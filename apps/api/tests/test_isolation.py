@@ -1,0 +1,161 @@
+"""CI-blocking cross-tenant isolation suite (spec §9.1).
+
+Two seeded tenants; every read endpoint is attacked cross-tenant, including
+direct-object-reference attacks, and RLS is verified at the SQL level per
+table with the runtime (non-owner) role.
+"""
+
+from uuid import uuid4
+
+import asyncpg
+import pytest
+
+from tests.conftest import APP_URL, auth
+
+TENANT_TABLES = [
+    "memberships",
+    "documents",
+    "doc_chunks",
+    "conversations",
+    "messages",
+    "usage_events",
+    "invites",
+    "audit_log",
+]
+
+
+async def test_cross_tenant_header_rejected(client, two_tenants):
+    """A's token with B's tenant id must be rejected on every endpoint."""
+    a, b = two_tenants
+    attacks = [
+        ("GET", "/api/v1/tenants/me"),
+        ("GET", "/api/v1/members"),
+        ("PATCH", "/api/v1/tenants/me"),
+        ("POST", "/api/v1/invites"),
+        ("DELETE", f"/api/v1/members/{b.membership_id}"),
+    ]
+    for method, path in attacks:
+        resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
+        assert resp.status_code == 403, f"{method} {path} -> {resp.status_code}"
+        assert resp.json()["error"]["code"] == "not_a_member"
+
+
+async def test_direct_object_reference_attacks(client, two_tenants):
+    """B's object ids under A's legitimate tenant context must 404."""
+    a, b = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    resp = await client.delete(f"/api/v1/members/{b.membership_id}", headers=headers)
+    assert resp.status_code == 404
+
+    members = (await client.get("/api/v1/members", headers=headers)).json()
+    listed_ids = {m["id"] for m in members}
+    assert str(b.membership_id) not in listed_ids
+    assert str(a.membership_id) in listed_ids
+
+
+async def test_cross_tenant_invite_token_is_single_use_and_scoped(client, two_tenants):
+    a, b = two_tenants
+    outsider = uuid4()
+    resp = await client.post(
+        "/api/v1/invites/accept", json={"token": b.invite_token}, headers=auth(outsider)
+    )
+    assert resp.status_code == 200
+    assert resp.json()["tenant_id"] == str(b.id)
+
+    # The accepted member of B still cannot touch A.
+    resp = await client.get("/api/v1/tenants/me", headers=auth(outsider, a.id))
+    assert resp.status_code == 403
+
+    # Token cannot be replayed.
+    resp = await client.post(
+        "/api/v1/invites/accept", json={"token": b.invite_token}, headers=auth(uuid4())
+    )
+    assert resp.status_code == 400
+
+
+async def test_sql_level_rls_per_table(two_tenants):
+    """With the runtime role: tenant A context sees only A rows in every
+    tenant-scoped table; no context sees zero rows."""
+    a, b = two_tenants
+    conn = await asyncpg.connect(APP_URL)
+    try:
+        role_info = await conn.fetchrow(
+            "select current_user, rolbypassrls from pg_roles where rolname = current_user"
+        )
+        assert role_info["current_user"] == "ops_app"
+        assert role_info["rolbypassrls"] is False, "runtime role must not bypass RLS"
+
+        for table in TENANT_TABLES + ["tenants"]:
+            count = await conn.fetchval(f"select count(*) from {table}")
+            assert count == 0, f"{table}: no context must see zero rows, saw {count}"
+
+        async with conn.transaction():
+            await conn.execute(
+                "select set_config('app.current_user', $1, true),"
+                " set_config('app.current_tenant', $2, true)",
+                str(a.owner_id),
+                str(a.id),
+            )
+            for table in TENANT_TABLES:
+                leaked = await conn.fetchval(
+                    f"select count(*) from {table} where tenant_id <> $1", a.id
+                )
+                assert leaked == 0, f"{table}: tenant A context leaked {leaked} foreign rows"
+                mine = await conn.fetchval(
+                    f"select count(*) from {table} where tenant_id = $1", a.id
+                )
+                assert mine > 0, f"{table}: tenant A context sees none of its own rows"
+            visible_tenants = await conn.fetch("select id from tenants")
+            assert {r["id"] for r in visible_tenants} == {a.id}
+    finally:
+        await conn.close()
+
+
+async def test_sql_level_rls_blocks_cross_tenant_writes(two_tenants):
+    """Under tenant A context, inserting or updating rows tagged for tenant B
+    must be rejected by policy, not app code."""
+    a, b = two_tenants
+    conn = await asyncpg.connect(APP_URL)
+    try:
+        async with conn.transaction():
+            await conn.execute(
+                "select set_config('app.current_user', $1, true),"
+                " set_config('app.current_tenant', $2, true)",
+                str(a.owner_id),
+                str(a.id),
+            )
+            with pytest.raises(asyncpg.InsufficientPrivilegeError):
+                await conn.execute(
+                    "insert into documents (tenant_id, title) values ($1, 'smuggled')",
+                    b.id,
+                )
+        async with conn.transaction():
+            await conn.execute(
+                "select set_config('app.current_user', $1, true),"
+                " set_config('app.current_tenant', $2, true)",
+                str(a.owner_id),
+                str(a.id),
+            )
+            # Update of B's rows silently matches nothing (filtered by USING).
+            result = await conn.execute(
+                "update documents set title = 'defaced' where tenant_id = $1", b.id
+            )
+            assert result == "UPDATE 0"
+            deleted = await conn.execute("delete from doc_chunks where tenant_id = $1", b.id)
+            assert deleted == "DELETE 0"
+    finally:
+        await conn.close()
+
+
+async def test_membership_visibility_requires_user_context(two_tenants):
+    a, _ = two_tenants
+    conn = await asyncpg.connect(APP_URL)
+    try:
+        async with conn.transaction():
+            # user context only (pre-tenant resolution): own memberships visible
+            await conn.execute("select set_config('app.current_user', $1, true)", str(a.owner_id))
+            rows = await conn.fetch("select tenant_id from memberships")
+            assert {r["tenant_id"] for r in rows} == {a.id}
+    finally:
+        await conn.close()

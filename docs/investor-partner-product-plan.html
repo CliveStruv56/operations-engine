@@ -1,0 +1,908 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Operations Engine — Product Plan, July 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0B0F1C;
+    --ink-soft:#3A4155;
+    --muted:#5C6474;
+    --accent:#1D40E8;
+    --accent-soft:#E9EDFE;
+    --accent-dark-text:#8CA2FF;
+    --line:#E4E7EE;
+    --line-strong:#CBD0DC;
+    --canvas:#FFFFFF;
+    --canvas-alt:#F6F7FA;
+    --dark:#0A0E1A;
+    --dark-2:#111730;
+    --good:#0B7A55;
+    --sans:'Inter',system-ui,-apple-system,sans-serif;
+    --disp:'Space Grotesk',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--canvas);
+    font-size:17px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 6%;}
+  @media(min-width:1200px){.wrap{padding:0 24px;}}
+
+  /* ---------- masthead ---------- */
+  .topbar{border-bottom:1px solid var(--line);}
+  .topbar-inner{display:flex;justify-content:space-between;align-items:center;padding:18px 0;gap:16px;flex-wrap:wrap;}
+  .brand{font-family:var(--disp);font-weight:700;letter-spacing:.06em;font-size:.95rem;display:flex;align-items:center;gap:10px;}
+  .brand-mark{width:10px;height:10px;background:var(--accent);display:inline-block;}
+  .topbar-meta{font-family:var(--mono);font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .accent-rule{height:3px;background:var(--accent);}
+
+  /* ---------- hero ---------- */
+  .hero{
+    position:relative;
+    padding:clamp(64px,9vw,120px) 0 clamp(48px,6vw,80px);
+    background:
+      linear-gradient(var(--canvas) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, var(--canvas) 100%),
+      repeating-linear-gradient(0deg, transparent 0 47px, rgba(11,15,28,.05) 47px 48px),
+      repeating-linear-gradient(90deg, transparent 0 47px, rgba(11,15,28,.05) 47px 48px);
+  }
+  .eyebrow{
+    font-family:var(--mono);font-size:.72rem;font-weight:500;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+    display:flex;align-items:center;gap:12px;margin-bottom:26px;
+  }
+  .eyebrow::before{content:"";width:28px;height:1px;background:var(--accent);}
+  h1{
+    font-family:var(--disp);
+    font-size:clamp(2.5rem,6.2vw,4.4rem);
+    line-height:1.04;
+    letter-spacing:-0.028em;
+    font-weight:700;
+    max-width:17ch;
+  }
+  h1 .h1-accent{color:var(--accent);}
+  .hero-sub{
+    margin-top:28px;max-width:62ch;font-size:clamp(1.02rem,1.5vw,1.2rem);
+    color:var(--ink-soft);line-height:1.7;
+  }
+  .hero-sub strong{color:var(--ink);font-weight:600;}
+
+  .statband{
+    margin-top:clamp(44px,6vw,72px);
+    border-top:1px solid var(--line-strong);
+    display:grid;grid-template-columns:repeat(4,1fr);
+  }
+  .stat{padding:26px 26px 6px 0;border-right:1px solid var(--line);}
+  .stat:last-child{border-right:none;}
+  .stat-num{font-family:var(--disp);font-weight:700;font-size:clamp(1.7rem,3vw,2.5rem);letter-spacing:-0.02em;line-height:1.05;}
+  .stat-num sup{font-size:.5em;color:var(--muted);font-weight:500;}
+  .stat-label{font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:10px;line-height:1.5;}
+  @media(max-width:880px){.statband{grid-template-columns:repeat(2,1fr);}.stat:nth-child(2){border-right:none;}.stat{border-bottom:1px solid var(--line);padding-bottom:20px;}}
+  @media(max-width:520px){.statband{grid-template-columns:1fr;}.stat{border-right:none;}}
+
+  /* ---------- sections ---------- */
+  section{padding:clamp(64px,9vw,110px) 0;}
+  section.alt{background:var(--canvas-alt);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .sec-head{max-width:760px;margin-bottom:clamp(36px,5vw,56px);}
+  .sec-eyebrow{
+    font-family:var(--mono);font-size:.72rem;font-weight:500;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--accent);margin-bottom:18px;display:block;
+  }
+  h2{
+    font-family:var(--disp);font-size:clamp(1.8rem,3.6vw,2.8rem);
+    line-height:1.12;letter-spacing:-0.022em;font-weight:700;
+  }
+  .sec-lede{margin-top:20px;color:var(--ink-soft);font-size:1.06rem;max-width:62ch;}
+
+  /* ---------- opportunity cards ---------- */
+  .cards3{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+  .card{background:var(--canvas);padding:34px 30px 38px;}
+  .card-idx{font-family:var(--mono);font-size:.72rem;color:var(--accent);letter-spacing:.12em;}
+  .card h3{font-family:var(--disp);font-size:1.22rem;letter-spacing:-0.01em;margin:14px 0 12px;line-height:1.3;}
+  .card p{font-size:.94rem;color:var(--ink-soft);}
+  .card p strong{color:var(--ink);}
+  @media(max-width:860px){.cards3{grid-template-columns:1fr;}}
+
+  /* ---------- module grid ---------- */
+  .modules{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);}
+  .module{background:var(--canvas);padding:28px 26px 30px;position:relative;}
+  .module .ic{width:34px;height:34px;color:var(--accent);margin-bottom:16px;}
+  .module h3{font-family:var(--disp);font-size:1.05rem;margin-bottom:8px;letter-spacing:-0.005em;}
+  .module p{font-size:.88rem;color:var(--ink-soft);line-height:1.6;}
+  .chip{
+    position:absolute;top:22px;right:20px;
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+    padding:4px 9px;border:1px solid var(--line-strong);color:var(--muted);border-radius:2px;
+  }
+  .chip.pro{background:var(--accent);border-color:var(--accent);color:#fff;}
+  @media(max-width:960px){.modules{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:600px){.modules{grid-template-columns:1fr;}}
+
+  /* ---------- engine / flow ---------- */
+  .flow{display:flex;align-items:stretch;gap:0;margin:8px 0 20px;}
+  .flow-step{
+    flex:1;border:1px solid var(--line-strong);background:var(--canvas);
+    padding:22px 20px;position:relative;
+  }
+  .flow-step + .flow-step{margin-left:34px;}
+  .flow-step + .flow-step::before{
+    content:"→";position:absolute;left:-27px;top:50%;transform:translateY(-50%);
+    font-family:var(--mono);color:var(--accent);font-size:1.05rem;font-weight:600;
+  }
+  .flow-step .k{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);display:block;margin-bottom:8px;}
+  .flow-step .t{font-family:var(--disp);font-size:.98rem;font-weight:600;letter-spacing:-0.005em;line-height:1.35;}
+  .flow-step .d{font-size:.8rem;color:var(--muted);margin-top:6px;line-height:1.55;}
+  @media(max-width:900px){
+    .flow{flex-direction:column;}
+    .flow-step + .flow-step{margin-left:0;margin-top:30px;}
+    .flow-step + .flow-step::before{content:"↓";left:22px;top:-26px;transform:none;}
+  }
+
+  /* ---------- tables ---------- */
+  table{width:100%;border-collapse:collapse;font-size:.92rem;}
+  th{
+    font-family:var(--mono);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--muted);font-weight:500;text-align:left;padding:12px 14px;
+    border-bottom:1px solid var(--ink);
+  }
+  td{padding:14px;border-bottom:1px solid var(--line);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  .num{font-family:var(--mono);font-size:.85rem;white-space:nowrap;}
+  th.r,td.r{text-align:right;}
+  .table-card{border:1px solid var(--line-strong);background:var(--canvas);overflow-x:auto;}
+  .table-note{font-size:.8rem;color:var(--muted);margin-top:14px;max-width:78ch;line-height:1.6;}
+  .model-name{font-weight:600;}
+  .host{font-family:var(--mono);font-size:.72rem;color:var(--muted);display:block;margin-top:3px;}
+
+  .callout{
+    margin-top:34px;border-left:3px solid var(--accent);background:var(--accent-soft);
+    padding:24px 28px;display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start;
+  }
+  .callout .ic{width:26px;height:26px;color:var(--accent);margin-top:2px;}
+  .callout h4{font-family:var(--disp);font-size:1.02rem;margin-bottom:6px;}
+  .callout p{font-size:.92rem;color:var(--ink-soft);}
+  .callout p strong{color:var(--ink);}
+  @media(max-width:600px){.callout{grid-template-columns:1fr;}}
+
+  .stack-line{margin-top:30px;font-size:.85rem;color:var(--muted);line-height:1.8;}
+  .stack-line .tag{
+    font-family:var(--mono);font-size:.72rem;border:1px solid var(--line-strong);
+    padding:3px 8px;margin:0 6px 6px 0;display:inline-block;color:var(--ink-soft);background:var(--canvas);
+  }
+
+  /* ---------- pricing ---------- */
+  .tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .tier{border:1px solid var(--line-strong);background:var(--canvas);padding:32px 30px 34px;display:flex;flex-direction:column;}
+  .tier.featured{border-color:var(--accent);border-width:2px;position:relative;}
+  .tier-flag{
+    position:absolute;top:-11px;left:28px;background:var(--accent);color:#fff;
+    font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;padding:4px 10px;
+  }
+  .tier-name{font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);}
+  .tier-price{font-family:var(--disp);font-weight:700;font-size:2.4rem;letter-spacing:-0.02em;margin-top:14px;line-height:1;}
+  .tier-price .per{font-size:.85rem;font-weight:500;color:var(--muted);font-family:var(--sans);letter-spacing:0;}
+  .tier-sub{font-size:.82rem;color:var(--muted);margin-top:8px;}
+  .tier ul{list-style:none;margin-top:22px;padding-top:22px;border-top:1px solid var(--line);}
+  .tier li{font-size:.88rem;color:var(--ink-soft);padding:5px 0 5px 22px;position:relative;}
+  .tier li::before{content:"";position:absolute;left:0;top:13px;width:10px;height:2px;background:var(--accent);}
+  .tier-margin{
+    margin-top:auto;padding-top:24px;font-family:var(--mono);font-size:.78rem;color:var(--good);letter-spacing:.04em;
+  }
+  @media(max-width:920px){.tiers{grid-template-columns:1fr;}}
+
+  .unit-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:44px;margin-top:56px;align-items:start;}
+  @media(max-width:920px){.unit-grid{grid-template-columns:1fr;}}
+  .side-note h3{font-family:var(--disp);font-size:1.2rem;margin-bottom:14px;letter-spacing:-0.01em;}
+  .side-note p{font-size:.93rem;color:var(--ink-soft);margin-bottom:14px;}
+  .side-note p strong{color:var(--ink);}
+
+  /* ---------- P&L bars ---------- */
+  .pl-box{border:1px solid var(--line-strong);background:var(--canvas);padding:38px 36px 34px;}
+  .pl-row{margin-bottom:28px;}
+  .pl-row:last-of-type{margin-bottom:8px;}
+  .pl-label{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .pl-label .l{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .pl-label .v{font-family:var(--disp);font-weight:700;font-size:1.3rem;letter-spacing:-0.01em;}
+  .bar{height:30px;background:var(--canvas-alt);border:1px solid var(--line);position:relative;overflow:hidden;}
+  .bar-fill{height:100%;background:var(--accent);width:0;transition:width 1.1s cubic-bezier(.2,.7,.2,1);}
+  .bar-fill.cogs{background:var(--ink);}
+  .pl-margin{
+    margin-top:26px;padding-top:24px;border-top:1px solid var(--line);
+    display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;
+  }
+  .pl-margin .big{font-family:var(--disp);font-weight:700;font-size:clamp(2rem,4vw,3rem);letter-spacing:-0.02em;color:var(--accent);}
+  .pl-margin .cap{font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);max-width:34ch;line-height:1.7;}
+  .facts{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:26px;}
+  .fact{border:1px solid var(--line);background:var(--canvas);padding:20px 22px;}
+  .fact .f-num{font-family:var(--disp);font-weight:700;font-size:1.35rem;letter-spacing:-0.015em;}
+  .fact .f-cap{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:6px;line-height:1.6;}
+  @media(max-width:760px){.facts{grid-template-columns:1fr;}}
+  .honesty{margin-top:30px;font-size:.95rem;color:var(--ink-soft);border-left:3px solid var(--ink);padding:6px 0 6px 22px;max-width:74ch;}
+  .honesty strong{color:var(--ink);}
+
+  /* ---------- diligence (dark) ---------- */
+  .dark-sec{background:var(--dark);color:#DDE2F0;}
+  .dark-sec .sec-eyebrow{color:var(--accent-dark-text);}
+  .dark-sec h2{color:#fff;}
+  .dark-sec .sec-lede{color:#9AA3BC;}
+  .findings{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.09);}
+  .finding{background:var(--dark-2);padding:34px 32px 36px;}
+  .finding .f-k{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-dark-text);}
+  .finding h3{font-family:var(--disp);font-size:1.22rem;color:#fff;margin:14px 0 12px;letter-spacing:-0.01em;}
+  .finding p{font-size:.9rem;color:#A9B1C9;line-height:1.7;}
+  .finding p strong{color:#E6EAF6;font-weight:600;}
+  .finding .impact{
+    margin-top:18px;font-family:var(--mono);font-size:.72rem;color:#7EE0B8;letter-spacing:.04em;line-height:1.6;
+  }
+  @media(max-width:860px){.findings{grid-template-columns:1fr;}}
+  .dark-note{margin-top:34px;font-family:var(--mono);font-size:.74rem;color:#707A96;letter-spacing:.04em;line-height:1.9;max-width:80ch;}
+
+  /* ---------- roadmap ---------- */
+  .phases{display:grid;grid-template-columns:repeat(5,1fr);gap:20px;}
+  .phase{border:1px solid var(--line-strong);background:var(--canvas);padding:26px 22px 28px;position:relative;}
+  .phase-band{height:3px;background:var(--line);margin:-26px -22px 22px;}
+  .phase.hot .phase-band{background:var(--accent);}
+  .phase .p-k{font-family:var(--mono);font-size:.64rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);}
+  .phase .p-w{font-family:var(--mono);font-size:.64rem;color:var(--accent);letter-spacing:.08em;display:block;margin-top:4px;}
+  .phase h3{font-family:var(--disp);font-size:1.02rem;margin:12px 0 10px;letter-spacing:-0.005em;line-height:1.3;}
+  .phase p{font-size:.82rem;color:var(--ink-soft);line-height:1.6;}
+  .phase .badge{
+    display:inline-block;margin-top:14px;font-family:var(--mono);font-size:.6rem;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--good);border:1px solid currentColor;padding:3px 8px;border-radius:2px;
+  }
+  @media(max-width:1040px){.phases{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:560px){.phases{grid-template-columns:1fr;}}
+  .roadmap-note{margin-top:28px;font-size:.9rem;color:var(--muted);max-width:74ch;}
+  .roadmap-note strong{color:var(--ink-soft);}
+
+  /* ---------- risks ---------- */
+  .risk-rows{border-top:1px solid var(--ink);}
+  .risk-row{
+    display:grid;grid-template-columns:.9fr 1.4fr;gap:34px;
+    padding:26px 0;border-bottom:1px solid var(--line);
+  }
+  .risk-row h3{font-family:var(--disp);font-size:1.05rem;letter-spacing:-0.005em;display:flex;gap:14px;align-items:baseline;}
+  .risk-row h3 .n{font-family:var(--mono);font-size:.7rem;color:var(--accent);font-weight:500;}
+  .risk-row p{font-size:.92rem;color:var(--ink-soft);}
+  .risk-row p strong{color:var(--ink);font-weight:600;}
+  @media(max-width:760px){.risk-row{grid-template-columns:1fr;gap:10px;}}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line);padding:44px 0 60px;background:var(--canvas-alt);}
+  .foot-inner{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;}
+  .foot-brand{font-family:var(--disp);font-weight:700;letter-spacing:.06em;font-size:.9rem;display:flex;align-items:center;gap:10px;}
+  .foot-note{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.05em;line-height:2;max-width:64ch;}
+
+  /* ---------- reveal ---------- */
+  .rv{opacity:0;transform:translateY(18px);transition:opacity .7s ease,transform .7s ease;}
+  .rv.in{opacity:1;transform:none;}
+  @media(prefers-reduced-motion:reduce){
+    .rv{opacity:1;transform:none;transition:none;}
+    .bar-fill{transition:none;}
+    html{scroll-behavior:auto;}
+  }
+</style>
+<style>
+.ha-img-placeholder{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:#f4f4f5;border:1px dashed #d4d4d8;border-radius:8px;color:#71717a;font-size:12px;font-family:system-ui,sans-serif;min-height:80px;padding:16px;box-sizing:border-box;animation:ha-img-pulse 1.5s ease-in-out infinite}
+.ha-img-placeholder.ha-failed{animation:none;opacity:.7}
+@keyframes ha-img-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@media(prefers-color-scheme:dark){.ha-img-placeholder{background:#27272a;border-color:#3f3f46;color:#a1a1aa}}
+</style>
+</head>
+<body>
+
+<div class="accent-rule"></div>
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="brand-mark"></span>OPERATIONS&nbsp;ENGINE</div>
+    <div class="topbar-meta">Product Plan · July 2026 · For Investors &amp; Partners</div>
+  </div>
+</header>
+
+<!-- ================= HERO ================= -->
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">White-label AI operations SaaS for small business</div>
+    <h1>Every AI capability an SMB needs.<br><span class="h1-accent">One workspace. Their brand.</span></h1>
+    <p class="hero-sub">
+      Operations Engine consolidates office admin, document intelligence, reports, spreadsheets, slide decks,
+      images, deep research, email, calendars and meetings into a single branded workspace per client —
+      with every task routed to the <strong>cheapest capable open-weight model</strong>.
+      Every number below was verified against live market sources in July&nbsp;2026.
+    </p>
+
+    <div class="statband">
+      <div class="stat rv">
+        <div class="stat-num">~84<sup>%</sup></div>
+        <div class="stat-label">Blended gross margin at 50 tenants — verified, all costs in</div>
+      </div>
+      <div class="stat rv">
+        <div class="stat-num">$0.35</div>
+        <div class="stat-label">Blended AI inference cost per active user per month</div>
+      </div>
+      <div class="stat rv">
+        <div class="stat-num">2–3</div>
+        <div class="stat-label">Tenants to break even — fixed platform cost ~£200/mo</div>
+      </div>
+      <div class="stat rv">
+        <div class="stat-num">16<sup>wks</sup></div>
+        <div class="stat-label">To a sellable platform — with revenue from week one</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 01 OPPORTUNITY ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">01 — The Opportunity</span>
+      <h2>SMBs are buying AI in fragments. The margin is in the consolidation.</h2>
+      <p class="sec-lede">
+        A typical small business now runs one subscription for chat, another for slides, another for meeting
+        notes, another for images — each with its own login, its own bill, and no knowledge of the company's
+        documents. Three shifts make one consolidated, white-label workspace viable right now.
+      </p>
+    </div>
+    <div class="cards3">
+      <div class="card rv">
+        <div class="card-idx">A</div>
+        <h3>Open weights crossed the quality line</h3>
+        <p>GLM, DeepSeek, Qwen and GPT-OSS now ship under <strong>MIT and Apache licences</strong> at
+        frontier-class quality for office work. For the everyday tasks SMBs actually run, the premium
+        for closed models has collapsed to near zero.</p>
+      </div>
+      <div class="card rv">
+        <div class="card-idx">B</div>
+        <h3>Inference became a commodity spread</h3>
+        <p>Routine office tasks now clear at <strong>$0.06–0.40 per million tokens</strong>. Routing each task
+        to the cheapest capable model prices the whole product at ~$0.35 per user per month —
+        roughly a <strong>50× spread</strong> against a £29 seat.</p>
+      </div>
+      <div class="card rv">
+        <div class="card-idx">C</div>
+        <h3>SMBs want one bill — and their own brand</h3>
+        <p>Each client gets the suite on <strong>their own domain, logo and house tone</strong>, grounded in their
+        own documents. White-labelling also opens a reseller channel: agencies, MSPs and consultancies
+        selling the platform as theirs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 02 PRODUCT ================= -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">02 — The Product</span>
+      <h2>One workspace, nine jobs done.</h2>
+      <p class="sec-lede">
+        Everything runs against the client's knowledge vault, in the client's tone, behind the client's brand.
+        Modules are per-tenant entitlements — the packaging lever for the two-tier model.
+      </p>
+    </div>
+    <div class="modules">
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+        <h3>Office admin</h3>
+        <p>Drafting, summarising, Q&amp;A and everyday busywork in the company's tone and terminology.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M9 7h6M9 11h6"/></svg>
+        <h3>Knowledge vault</h3>
+        <p>Contracts, SOPs and handbooks parsed, chunked and embedded per tenant. Answers cite to the page.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+        <h3>Report generation</h3>
+        <p>Multi-step drafting grounded in the vault — outline, sections, assembly — out to DOCX or PDF.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-6 3 4 5-8"/></svg>
+        <h3>Financial analysis</h3>
+        <p>Upload P&amp;Ls, budgets or inventory sheets. Model-written Python runs in a sandbox — charts and variances back in chat.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="1.5"/><path d="M8 21h8M12 17v4"/></svg>
+        <h3>Slide decks</h3>
+        <p>One prompt to an editable PPTX. Self-hosted engine by default; designer-grade API tier on Pro.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+        <h3>Image generation</h3>
+        <p>Marketing visuals and slide covers on open-weight image models — from $0.003 a draft image.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip pro">Pro</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.35-4.35"/><path d="M11 8v6M8 11h6"/></svg>
+        <h3>Deep research</h3>
+        <p>Multi-step web research with cited sources — market scans, competitor briefs, supplier checks.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip">Core</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/><path d="M22 6l-10 7L2 6"/></svg>
+        <h3>Email &amp; calendar</h3>
+        <p>Triage, drafting and scheduling across Gmail and Microsoft 365. Sends always require user approval.</p>
+      </div>
+      <div class="module rv">
+        <span class="chip pro">Pro</span>
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+        <h3>Meeting intelligence</h3>
+        <p>A bot joins Zoom, Teams or Meet. Summaries, actions and owners land in the workspace within minutes.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 03 ENGINE ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">03 — How It Works</span>
+      <h2>The margin is the router.</h2>
+      <p class="sec-lede">
+        Every request flows through a routing gateway that selects the cheapest capable open-weight model
+        for the task, enforces per-tenant budgets, and fails over automatically. Models are configuration,
+        not code — when the market reprices (it does, monthly), the routing table changes, not the product.
+      </p>
+    </div>
+
+    <div class="flow rv">
+      <div class="flow-step">
+        <span class="k">Client-facing</span>
+        <div class="t">Branded workspace</div>
+        <div class="d">Per-client domain, logo, palette and house tone</div>
+      </div>
+      <div class="flow-step">
+        <span class="k">Isolation</span>
+        <div class="t">Tenant boundary</div>
+        <div class="d">Postgres row-level security on every tenant table</div>
+      </div>
+      <div class="flow-step">
+        <span class="k">The IP</span>
+        <div class="t">Model router</div>
+        <div class="d">Per-tenant budgets, task routing, fallbacks, metering</div>
+      </div>
+      <div class="flow-step">
+        <span class="k">Supply</span>
+        <div class="t">Open-weight hosts</div>
+        <div class="d">US/EU zero-data-retention APIs by default</div>
+      </div>
+    </div>
+
+    <div class="table-card rv" style="margin-top:36px;">
+      <table>
+        <thead>
+          <tr><th>Task</th><th>Routed to</th><th class="r">Verified cost</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Everyday admin, email drafting, calendar parsing</td><td><span class="model-name">GLM 4.7-Flash</span><span class="host">MIT · US-hosted</span></td><td class="r num">$0.06 / $0.40 per M tokens</td></tr>
+          <tr><td>Document Q&amp;A, RAG answers, summaries</td><td><span class="model-name">GLM 4.7-Flash → GPT-OSS-120B</span><span class="host">MIT / open licence</span></td><td class="r num">$0.06–0.60 per M tokens</td></tr>
+          <tr><td>Long documents — up to 1M-token contracts</td><td><span class="model-name">DeepSeek V4 Flash</span><span class="host">MIT · 1M context</span></td><td class="r num">$0.14 / $0.28 per M tokens</td></tr>
+          <tr><td>Reports &amp; multi-step drafting</td><td><span class="model-name">GPT-OSS-120B</span><span class="host">open licence · US-hosted</span></td><td class="r num">$0.15 / $0.60 per M tokens</td></tr>
+          <tr><td>Financial reasoning &amp; complex analysis</td><td><span class="model-name">GLM 5.2</span><span class="host">MIT · reasoning class</span></td><td class="r num">$0.93 / $3.00 per M tokens</td></tr>
+          <tr><td>Meeting transcription</td><td><span class="model-name">Whisper Large v3 Turbo</span><span class="host">open weights</span></td><td class="r num">$0.04 per hour</td></tr>
+          <tr><td>Images — drafts to finals</td><td><span class="model-name">FLUX.1 schnell → FLUX.2 dev</span><span class="host">Apache 2.0 / open</span></td><td class="r num">$0.003–0.008 per image</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="table-note">
+      Input / output prices per million tokens, verified against live provider listings, July 2026.
+      All primary routes are open-weight models, satisfying the open-source mandate while staying entirely
+      API-based — no GPUs owned, no local deployments.
+    </p>
+
+    <div class="callout rv">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+      <div>
+        <h4>Privacy without the premium — verified, not assumed</h4>
+        <p>Diligence found the same open models on <strong>US zero-data-retention hosts cost the same or less</strong>
+        than their Chinese home APIs (GLM 5.2: $0.93 vs $1.40 per M input — 33% cheaper on the Western host).
+        Western ZDR routing is therefore the default for every tenant; anything else is explicit per-tenant
+        opt-in. Client financial data is never trained on and never leaves US/EU infrastructure.</p>
+      </div>
+    </div>
+
+    <p class="stack-line rv">
+      Built entirely on permissively licensed components — zero licensing overhang, zero platform dependency:<br>
+      <span class="tag">Next.js</span><span class="tag">FastAPI</span><span class="tag">LangGraph · MIT</span><span class="tag">LiteLLM gateway · Apache 2.0</span><span class="tag">Postgres RLS + pgvector</span><span class="tag">Docling parsing</span><span class="tag">Presenton slides · Apache 2.0</span><span class="tag">Cloudflare for SaaS domains</span>
+    </p>
+  </div>
+</section>
+
+<!-- ================= 04 BUSINESS MODEL ================= -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">04 — Business Model</span>
+      <h2>Priced per seat, because costs scale per seat.</h2>
+      <p class="sec-lede">
+        The two largest variable costs — connected email accounts and model usage — grow with headcount,
+        not with tenants. Per-seat pricing absorbs them structurally; the flat-fee competitors quietly bleed on both.
+        A hybrid go-to-market pairs self-serve tiers with a white-glove managed tier.
+      </p>
+    </div>
+
+    <div class="tiers">
+      <div class="tier rv">
+        <div class="tier-name">Core</div>
+        <div class="tier-price">£29 <span class="per">/ seat / month · min 3 seats</span></div>
+        <div class="tier-sub">Self-serve · SMBs of 3–15</div>
+        <ul>
+          <li>Workspace, knowledge vault &amp; document analysis</li>
+          <li>Reports, spreadsheets, slides &amp; images</li>
+          <li>Email &amp; calendar across Gmail / Microsoft 365</li>
+          <li>Standard web search</li>
+        </ul>
+        <div class="tier-margin">~89% gross margin / seat</div>
+      </div>
+      <div class="tier featured rv">
+        <div class="tier-flag">Expansion tier</div>
+        <div class="tier-name">Pro</div>
+        <div class="tier-price">£49 <span class="per">/ seat / month</span></div>
+        <div class="tier-sub">Self-serve · power SMBs of 5–30</div>
+        <ul>
+          <li>Everything in Core</li>
+          <li>Meeting intelligence — 20 pooled hours / month</li>
+          <li>Deep research mode with cited sources</li>
+          <li>Premium reasoning models &amp; designed decks</li>
+        </ul>
+        <div class="tier-margin">~88% gross margin / seat</div>
+      </div>
+      <div class="tier rv">
+        <div class="tier-name">Managed</div>
+        <div class="tier-price">£799 <span class="per">/ month + £1,500 onboarding</span></div>
+        <div class="tier-sub">White-glove · includes 10 Pro seats, +£39 / extra seat</div>
+        <ul>
+          <li>Curated vault ingestion &amp; custom workflows</li>
+          <li>Team training &amp; quarterly reviews, SLA</li>
+          <li>Data-sovereign RAG option</li>
+          <li>The wedge for the reseller / agency channel</li>
+        </ul>
+        <div class="tier-margin">~70% margin after support labour</div>
+      </div>
+    </div>
+
+    <div class="unit-grid">
+      <div class="table-card rv">
+        <table>
+          <thead>
+            <tr><th>Per seat, per month</th><th class="r">Core</th><th class="r">Pro</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Revenue <span class="host">at ~$1.30 / £</span></td><td class="r num">£29 · $37.70</td><td class="r num">£49 · $63.70</td></tr>
+            <tr><td>AI inference <span class="host">routed mix, padded 2×</span></td><td class="r num">$0.70</td><td class="r num">$1.50</td></tr>
+            <tr><td>Email + calendar API</td><td class="r num">$2.00</td><td class="r num">$2.00</td></tr>
+            <tr><td>Search / deep research</td><td class="r num">$0.60</td><td class="r num">$1.50</td></tr>
+            <tr><td>Meeting bot + transcription <span class="host">pooled ÷ 10 seats</span></td><td class="r num">—</td><td class="r num">$1.10</td></tr>
+            <tr><td>Images, slides, parsing, RAG, infra</td><td class="r num">$0.70</td><td class="r num">$1.20</td></tr>
+            <tr><td><strong>All-in COGS</strong></td><td class="r num"><strong>~$4.00</strong></td><td class="r num"><strong>~$7.30</strong></td></tr>
+            <tr><td><strong>Gross margin</strong></td><td class="r num"><strong>~89%</strong></td><td class="r num"><strong>~88%</strong></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="side-note rv">
+        <h3>Fair use without surprise invoices</h3>
+        <p>Soft token caps per seat are enforced at the gateway. When a tenant exceeds them, requests
+        <strong>route to the cheapest model tier with an in-app nudge</strong> — graceful degradation,
+        never an overage bill. Meeting hours and images carry hard pooled caps with self-serve top-ups.</p>
+        <p>Meeting intelligence is deliberately gated to Pro: at ~$11 per tenant per month it is the single
+        largest variable cost, and it is exactly where flat-fee competitor economics fail.</p>
+        <p><strong>Setup fees price in the labour.</strong> Managed onboarding (£1,500) covers vault curation,
+        prompt tuning and training — the white-glove tier stays at ~70% margin including support hours.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 05 ECONOMICS ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">05 — Economics at Scale</span>
+      <h2>The P&amp;L at fifty tenants.</h2>
+      <p class="sec-lede">
+        Illustrative mix: 30 Core tenants × 8 seats, 15 Pro × 10 seats, 5 Managed. All verified costs included —
+        meeting bots, email APIs, search, parsing, media, hosting and support labour.
+      </p>
+    </div>
+
+    <div class="pl-box rv">
+      <div class="pl-row">
+        <div class="pl-label"><span class="l">Monthly recurring revenue</span><span class="v">£18,300</span></div>
+        <div class="bar"><div class="bar-fill" data-w="100"></div></div>
+      </div>
+      <div class="pl-row">
+        <div class="pl-label"><span class="l">All-in monthly COGS</span><span class="v">~£3,000</span></div>
+        <div class="bar"><div class="bar-fill cogs" data-w="16.4"></div></div>
+      </div>
+      <div class="pl-margin">
+        <div>
+          <div class="big">~84%</div>
+          <div class="cap" style="margin-top:6px;">Blended gross margin</div>
+        </div>
+        <div class="cap">
+          Gross profit ≈ £15,300 / month at this scale — before founder time and freelance build spend,
+          after every verified variable cost.
+        </div>
+      </div>
+    </div>
+
+    <div class="facts">
+      <div class="fact rv"><div class="f-num">~£200 / mo</div><div class="f-cap">Total fixed platform cost — managed Postgres, hosting, tooling</div></div>
+      <div class="fact rv"><div class="f-num">2–3 tenants</div><div class="f-cap">Break-even point — the plan is default-alive almost immediately</div></div>
+      <div class="fact rv"><div class="f-num">2× padded</div><div class="f-cap">Inference costs carry a 100% safety factor against usage spikes and repricing</div></div>
+    </div>
+
+    <p class="honesty rv">
+      <strong>A note on intellectual honesty:</strong> an earlier draft of this plan claimed 99.5% margins on
+      $30/month of total cost. Line-by-line verification priced in meeting bots, email APIs, search, document
+      parsing and support labour — and the business <strong>still clears ~84%</strong>. These are the numbers
+      we would defend in diligence, because they came out of ours.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 06 DILIGENCE ================= -->
+<section class="dark-sec">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">06 — Diligence</span>
+      <h2>Every number on this page survived contact with a source.</h2>
+      <p class="sec-lede">
+        Four parallel research workstreams re-verified licensing terms, model pricing, vendor costs and RAG
+        economics against live July 2026 sources before this plan was written. Four findings changed it materially.
+      </p>
+    </div>
+    <div class="findings">
+      <div class="finding rv">
+        <span class="f-k">Finding 01 · Licensing</span>
+        <h3>The obvious build is illegal.</h3>
+        <p>The most-recommended off-the-shelf stack (Open WebUI + Dify) <strong>prohibits white-label,
+        multi-tenant SaaS</strong> without unpublished-price commercial licences — and a popular workflow engine
+        wants ~$50k/year to embed. Competitors assembling these tools carry a forced-rebuild risk they haven't priced.</p>
+        <div class="impact">→ Chosen stack is MIT / Apache end-to-end. Zero licensing overhang.</div>
+      </div>
+      <div class="finding rv">
+        <span class="f-k">Finding 02 · Pricing</span>
+        <h3>The "free" model wasn't. The cheap one had expired.</h3>
+        <p>A workhorse model billed as free actually costs <strong>$0.06 / $0.40 per M tokens</strong>; a quoted
+        premium-model price turned out to be promotional pricing that expired 31 May 2026 — real list is
+        <strong>4× higher</strong>. This market reprices monthly.</p>
+        <div class="impact">→ Economics rebuilt on list prices, padded 2×. Router re-verified monthly.</div>
+      </div>
+      <div class="finding rv">
+        <span class="f-k">Finding 03 · Privacy</span>
+        <h3>The privacy premium doesn't exist.</h3>
+        <p>The same open-weight models served from US zero-data-retention infrastructure cost
+        <strong>0–33% less</strong> than their Chinese home APIs. The trade-off everyone assumes between
+        cost and data protection largely isn't there — if you pick the right host.</p>
+        <div class="impact">→ Privacy-safe routing is the default, at no margin cost. A sales weapon with SMBs.</div>
+      </div>
+      <div class="finding rv">
+        <span class="f-k">Finding 04 · Margins</span>
+        <h3>The 99.5% margin claim was fiction.</h3>
+        <p>A prior draft's "$30/month total cost at 50 tenants" omitted meeting bots (~$0.54/hr), email APIs
+        ($2/account), search, parsing and support. True COGS is ~80–100× that figure — and the model
+        <strong>still holds ~84% blended margin</strong>.</p>
+        <div class="impact">→ A plan that survives an investor's spreadsheet, because it already survived ours.</div>
+      </div>
+    </div>
+    <p class="dark-note">
+      Standing cadence: model prices, vendor terms and licence texts are re-verified monthly. The routing
+      matrix is configuration — corrections ship without touching product code.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 07 ROADMAP ================= -->
+<section>
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">07 — Execution</span>
+      <h2>Revenue in week one. Platform in sixteen.</h2>
+      <p class="sec-lede">
+        Capital-light by construction: a founder plus freelance developers, managed services over bespoke
+        infrastructure, and design partners paying managed-tier rates before the product exists.
+      </p>
+    </div>
+    <div class="phases">
+      <div class="phase hot rv">
+        <div class="phase-band"></div>
+        <span class="p-k">Phase 0</span><span class="p-w">Weeks 1–2</span>
+        <h3>Concierge pilot</h3>
+        <p>2–3 design partners live on MIT-licensed tooling at Managed pricing. Real requirements, real revenue, before product code.</p>
+        <span class="badge">Revenue from week 1</span>
+      </div>
+      <div class="phase rv">
+        <div class="phase-band"></div>
+        <span class="p-k">Phase 1</span><span class="p-w">Weeks 3–8</span>
+        <h3>Product core</h3>
+        <p>Workspace, knowledge vault, model router, per-seat billing. Tenant isolation enforced at the database from day one.</p>
+      </div>
+      <div class="phase rv">
+        <div class="phase-band"></div>
+        <span class="p-k">Phase 2</span><span class="p-w">Weeks 9–12</span>
+        <h3>White-label &amp; modules</h3>
+        <p>Custom domains with auto-SSL, per-tenant theming, email &amp; calendar, slides, images, search, usage metering.</p>
+      </div>
+      <div class="phase rv">
+        <div class="phase-band"></div>
+        <span class="p-k">Phase 3</span><span class="p-w">Weeks 13–16</span>
+        <h3>Premium tier</h3>
+        <p>Meeting intelligence, report workflows, admin console. Pilot clients migrate onto the platform — Pro tier sellable.</p>
+      </div>
+      <div class="phase rv">
+        <div class="phase-band"></div>
+        <span class="p-k">Phase 4</span><span class="p-w">Months 5–6</span>
+        <h3>Hardening</h3>
+        <p>Observability and evals, GDPR pack, onboarding automation. Scale-out only when the numbers demand it.</p>
+      </div>
+    </div>
+    <p class="roadmap-note rv">
+      <strong>Deliberately less optimistic than the 12-week plans circulating for this category</strong> — and
+      unlike them, it starts paying for itself in week one. One strong full-stack freelancer from the start;
+      a second joins for Phase 3.
+    </p>
+  </div>
+</section>
+
+<!-- ================= 08 RISKS ================= -->
+<section class="alt">
+  <div class="wrap">
+    <div class="sec-head rv">
+      <span class="sec-eyebrow">08 — Risk Register</span>
+      <h2>What could go wrong — and what's already in place.</h2>
+    </div>
+    <div class="risk-rows">
+      <div class="risk-row rv">
+        <h3><span class="n">R1</span>Model &amp; price churn — monthly in this market</h3>
+        <p>The router makes models <strong>configuration, not code</strong>. Prices re-verified on a monthly cadence;
+        unit economics already padded 2× against repricing and usage spikes.</p>
+      </div>
+      <div class="risk-row rv">
+        <h3><span class="n">R2</span>Runaway usage costs</h3>
+        <p><strong>Per-tenant budgets enforced at the gateway</strong>, pooled caps on meeting hours and images,
+        and graceful degradation to cheaper models instead of surprise invoices — protecting both margin and trust.</p>
+      </div>
+      <div class="risk-row rv">
+        <h3><span class="n">R3</span>Trust with sensitive financial data</h3>
+        <p>Database-enforced tenant isolation (row-level security), <strong>zero-data-retention hosts by default</strong>,
+        draft-first approval on every outbound email, per-tenant audit logs, GDPR export and deletion from launch.</p>
+      </div>
+      <div class="risk-row rv">
+        <h3><span class="n">R4</span>Open-source licence exposure</h3>
+        <p>An <strong>MIT/Apache-only component policy</strong>, verified per component before adoption — the trap that
+        invalidates the naive competitor build is structurally avoided.</p>
+      </div>
+      <div class="risk-row rv">
+        <h3><span class="n">R5</span>Managed-tier support burden</h3>
+        <p>Onboarding runbooks, a quarterly (not ad-hoc) review cadence, and a £1,500 setup fee that
+        <strong>prices the labour in</strong>. If hours exceed the model, the fee moves — not the margin.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-inner">
+    <div>
+      <div class="foot-brand"><span class="brand-mark"></span>OPERATIONS&nbsp;ENGINE</div>
+    </div>
+    <p class="foot-note">
+      Product plan · July 2026. Model prices, vendor costs and licence terms verified against live sources at
+      publication; this market reprices monthly and the routing matrix is maintained on a standing verification
+      cadence. Currency conversions assume ~$1.30/£. Prepared from the consolidated recommendations analysis.
+    </p>
+  </div>
+</footer>
+
+<script>
+  // Scroll reveals
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rvs = document.querySelectorAll('.rv');
+  if (reduced) {
+    rvs.forEach(el => el.classList.add('in'));
+  } else {
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+    rvs.forEach(el => io.observe(el));
+  }
+  // P&L bars
+  const bars = document.querySelectorAll('.bar-fill');
+  const bio = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.width = e.target.dataset.w + '%';
+        bio.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.4 });
+  bars.forEach(b => { if (reduced) { b.style.width = b.dataset.w + '%'; } else { bio.observe(b); } });
+</script>
+<script>
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && window.parent !== window) {
+    window.parent.postMessage({ type: 'close-fullscreen' }, '*');
+  }
+});
+</script>
+<!-- broken-img-handler -->
+<script>
+(function(){
+  if(window.__brokenImgHandler)return;
+  window.__brokenImgHandler=true;
+  var MAX=5,DELAYS=[2000,4000,8000,16000,32000];
+  document.addEventListener('error',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG')return;
+    var liveSrc=img.getAttribute('src');
+    var src=img.dataset.haOriginalSrc||liveSrc;
+    if(!src)return;
+    if(img.dataset.haOriginalSrc&&liveSrc&&liveSrc!==img.dataset.haOriginalSrc&&liveSrc.indexOf('_r=')<0){src=liveSrc;img.dataset.haOriginalSrc=src;img.dataset.haRetryCount='0'}
+    else if(!img.dataset.haOriginalSrc){img.dataset.haOriginalSrc=src}
+    var attempt=parseInt(img.dataset.haRetryCount||'0',10);
+    if(img.dataset.haPhId){var old=document.getElementById(img.dataset.haPhId);if(old)old.remove()}
+    var ph=document.createElement('div');
+    ph.className='ha-img-placeholder'+(attempt>=MAX?' ha-failed':'');
+    ph.id='ha-ph-'+Math.random().toString(36).slice(2,9);
+    var w=img.getAttribute('width');var h=img.getAttribute('height');
+    if(w)ph.style.width=w+(isNaN(Number(w))?'':'px');
+    else if(img.style.width)ph.style.width=img.style.width;
+    else if(img.width>1)ph.style.width=img.width+'px';
+    if(h)ph.style.height=h+(isNaN(Number(h))?'':'px');
+    else if(img.style.height)ph.style.height=img.style.height;
+    else if(img.height>1)ph.style.height=img.height+'px';
+    ph.textContent=attempt>=MAX?'Image unavailable':'Loading image\u2026';
+    img.dataset.haPhId=ph.id;
+    if(img.dataset.haOrigDisplay==null)img.dataset.haOrigDisplay=img.style.display||'';
+    img.style.display='none';
+    img.insertAdjacentElement('afterend',ph);
+    if(attempt<MAX){
+      img.dataset.haRetryCount=String(attempt+1);
+      setTimeout(function(){
+        if(!img.isConnected)return;
+        if(img.dataset.haOriginalSrc!==src)return;
+        if(img.complete&&img.naturalWidth>0)return;
+        var curSrc=img.getAttribute('src');
+        if(curSrc&&curSrc.indexOf(src)!==0)return;
+        var fresh=src+(src.indexOf('?')>=0?'&':'?')+'_r='+(attempt+1)+'_'+Date.now();
+        img.src=fresh;
+      },DELAYS[attempt]);
+    }
+  },true);
+  document.addEventListener('load',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG')return;
+    if(img.dataset.haPhId){
+      var ph=document.getElementById(img.dataset.haPhId);
+      if(ph)ph.remove();
+      delete img.dataset.haPhId;
+      img.style.display=img.dataset.haOrigDisplay||'';
+      delete img.dataset.haOrigDisplay;
+      delete img.dataset.haOriginalSrc;
+      delete img.dataset.haRetryCount;
+    }
+  },true);
+})();
+</script>
+</body>
+</html>
