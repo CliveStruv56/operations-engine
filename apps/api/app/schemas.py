@@ -57,3 +57,50 @@ class InviteAccept(BaseModel):
 class InviteAcceptOut(BaseModel):
     tenant_id: UUID
     role: str
+
+
+class ConversationCreate(BaseModel):
+    title: str | None = Field(default=None, max_length=200)
+
+
+class ConversationOut(BaseModel):
+    id: UUID
+    title: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class MessageCreate(BaseModel):
+    content: str = Field(min_length=1, max_length=200_000)
+    task_kind: str | None = Field(default=None, pattern="^(chat|analyse|report|financial)$")
+
+
+class MessageOut(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    role: str
+    content: str
+    citations: list[Any]
+    model: str | None
+    tokens_in: int | None
+    tokens_out: int | None
+    cost_usd: float | None
+    created_at: datetime
+
+
+class UsageBucket(BaseModel):
+    key: str
+    tokens_in: int
+    tokens_out: int
+    cost_usd: float
+    requests: int
+
+
+class UsageSummaryOut(BaseModel):
+    month: str
+    tokens_in: int
+    tokens_out: int
+    cost_usd: float
+    requests: int
+    by_user: list[UsageBucket]
+    by_model: list[UsageBucket]

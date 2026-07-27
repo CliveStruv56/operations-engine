@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { api, ApiError } from "@/lib/api";
+import ChatPanel from "./chat";
 
 type Tenant = {
   id: string;
@@ -103,11 +104,10 @@ export default function WorkspacePage() {
               Trial ends {new Date(tenant.trial_ends_at).toLocaleDateString()}
             </p>
           )}
-          <p className="pt-2 text-neutral-500">
-            Workspace shell — chat arrives in the next slice.
-          </p>
         </section>
       )}
+
+      {tenant && <ChatPanel tenantId={tenant.id} />}
 
       {memberships && memberships.length > 0 && (
         <section className="space-y-2">

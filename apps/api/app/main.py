@@ -7,13 +7,17 @@ from fastapi import FastAPI
 from app.config import get_settings
 from app.db import db
 from app.errors import register_error_handlers
-from app.routers import invites, members, tenants
+from app.litellm import litellm_client
+from app.ratelimit import rate_limiter
+from app.routers import conversations, invites, members, tenants, usage
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await db.connect()
     yield
+    await litellm_client.close()
+    await rate_limiter.close()
     await db.close()
 
 
@@ -34,7 +38,13 @@ def create_app() -> FastAPI:
     async def health() -> dict:
         return {"status": "ok"}
 
-    for router in (tenants.router, members.router, invites.router):
+    for router in (
+        tenants.router,
+        members.router,
+        invites.router,
+        conversations.router,
+        usage.router,
+    ):
         app.include_router(router, prefix="/api/v1")
     return app
 

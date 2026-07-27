@@ -22,5 +22,41 @@ services:
     ports:
       - "6379:6379"
 
+  # LiteLLM gets its own small Postgres for virtual keys + spend (spec §4).
+  # In prod both run on an internal network only; in dev the proxy binds to
+  # localhost so the API (running on the host) can reach it.
+  litellm-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 2s
+      timeout: 2s
+      retries: 20
+
+  litellm:
+    image: ghcr.io/berriai/litellm-database:main-stable
+    depends_on:
+      litellm-postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:4000:4000"
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:-sk-dev-master-key}
+      LITELLM_DATABASE_URL: postgresql://litellm:litellm@litellm-postgres:5432/litellm
+      DATABASE_URL: postgresql://litellm:litellm@litellm-postgres:5432/litellm
+      DEEPINFRA_API_KEY: ${DEEPINFRA_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+
 volumes:
   pgdata:
+  litellm_pgdata:

@@ -33,6 +33,12 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("PATCH", "/api/v1/tenants/me"),
         ("POST", "/api/v1/invites"),
         ("DELETE", f"/api/v1/members/{b.membership_id}"),
+        ("GET", "/api/v1/conversations"),
+        ("POST", "/api/v1/conversations"),
+        ("GET", f"/api/v1/conversations/{b.conversation_id}/messages"),
+        ("DELETE", f"/api/v1/conversations/{b.conversation_id}"),
+        ("POST", f"/api/v1/conversations/{b.conversation_id}/messages"),
+        ("GET", "/api/v1/usage/summary"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
@@ -52,6 +58,35 @@ async def test_direct_object_reference_attacks(client, two_tenants):
     listed_ids = {m["id"] for m in members}
     assert str(b.membership_id) not in listed_ids
     assert str(a.membership_id) in listed_ids
+
+    # Chat: B's conversation id under A's context must 404 on every verb.
+    resp = await client.get(f"/api/v1/conversations/{b.conversation_id}/messages", headers=headers)
+    assert resp.status_code == 404
+    resp = await client.post(
+        f"/api/v1/conversations/{b.conversation_id}/messages",
+        json={"content": "hi"},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+    resp = await client.delete(f"/api/v1/conversations/{b.conversation_id}", headers=headers)
+    assert resp.status_code == 404
+
+    convs = (await client.get("/api/v1/conversations", headers=headers)).json()
+    assert str(b.conversation_id) not in {c["id"] for c in convs}
+
+
+async def test_usage_summary_is_tenant_scoped(client, two_tenants):
+    """Each seeded tenant has exactly one usage event (10 in / 20 out); a
+    tenant's summary must never include the other's tokens."""
+    a, b = two_tenants
+    for tenant in (a, b):
+        resp = await client.get("/api/v1/usage/summary", headers=auth(tenant.owner_id, tenant.id))
+        assert resp.status_code == 200, resp.text
+        body = resp.json()
+        assert body["tokens_in"] == 10
+        assert body["tokens_out"] == 20
+        assert body["requests"] == 1
+        assert [u["key"] for u in body["by_user"]] == [str(tenant.owner_id)]
 
 
 async def test_cross_tenant_invite_token_is_single_use_and_scoped(client, two_tenants):

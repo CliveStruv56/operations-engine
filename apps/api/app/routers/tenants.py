@@ -9,6 +9,7 @@ from app.audit import write_audit
 from app.auth import AuthUser, get_current_user
 from app.config import get_settings
 from app.db import db
+from app.litellm import litellm_client
 from app.schemas import TenantCreate, TenantMeOut, TenantOut, TenantPatch
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -24,23 +25,25 @@ def _tenant_out(row: asyncpg.Record) -> dict:
 
 @router.post("/tenants", status_code=201, response_model=TenantOut)
 async def create_tenant(body: TenantCreate, user: AuthUser = Depends(get_current_user)):
-    """Bootstrap: tenant + owner membership + 14-day trial.
-    LiteLLM virtual key creation is wired in Slice 2 (litellm_key_id stays null)."""
+    """Bootstrap: tenant + owner membership + 14-day trial + LiteLLM virtual key."""
     settings = get_settings()
     tenant_id = uuid4()
     trial_ends = datetime.now(UTC) + timedelta(days=settings.trial_days)
     soft_budget = settings.default_seats * settings.default_soft_budget_per_seat_usd
+    litellm_key = await litellm_client.create_tenant_key(tenant_id, soft_budget)
     async with db.tenant_tx(user.id, tenant_id) as conn:
         await conn.execute(
             """
-            insert into tenants (id, name, plan, seats, soft_budget_usd, trial_ends_at)
-            values ($1, $2, 'trial', $3, $4, $5)
+            insert into tenants (id, name, plan, seats, soft_budget_usd, trial_ends_at,
+                                 litellm_key_id)
+            values ($1, $2, 'trial', $3, $4, $5, $6)
             """,
             tenant_id,
             body.name,
             settings.default_seats,
             soft_budget,
             trial_ends,
+            litellm_key,
         )
         await conn.execute(
             "insert into memberships (user_id, tenant_id, role) values ($1, $2, 'owner')",

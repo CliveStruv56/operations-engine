@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     sentry_dsn: str = ""
     environment: str = "dev"
 
+    # LiteLLM proxy. Empty base URL = gateway disabled (unit tests, CI):
+    # tenant bootstrap then leaves litellm_key_id null and chat returns 503.
+    litellm_base_url: str = ""
+    litellm_master_key: str = ""
+
+    chat_rate_limit_per_min: int = 60
+
     trial_days: int = 14
     default_seats: int = 3
     default_soft_budget_per_seat_usd: float = 1.50

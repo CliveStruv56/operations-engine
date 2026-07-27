@@ -1,0 +1,51 @@
+# LiteLLM proxy config — spec §4. App code references aliases only.
+# Slugs verified against live catalogues 27 Jul 2026:
+#   deepinfra: zai-org/GLM-4.7-Flash, zai-org/GLM-5.2, Qwen/Qwen3-Embedding-4B
+#   groq: openai/gpt-oss-120b
+#   openrouter: deepseek/deepseek-v4-flash
+# Deviation from spec draft: longdoc provider order was ["Together","DeepInfra"],
+# but Together no longer hosts deepseek-v4-flash on OpenRouter — pinned to
+# DeepInfra + Fireworks (both US) instead.
+model_list:
+  - model_name: workhorse
+    litellm_params:
+      model: deepinfra/zai-org/GLM-4.7-Flash
+      api_key: os.environ/DEEPINFRA_API_KEY
+
+  - model_name: drafter
+    litellm_params:
+      model: groq/openai/gpt-oss-120b
+      api_key: os.environ/GROQ_API_KEY
+
+  - model_name: reasoner
+    litellm_params:
+      model: deepinfra/zai-org/GLM-5.2
+      api_key: os.environ/DEEPINFRA_API_KEY
+
+  - model_name: longdoc
+    litellm_params:
+      model: openrouter/deepseek/deepseek-v4-flash
+      api_key: os.environ/OPENROUTER_API_KEY
+      extra_body:
+        provider:
+          order: ["DeepInfra", "Fireworks"]
+          allow_fallbacks: false
+          data_collection: deny
+
+  - model_name: embedder
+    litellm_params:
+      model: deepinfra/Qwen/Qwen3-Embedding-4B
+      api_key: os.environ/DEEPINFRA_API_KEY
+
+router_settings:
+  fallbacks:
+    - workhorse: [drafter]
+    - drafter: [workhorse]
+    - reasoner: [longdoc]
+    - longdoc: [reasoner]
+  num_retries: 2
+  timeout: 120
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/LITELLM_DATABASE_URL
