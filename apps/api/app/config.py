@@ -27,6 +27,15 @@ class Settings(BaseSettings):
     litellm_master_key: str = ""
 
     chat_rate_limit_per_min: int = 60
+    upload_rate_limit_per_hour: int = 20
+
+    # Object storage (MinIO in dev, Cloudflare R2 in prod). Empty endpoint =
+    # storage disabled (unit tests, CI): vault endpoints return 503.
+    storage_endpoint: str = ""
+    storage_bucket: str = "vault"
+    storage_access_key: str = ""
+    storage_secret_key: str = ""
+    storage_region: str = "auto"
 
     trial_days: int = 14
     default_seats: int = 3

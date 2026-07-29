@@ -1,4 +1,5 @@
-"""Redis fixed-window rate limits (spec §3): 60 chat req/min per tenant.
+"""Redis fixed-window rate limits (spec §3): 60 chat req/min and 20
+uploads/hour per tenant.
 
 Disabled when redis_url is unset (unit tests); the limiter is fail-open on
 Redis outage — losing rate limiting must not take chat down with it.
@@ -29,19 +30,34 @@ class RateLimiter:
             await self._redis.aclose()
             self._redis = None
 
-    async def check_chat(self, tenant_id: UUID) -> None:
+    async def _check(self, key: str, limit: int, window_s: int, message: str) -> None:
         conn = self._conn()
         if conn is None:
             return
-        key = f"rl:chat:{tenant_id}"
         try:
             count = await conn.incr(key)
             if count == 1:
-                await conn.expire(key, 60)
+                await conn.expire(key, window_s)
         except aioredis.RedisError:
             return
-        if count > get_settings().chat_rate_limit_per_min:
-            raise ApiError(429, "rate_limited", "Chat rate limit reached, retry in a minute")
+        if count > limit:
+            raise ApiError(429, "rate_limited", message)
+
+    async def check_chat(self, tenant_id: UUID) -> None:
+        await self._check(
+            f"rl:chat:{tenant_id}",
+            get_settings().chat_rate_limit_per_min,
+            60,
+            "Chat rate limit reached, retry in a minute",
+        )
+
+    async def check_upload(self, tenant_id: UUID) -> None:
+        await self._check(
+            f"rl:upload:{tenant_id}",
+            get_settings().upload_rate_limit_per_hour,
+            3600,
+            "Upload limit reached, retry later",
+        )
 
 
 rate_limiter = RateLimiter()

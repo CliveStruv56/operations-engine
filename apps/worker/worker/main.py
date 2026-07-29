@@ -1,0 +1,161 @@
+"""arq worker: ingest_document = download → Docling parse → chunk → embed →
+doc_chunks, with status transitions and usage capture.
+
+Run: arq worker.main.WorkerSettings
+
+DB access mirrors the API's conventions: connect as the non-owner ops_app
+role and set app.current_tenant per transaction, so RLS applies to the
+worker exactly as it does to request handlers.
+"""
+
+import asyncio
+import contextlib
+import tempfile
+from pathlib import Path
+
+import asyncpg
+import boto3
+import sentry_sdk
+from arq.connections import RedisSettings
+
+from worker.blocks import estimate_tokens
+from worker.chunking import chunk_blocks
+from worker.embed import embed_texts
+from worker.parsing import parse_file
+from worker.settings import get_settings
+
+PARSE_TIMEOUT_S = 600
+
+
+@contextlib.asynccontextmanager
+async def tenant_tx(pool: asyncpg.Pool, tenant_id: str):
+    async with pool.acquire() as conn, conn.transaction():
+        await conn.execute("select set_config('app.current_tenant', $1, true)", tenant_id)
+        yield conn
+
+
+def _download(storage_key: str, dest: str) -> None:
+    settings = get_settings()
+    boto3.client(
+        "s3",
+        endpoint_url=settings.storage_endpoint,
+        aws_access_key_id=settings.storage_access_key,
+        aws_secret_access_key=settings.storage_secret_key,
+        region_name=settings.storage_region,
+    ).download_file(settings.storage_bucket, storage_key, dest)
+
+
+async def _set_status(
+    pool: asyncpg.Pool, tenant_id: str, document_id: str, status: str, error: str | None = None
+) -> None:
+    async with tenant_tx(pool, tenant_id) as conn:
+        await conn.execute(
+            "update documents set status = $2, error = $3, updated_at = now() where id = $1",
+            document_id,
+            status,
+            error,
+        )
+
+
+async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: str) -> str:
+    pool: asyncpg.Pool = ctx["pool"]
+    loop = asyncio.get_running_loop()
+
+    async with tenant_tx(pool, tenant_id) as conn:
+        doc = await conn.fetchrow("select * from documents where id = $1", document_id)
+        if doc is None:
+            return "gone"  # deleted between enqueue and run
+        virtual_key = await conn.fetchval(
+            "select litellm_key_id from tenants where id = $1", tenant_id
+        )
+
+    try:
+        await _set_status(pool, tenant_id, document_id, "parsing")
+        with tempfile.TemporaryDirectory() as tmp:
+            local = str(Path(tmp) / Path(doc["storage_key"]).name)
+            await loop.run_in_executor(None, _download, doc["storage_key"], local)
+            blocks = await asyncio.wait_for(
+                loop.run_in_executor(None, parse_file, local), timeout=PARSE_TIMEOUT_S
+            )
+        chunks = chunk_blocks(
+            blocks,
+            target_tokens=get_settings().chunk_target_tokens,
+            overlap_ratio=get_settings().chunk_overlap_ratio,
+        )
+        if not chunks:
+            raise ValueError("No readable content found in the file")
+
+        await _set_status(pool, tenant_id, document_id, "embedding")
+        if not virtual_key:
+            raise RuntimeError("No model key provisioned for this workspace")
+        embedded = await embed_texts(virtual_key, [c.content for c in chunks])
+
+        async with tenant_tx(pool, tenant_id) as conn:
+            await conn.execute("delete from doc_chunks where document_id = $1", document_id)
+            await conn.executemany(
+                """
+                insert into doc_chunks (tenant_id, document_id, content, heading_path,
+                                        page_start, page_end, token_count, embedding)
+                values ($1, $2, $3, $4, $5, $6, $7, $8::vector)
+                """,
+                [
+                    (
+                        tenant_id,
+                        document_id,
+                        c.content,
+                        c.heading_path,
+                        c.page_start,
+                        c.page_end,
+                        c.token_count,
+                        "[" + ",".join(f"{x:.7g}" for x in vec) + "]",
+                    )
+                    for c, vec in zip(chunks, embedded.vectors, strict=True)
+                ],
+            )
+            await conn.execute(
+                """
+                insert into usage_events (tenant_id, user_id, kind, model, tokens_in, cost_usd)
+                values ($1, $2, 'parse', 'docling', $3, 0),
+                       ($1, $2, 'embed', 'embedder', $4, $5)
+                """,
+                tenant_id,
+                user_id,
+                sum(estimate_tokens(b.text) for b in blocks),
+                embedded.tokens,
+                embedded.cost_usd,
+            )
+            await conn.execute(
+                "update documents set status = 'ready', error = null, updated_at = now()"
+                " where id = $1",
+                document_id,
+            )
+        return f"ready:{len(chunks)} chunks"
+    except Exception as exc:
+        # Sanitized failure reason only — no file content in the row or logs.
+        reason = f"{type(exc).__name__}: {str(exc)[:200]}"
+        with contextlib.suppress(Exception):
+            await _set_status(pool, tenant_id, document_id, "failed", reason)
+        raise
+
+
+async def startup(ctx: dict) -> None:
+    settings = get_settings()
+    if settings.sentry_dsn:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn, environment=settings.environment, send_default_pii=False
+        )
+    ctx["pool"] = await asyncpg.create_pool(settings.app_database_url, min_size=1, max_size=4)
+
+
+async def shutdown(ctx: dict) -> None:
+    await ctx["pool"].close()
+
+
+class WorkerSettings:
+    functions = [ingest_document]
+    on_startup = startup
+    on_shutdown = shutdown
+    redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
+    job_timeout = 1200
+    max_tries = 1  # failures surface as status=failed; users reprocess explicitly
+    keep_result = 0  # frees the job id so reprocess can requeue immediately

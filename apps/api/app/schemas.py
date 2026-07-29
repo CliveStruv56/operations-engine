@@ -88,6 +88,28 @@ class MessageOut(BaseModel):
     created_at: datetime
 
 
+class DocumentCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    mime: str
+    size_bytes: int = Field(gt=0)
+
+
+class DocumentOut(BaseModel):
+    id: UUID
+    title: str
+    mime: str | None
+    status: str
+    error: str | None
+    created_by: UUID | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class DocumentCreateOut(BaseModel):
+    id: UUID
+    upload_url: str
+
+
 class UsageBucket(BaseModel):
     key: str
     tokens_in: int

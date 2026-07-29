@@ -19,6 +19,11 @@ os.environ["SUPABASE_JWT_SECRET"] = JWT_SECRET
 os.environ["SUPABASE_JWKS_URL"] = ""
 os.environ["SENTRY_DSN"] = ""
 os.environ["REDIS_URL"] = ""
+# Gateway/storage disabled mode: a developer .env with live endpoints must not
+# turn unit tests into integration tests (tests inject fakes instead).
+os.environ["LITELLM_BASE_URL"] = ""
+os.environ["LITELLM_MASTER_KEY"] = ""
+os.environ["STORAGE_ENDPOINT"] = ""
 
 import jwt as pyjwt  # noqa: E402
 import psycopg  # noqa: E402

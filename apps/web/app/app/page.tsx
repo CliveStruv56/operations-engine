@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { api, ApiError } from "@/lib/api";
 import ChatPanel from "./chat";
+import VaultPanel from "./vault";
 
 type Tenant = {
   id: string;
@@ -25,6 +26,7 @@ export default function WorkspacePage() {
   const [newName, setNewName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState<"chat" | "vault">("chat");
 
   const loadTenant = useCallback(async (tenantId?: string) => {
     try {
@@ -107,7 +109,30 @@ export default function WorkspacePage() {
         </section>
       )}
 
-      {tenant && <ChatPanel tenantId={tenant.id} />}
+      {tenant && (
+        <>
+          <nav className="flex gap-1 border-b border-neutral-200 text-sm">
+            {(["chat", "vault"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-t px-4 py-2 capitalize ${
+                  tab === t
+                    ? "border border-b-0 border-neutral-200 bg-white font-medium"
+                    : "text-neutral-500 hover:text-neutral-800"
+                }`}
+              >
+                {t}
+              </button>
+            ))}
+          </nav>
+          {tab === "chat" ? (
+            <ChatPanel tenantId={tenant.id} />
+          ) : (
+            <VaultPanel tenantId={tenant.id} />
+          )}
+        </>
+      )}
 
       {memberships && memberships.length > 0 && (
         <section className="space-y-2">

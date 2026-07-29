@@ -16,6 +16,8 @@ dependencies = [
     "redis>=5.0",
     "sentry-sdk[fastapi]>=2.0",
     "httpx>=0.27",
+    "boto3>=1.34",
+    "arq>=0.26",
 ]
 
 [dependency-groups]

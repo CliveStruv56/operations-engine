@@ -39,6 +39,12 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("DELETE", f"/api/v1/conversations/{b.conversation_id}"),
         ("POST", f"/api/v1/conversations/{b.conversation_id}/messages"),
         ("GET", "/api/v1/usage/summary"),
+        ("GET", "/api/v1/documents"),
+        ("POST", "/api/v1/documents"),
+        ("GET", f"/api/v1/documents/{b.document_id}"),
+        ("POST", f"/api/v1/documents/{b.document_id}/complete"),
+        ("POST", f"/api/v1/documents/{b.document_id}/reprocess"),
+        ("DELETE", f"/api/v1/documents/{b.document_id}"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
@@ -73,6 +79,19 @@ async def test_direct_object_reference_attacks(client, two_tenants):
 
     convs = (await client.get("/api/v1/conversations", headers=headers)).json()
     assert str(b.conversation_id) not in {c["id"] for c in convs}
+
+    # Vault: B's document id under A's context must 404 on every verb.
+    for method, path in [
+        ("GET", f"/api/v1/documents/{b.document_id}"),
+        ("POST", f"/api/v1/documents/{b.document_id}/complete"),
+        ("POST", f"/api/v1/documents/{b.document_id}/reprocess"),
+        ("DELETE", f"/api/v1/documents/{b.document_id}"),
+    ]:
+        resp = await client.request(method, path, headers=headers)
+        assert resp.status_code == 404, f"{method} {path} -> {resp.status_code}"
+
+    docs = (await client.get("/api/v1/documents", headers=headers)).json()
+    assert str(b.document_id) not in {d["id"] for d in docs}
 
 
 async def test_usage_summary_is_tenant_scoped(client, two_tenants):
