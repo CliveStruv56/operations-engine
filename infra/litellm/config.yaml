@@ -32,10 +32,18 @@ model_list:
           allow_fallbacks: false
           data_collection: deny
 
+  # openai/ prefix + api_base: LiteLLM's deepinfra provider has no /embeddings
+  # mapping, but DeepInfra's OpenAI-compatible endpoint works for it.
   - model_name: embedder
     litellm_params:
-      model: deepinfra/Qwen/Qwen3-Embedding-4B
+      model: openai/Qwen/Qwen3-Embedding-4B
+      api_base: https://api.deepinfra.com/v1/openai
       api_key: os.environ/DEEPINFRA_API_KEY
+      # Qwen3 is MRL-trained; 2048 matches doc_chunks vector(2048). Sent via
+      # extra_body because LiteLLM's own `dimensions` validation only allows
+      # OpenAI text-embedding-3 models; DeepInfra honours the raw param.
+      extra_body:
+        dimensions: 2048
 
 router_settings:
   fallbacks:
