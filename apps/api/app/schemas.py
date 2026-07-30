@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
@@ -152,6 +152,64 @@ class DocumentOut(BaseModel):
 class DocumentCreateOut(BaseModel):
     id: UUID
     upload_url: str
+
+
+class GroundworkApplicability(BaseModel):
+    wales: bool = False
+    hrb: bool = False
+    bng_exempt: bool = False
+    conservation_area: bool = False
+
+
+class GroundworkSetup(BaseModel):
+    client_org: str | None = Field(default=None, max_length=200)
+    delivery_route: str | None = Field(
+        default=None, pattern="^(direct|ha_partnership|council_enabled)$"
+    )
+    homes_planned: int | None = Field(default=None, gt=0)
+    start_date: date | None = None
+    target_completion: date | None = None
+    site_address: str | None = Field(default=None, max_length=500)
+    applicability: GroundworkApplicability = GroundworkApplicability()
+
+
+class GroundworkSetupOut(BaseModel):
+    project_id: UUID
+    stage_current: str
+    seeded: dict[str, int]
+
+
+class GroundworkStatusIn(BaseModel):
+    status: str = Field(pattern="^(active|dormant|complete|archived)$")
+    dormancy_reason: str | None = Field(default=None, max_length=200)
+
+
+class RagOut(BaseModel):
+    programme: str
+    cost: str
+    risk: str
+
+
+class NextMilestone(BaseModel):
+    title: str
+    due_date: date
+
+
+class PortfolioRow(BaseModel):
+    id: UUID
+    name: str
+    client_org: str | None
+    status: str
+    dormancy_reason: str | None
+    stage_current: str
+    homes_planned: int | None
+    target_completion: date | None
+    rag: RagOut
+    next_milestone: NextMilestone | None
+    open_risks: int
+    outstanding_pre_commencement: int
+    overdue_tasks: int
+    updated_at: datetime
 
 
 class VaultSearchIn(BaseModel):

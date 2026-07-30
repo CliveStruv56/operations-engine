@@ -1,0 +1,188 @@
+{
+  "key": "clh_new_build",
+  "version": 1,
+  "payload": {
+    "stages": [
+      {
+        "stage_key": "group",
+        "label": "Group",
+        "riba_ref": null,
+        "position": 1,
+        "gate": [
+          { "id": "g1", "criterion": "Legal entity incorporated", "kind": "manual" },
+          { "id": "g2", "criterion": "Governance & decision-making agreed", "kind": "manual" },
+          { "id": "g3", "criterion": "Bank account & insurances in place", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "site",
+        "label": "Site",
+        "riba_ref": "RIBA 0–1",
+        "position": 2,
+        "gate": [
+          { "id": "s1", "criterion": "Housing needs evidence in place", "kind": "doc", "ref": "housing_needs_survey" },
+          { "id": "s2", "criterion": "Development appraisal viable", "kind": "doc", "ref": "development_appraisal" },
+          { "id": "s3", "criterion": "Legal interest secured (option/HoTs/freehold)", "kind": "manual" },
+          { "id": "s4", "criterion": "Pre-app response assessed", "kind": "doc", "ref": "preapp_response" }
+        ]
+      },
+      {
+        "stage_key": "plan",
+        "label": "Plan",
+        "riba_ref": "RIBA 2–4",
+        "position": 3,
+        "gate": [
+          { "id": "p1", "criterion": "Planning consent granted", "kind": "manual" },
+          { "id": "p2", "criterion": "Funding package committed", "kind": "manual" },
+          { "id": "p3", "criterion": "Contractor tender accepted", "kind": "manual" },
+          { "id": "p4", "criterion": "Development/partnership agreements signed", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "build",
+        "label": "Build",
+        "riba_ref": "RIBA 5",
+        "position": 4,
+        "gate": [
+          { "id": "b1", "criterion": "Practical completion certified", "kind": "doc", "ref": "pc_certificate" },
+          { "id": "b2", "criterion": "Building control completion received", "kind": "manual" },
+          { "id": "b3", "criterion": "Warranties in place", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "live",
+        "label": "Live",
+        "riba_ref": "RIBA 6–7",
+        "position": 5,
+        "gate": [
+          { "id": "l1", "criterion": "All homes allocated & occupied", "kind": "manual" },
+          { "id": "l2", "criterion": "Management arrangements operational", "kind": "manual" },
+          { "id": "l3", "criterion": "Funder final sign-off received", "kind": "doc", "ref": "final_monitoring_report" },
+          { "id": "l4", "criterion": "End of defects period reached", "kind": "manual" }
+        ]
+      }
+    ],
+    "tasks": [
+      { "stage_key": "group", "title": "Confirm vision & objectives with client group", "details": "Facilitated session producing a one-page vision the group has formally adopted." },
+      { "stage_key": "group", "title": "Choose & register legal form (CLT/CBS/co-op)", "details": "Compare structures with the group and register the chosen entity." },
+      { "stage_key": "group", "title": "Adopt constitution & policies", "details": "Model rules tailored and adopted; core policies (conflicts, safeguarding, finance) in place." },
+      { "stage_key": "group", "title": "Recruit/confirm steering group & roles", "details": "Named chair, secretary, treasurer and leads with agreed terms of reference." },
+      { "stage_key": "group", "title": "Skills audit & training plan", "details": "Map member skills against what the project needs; book training for gaps." },
+      { "stage_key": "group", "title": "Open bank account, arrange insurances", "details": "Community account opened; trustee indemnity and public liability cover bound." },
+      { "stage_key": "group", "title": "Membership drive & register", "details": "Recruit members per the rules; maintain the statutory membership register." },
+      { "stage_key": "group", "title": "Agree decision-making & meeting cadence", "details": "Decision log started; meeting rhythm and quorum agreed with the group." },
+
+      { "stage_key": "site", "title": "Define site requirements brief", "details": "Homes, tenure mix, access and services criteria the site must meet." },
+      { "stage_key": "site", "title": "Site search & land audit", "details": "Systematic sweep of council land, estates and market opportunities against the brief." },
+      { "stage_key": "site", "title": "Landowner approach & negotiation", "details": "Open discussions with the preferred site's owner.", "is_milestone": true },
+      { "stage_key": "site", "title": "Commission housing needs survey", "details": "Independent survey evidencing local need for the homes proposed." },
+      { "stage_key": "site", "title": "Desktop planning-policy review", "details": "Local plan, allocations and constraints check for the shortlisted site." },
+      { "stage_key": "site", "title": "Development appraisal v1", "details": "First-pass viability: costs, values, funding assumptions." },
+      { "stage_key": "site", "title": "Title & legal due diligence", "details": "Title, covenants, easements and rights of way checked by solicitors." },
+      { "stage_key": "site", "title": "Utilities & access desk study", "details": "Confirm services capacity and safe access can be achieved." },
+      { "stage_key": "site", "title": "Contamination Phase 1 desk study", "details": "Historic-use review to flag remediation risk early.", "tags": ["statutory"] },
+      { "stage_key": "site", "title": "Pre-application submission", "details": "Formal pre-app to the LPA with concept sketch and supporting evidence.", "is_milestone": true, "tags": ["planning"] },
+      { "stage_key": "site", "title": "Assess pre-app response", "details": "Digest officer feedback; agree design and evidence changes needed." },
+      { "stage_key": "site", "title": "Heads of terms / option agreement", "details": "Secure the site under option or conditional contract.", "is_milestone": true },
+
+      { "stage_key": "plan", "title": "Appoint architect/design team", "details": "Competitive selection; appointment on agreed scope and fee.", "is_milestone": true },
+      { "stage_key": "plan", "title": "Appoint QS/cost consultant", "details": "Cost control from concept stage onwards." },
+      { "stage_key": "plan", "title": "Appoint principal designer (CDM)", "details": "CDM 2015 duty holder appointed in writing.", "tags": ["statutory"] },
+      { "stage_key": "plan", "title": "Community co-design rounds", "details": "Structured workshops feeding member priorities into the design." },
+      { "stage_key": "plan", "title": "Concept design sign-off (RIBA 2)", "details": "Group formally approves the concept before spatial coordination.", "is_milestone": true },
+      { "stage_key": "plan", "title": "Spatial coordination (RIBA 3)", "details": "Coordinated design frozen ahead of the planning application." },
+      { "stage_key": "plan", "title": "BNG assessment & Gain Plan", "details": "Biodiversity net gain baseline and 10% gain plan prepared.", "tags": ["statutory"] },
+      { "stage_key": "plan", "title": "Fire statement prepared", "details": "Fire safety statement to accompany the planning application.", "tags": ["statutory"] },
+      { "stage_key": "plan", "title": "Submit planning application", "details": "Full application validated by the LPA.", "is_milestone": true, "tags": ["planning"] },
+      { "stage_key": "plan", "title": "S106 heads of terms", "details": "Agree obligation heads with the LPA in parallel with determination.", "tags": ["planning"] },
+      { "stage_key": "plan", "title": "CIL liability & exemption forms", "details": "Assume liability and claim any exemptions before commencement.", "tags": ["planning"] },
+      { "stage_key": "plan", "title": "Planning decision", "details": "Determination received; conditions logged into the tracker.", "is_milestone": true, "tags": ["planning"] },
+      { "stage_key": "plan", "title": "Update appraisal & value engineer", "details": "Re-run viability post-consent; agree savings without quality loss." },
+      { "stage_key": "plan", "title": "Funding applications submitted", "details": "Bids to the agreed funding stack lodged.", "is_milestone": true, "tags": ["funding"] },
+      { "stage_key": "plan", "title": "Finance close", "details": "All funding agreements signed and conditions precedent met.", "is_milestone": true, "tags": ["funding"] },
+      { "stage_key": "plan", "title": "Technical design (RIBA 4)", "details": "Construction-ready information for tender." },
+      { "stage_key": "plan", "title": "Tender pack issued", "details": "Employer's requirements, drawings and preliminaries issued to bidders." },
+      { "stage_key": "plan", "title": "Tender review & contractor selection", "details": "Bids levelled and preferred contractor selected.", "is_milestone": true },
+
+      { "stage_key": "build", "title": "Building regs full-plans approval", "details": "Full plans approved before start on site.", "tags": ["statutory"] },
+      { "stage_key": "build", "title": "Appoint principal contractor (CDM)", "details": "CDM principal contractor duties formally assigned.", "tags": ["statutory"] },
+      { "stage_key": "build", "title": "F10 notification if notifiable", "details": "HSE F10 lodged where the project is notifiable.", "tags": ["statutory"] },
+      { "stage_key": "build", "title": "Party wall notices (if applicable)", "details": "Notices served and awards agreed where works affect neighbours.", "tags": ["statutory"] },
+      { "stage_key": "build", "title": "Utility connections ordered", "details": "Long-lead service connections ordered early.", "is_milestone": true },
+      { "stage_key": "build", "title": "Pre-start meeting & programme baseline", "details": "Contract programme baselined; roles and comms agreed." },
+      { "stage_key": "build", "title": "Start on site", "details": "Possession given and works commenced.", "is_milestone": true },
+      { "stage_key": "build", "title": "Monthly valuations & certificates (recurring)", "details": "Valuations certified monthly through the build." },
+      { "stage_key": "build", "title": "Monthly funder drawdown claims (recurring)", "details": "Claims submitted against certified spend each month.", "tags": ["funding"] },
+      { "stage_key": "build", "title": "Variations/change control log maintained", "details": "Every instruction priced and logged before commitment." },
+      { "stage_key": "build", "title": "Discharge pre-commencement conditions", "details": "All pre-commencement conditions discharged before works.", "is_milestone": true, "tags": ["planning"] },
+      { "stage_key": "build", "title": "Snagging inspection", "details": "Joint snagging with contractor ahead of PC." },
+      { "stage_key": "build", "title": "Practical completion", "details": "PC certified; handover begins.", "is_milestone": true },
+      { "stage_key": "build", "title": "Handover pack & O&M received", "details": "As-builts, warranties and O&M manuals received and filed." },
+
+      { "stage_key": "live", "title": "Allocations policy adopted", "details": "Fair, published policy for allocating the homes." },
+      { "stage_key": "live", "title": "Advertise & allocate homes", "details": "Homes advertised and allocated per the policy.", "is_milestone": true },
+      { "stage_key": "live", "title": "Leases/tenancies executed", "details": "Legal completions for every home." },
+      { "stage_key": "live", "title": "Residents move in", "details": "Phased move-ins complete.", "is_milestone": true },
+      { "stage_key": "live", "title": "Setup management arrangements (RMC/agent)", "details": "Day-to-day management contracted or organised in-house." },
+      { "stage_key": "live", "title": "Service charge budget set", "details": "First-year service charge modelled and communicated." },
+      { "stage_key": "live", "title": "Defects log & contractor liaison", "details": "Defects reported, tracked and closed with the contractor." },
+      { "stage_key": "live", "title": "End-of-defects inspection", "details": "Joint inspection at the end of the rectification period.", "is_milestone": true },
+      { "stage_key": "live", "title": "Retention release", "details": "Final retention certified and released." },
+      { "stage_key": "live", "title": "Funder final monitoring report", "details": "Completion report submitted to funders.", "tags": ["funding"] },
+      { "stage_key": "live", "title": "Impact report to board", "details": "Outcomes vs objectives reported to the board and members." },
+      { "stage_key": "live", "title": "Lessons-learned review", "details": "Structured review captured for the next scheme." }
+    ],
+    "applicability_tasks": {
+      "wales": { "stage_key": "plan", "title": "SAB drainage approval", "details": "Sustainable drainage approval from the SAB before construction.", "tags": ["statutory"] },
+      "hrb": { "stage_key": "plan", "title": "Confirm BSR gateway strategy", "details": "Higher-Risk Building: agree Building Safety Regulator gateway approach.", "tags": ["statutory"] },
+      "conservation_area": { "stage_key": "plan", "title": "Heritage/conservation officer pre-app engagement", "details": "Early engagement on heritage impact and design expectations.", "tags": ["planning"] }
+    },
+    "bng_task_title": "BNG assessment & Gain Plan",
+    "doc_types": [
+      { "doc_type_key": "constitution", "title": "Constitution / rules", "stage_key": "group", "ai_draftable": false },
+      { "doc_type_key": "vision_statement", "title": "Project vision statement", "stage_key": "group", "ai_draftable": false },
+      { "doc_type_key": "skills_audit", "title": "Skills & capacity audit", "stage_key": "group", "ai_draftable": false },
+      { "doc_type_key": "housing_needs_survey", "title": "Housing needs survey", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "site_brief", "title": "Site requirements brief", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "development_appraisal", "title": "Development appraisal", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "due_diligence_report", "title": "Site due diligence report", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "preapp_pack", "title": "Pre-application pack", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "preapp_response", "title": "Pre-app response & assessment", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "heads_of_terms", "title": "Heads of terms / option agreement", "stage_key": "site", "ai_draftable": false },
+      { "doc_type_key": "feasibility_study", "title": "Feasibility study", "stage_key": "plan", "ai_draftable": true },
+      { "doc_type_key": "design_brief", "title": "Design team brief", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "engagement_report", "title": "Community engagement report", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "planning_application_pack", "title": "Planning application pack", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "s106_hot", "title": "S106 heads of terms", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "bng_gain_plan", "title": "Biodiversity gain plan", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "funding_bid", "title": "Funding application", "stage_key": "plan", "ai_draftable": true },
+      { "doc_type_key": "finance_terms", "title": "Finance term sheet", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "tender_pack", "title": "Tender pack", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "development_agreement", "title": "Development / partnership agreement", "stage_key": "plan", "ai_draftable": false },
+      { "doc_type_key": "build_contract", "title": "Building contract", "stage_key": "build", "ai_draftable": false },
+      { "doc_type_key": "baseline_programme", "title": "Baseline programme", "stage_key": "build", "ai_draftable": false },
+      { "doc_type_key": "monthly_report", "title": "Monthly client report", "stage_key": "build", "ai_draftable": true },
+      { "doc_type_key": "drawdown_claim", "title": "Funder drawdown claim", "stage_key": "build", "ai_draftable": false },
+      { "doc_type_key": "variation_log", "title": "Variation & change log", "stage_key": "build", "ai_draftable": false },
+      { "doc_type_key": "pc_certificate", "title": "Practical completion certificate", "stage_key": "build", "ai_draftable": false },
+      { "doc_type_key": "allocations_policy", "title": "Allocations policy", "stage_key": "live", "ai_draftable": false },
+      { "doc_type_key": "lease_pack", "title": "Lease / tenancy pack", "stage_key": "live", "ai_draftable": false },
+      { "doc_type_key": "management_agreement", "title": "Management agreement", "stage_key": "live", "ai_draftable": false },
+      { "doc_type_key": "handover_pack", "title": "Resident handover pack", "stage_key": "live", "ai_draftable": false },
+      { "doc_type_key": "final_monitoring_report", "title": "Funder final monitoring report", "stage_key": "live", "ai_draftable": false },
+      { "doc_type_key": "impact_report", "title": "Impact report", "stage_key": "live", "ai_draftable": false }
+    ],
+    "risks": [
+      { "category": "site_acquisition", "description": "Site not secured or acquisition falls through", "likelihood": 4, "impact": 5, "mitigation": "Parallel site options; option agreement early; LA relationship" },
+      { "category": "funding_gap", "description": "Funding gap between stages stalls the project", "likelihood": 4, "impact": 5, "mitigation": "Stage-gated fundraising plan; monitor drawdown vs spend monthly" },
+      { "category": "planning_refusal", "description": "Planning refused or hostile pre-app", "likelihood": 3, "impact": 5, "mitigation": "Pre-app engagement; community support evidence; policy-compliant design" },
+      { "category": "cost_inflation", "description": "Build cost inflation breaks viability", "likelihood": 3, "impact": 4, "mitigation": "Contingency ≥10%; re-tender options; value engineering rounds" },
+      { "category": "group_capacity", "description": "Volunteer burnout / loss of key people", "likelihood": 3, "impact": 4, "mitigation": "Succession planning; consultant carries process load; training" },
+      { "category": "partner_withdrawal", "description": "HA partner or lender withdraws", "likelihood": 2, "impact": 5, "mitigation": "Alternative partners identified; avoid single-point dependence" },
+      { "category": "la_delay", "description": "Local authority slow decisions / officer turnover", "likelihood": 3, "impact": 3, "mitigation": "Named contacts; escalate via members; build slack into programme" },
+      { "category": "local_opposition", "description": "Local opposition undermines consent", "likelihood": 2, "impact": 4, "mitigation": "Early engagement; support-letter campaign; address objections in design" },
+      { "category": "contractor_insolvency", "description": "Contractor insolvency mid-build", "likelihood": 2, "impact": 5, "mitigation": "Financial checks at tender; retention; warranty & step-in rights" },
+      { "category": "governance_dispute", "description": "Governance dispute within client group", "likelihood": 2, "impact": 3, "mitigation": "Clear constitution; decision log; independent chair option" }
+    ]
+  }
+}
