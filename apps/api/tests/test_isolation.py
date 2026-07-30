@@ -14,6 +14,7 @@ from tests.conftest import APP_URL, auth
 
 TENANT_TABLES = [
     "memberships",
+    "projects",
     "documents",
     "doc_chunks",
     "conversations",

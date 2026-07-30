@@ -22,6 +22,7 @@ from app.schemas import (
     DocumentCreate,
     DocumentCreateOut,
     DocumentOut,
+    DocumentUpdate,
     VaultSearchHit,
     VaultSearchIn,
 )
@@ -54,19 +55,25 @@ async def create_document(
         raise ApiError(400, "too_large", "Files are limited to 50 MB")
     await rate_limiter.check_upload(ctx.tenant_id)
 
+    if body.project_id is not None:
+        exists = await conn.fetchval("select 1 from projects where id = $1", body.project_id)
+        if not exists:
+            raise ApiError(404, "not_found", "Project not found")
+
     document_id = uuid4()
     key = f"{ctx.tenant_id}/{document_id}.{ALLOWED_MIMES[body.mime]}"
     upload_url = storage.presign_put(key, body.mime)
     await conn.execute(
         """
-        insert into documents (id, tenant_id, title, storage_key, mime, created_by)
-        values ($1, $2, $3, $4, $5, $6)
+        insert into documents (id, tenant_id, title, storage_key, mime, project_id, created_by)
+        values ($1, $2, $3, $4, $5, $6, $7)
         """,
         document_id,
         ctx.tenant_id,
         body.title,
         key,
         body.mime,
+        body.project_id,
         ctx.user_id,
     )
     await write_audit(
@@ -137,6 +144,34 @@ async def get_document(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     return dict(await _get_document(conn, document_id))
+
+
+@router.patch("/documents/{document_id}", response_model=DocumentOut)
+async def update_document(
+    document_id: UUID,
+    body: DocumentUpdate,
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Assign to a project / mark as one of its primary documents."""
+    updates = body.model_dump(exclude_unset=True)
+    if not updates:
+        raise ApiError(400, "no_changes", "Nothing to update")
+    if updates.get("project_id") is not None:
+        exists = await conn.fetchval("select 1 from projects where id = $1", body.project_id)
+        if not exists:
+            raise ApiError(404, "not_found", "Project not found")
+    await _get_document(conn, document_id)
+    sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
+    row = await conn.fetchrow(
+        f"update documents set {sets}, updated_at = now() where id = $1 returning *",
+        document_id,
+        *updates.values(),
+    )
+    await write_audit(
+        conn, ctx.tenant_id, ctx.user_id, "document.update", "document", str(document_id)
+    )
+    return dict(row)
 
 
 @router.delete("/documents/{document_id}", status_code=204)

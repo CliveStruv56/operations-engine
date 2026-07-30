@@ -2,11 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import type { Project } from "./page";
 
 type Doc = {
   id: string;
   title: string;
   mime: string | null;
+  project_id: string | null;
+  is_primary: boolean;
+  summary: string | null;
   status: "uploaded" | "parsing" | "embedding" | "ready" | "failed";
   error: string | null;
   created_at: string;
@@ -55,13 +59,25 @@ const STATUS_STYLE: Record<Doc["status"], string> = {
   failed: "text-danger bg-danger-soft",
 };
 
-export default function VaultPanel({ tenantId }: { tenantId: string }) {
+export default function VaultPanel({
+  tenantId,
+  projects,
+  activeProjectId,
+  onProjectsChanged,
+}: {
+  tenantId: string;
+  projects: Project[];
+  activeProjectId: string | null;
+  onProjectsChanged: () => void;
+}) {
   const [docs, setDocs] = useState<Doc[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
 
   const refresh = useCallback(async () => {
     setDocs(await api<Doc[]>("/documents", {}, tenantId));
@@ -96,7 +112,12 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
           "/documents",
           {
             method: "POST",
-            body: JSON.stringify({ title: file.name, mime, size_bytes: file.size }),
+            body: JSON.stringify({
+              title: file.name,
+              mime,
+              size_bytes: file.size,
+              project_id: activeProjectId,
+            }),
           },
           tenantId
         );
@@ -134,19 +155,34 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
     }
   }
 
-  const readyCount = docs.filter((d) => d.status === "ready").length;
+  async function patchDoc(doc: Doc, patch: { project_id?: string | null; is_primary?: boolean }) {
+    try {
+      await api(`/documents/${doc.id}`, { method: "PATCH", body: JSON.stringify(patch) }, tenantId);
+      await refresh();
+      onProjectsChanged();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  const visible = activeProjectId ? docs.filter((d) => d.project_id === activeProjectId) : docs;
+  const readyCount = visible.filter((d) => d.status === "ready").length;
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-baseline justify-between border-b border-line px-6 py-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">Vault</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            {activeProject ? `Vault — ${activeProject.name}` : "Vault"}
+          </h2>
           <p className="mt-0.5 text-sm text-ink-muted">
-            Everything here is read, indexed, and used to answer your questions.
+            {activeProject
+              ? "This project's documents. Chat in this project prefers these; ★ marks its primary sources."
+              : "Everything here is read, indexed, and used to answer your questions."}
           </p>
         </div>
         <p className="data text-ink-muted uppercase">
-          {docs.length} documents · {readyCount} ready
+          {visible.length} documents · {readyCount} ready
         </p>
       </header>
 
@@ -188,65 +224,119 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
           <p className="mt-3 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
-        {docs.length === 0 && !busy ? (
+        {visible.length === 0 && !busy ? (
           <p className="mt-8 text-center text-sm text-ink-faint">
-            No documents yet. Add your staff handbook, policies, or price lists — anything your
-            team asks questions about.
+            {activeProject
+              ? "No documents in this project yet. Upload here, or assign existing documents from Everything."
+              : "No documents yet. Add your staff handbook, policies, or price lists — anything your team asks questions about."}
           </p>
         ) : (
           <ul className="mt-6 divide-y divide-line border-y border-line">
-            {docs.map((d) => (
-              <li key={d.id} className="flex items-center gap-4 py-3">
-                <span className="data w-9 shrink-0 text-ink-faint">
-                  {MIME_LABEL[d.mime ?? ""] ?? "—"}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium">{d.title}</p>
-                  {d.status === "failed" && d.error ? (
-                    <p className="mt-0.5 truncate text-xs text-danger">{d.error}</p>
-                  ) : (
-                    <p className="data mt-0.5 text-ink-faint">
-                      Added {new Date(d.created_at).toLocaleDateString("en-GB")}
+            {visible.map((d) => (
+              <li key={d.id} className="py-3">
+                <div className="flex items-center gap-4">
+                  <span className="data w-9 shrink-0 text-ink-faint">
+                    {MIME_LABEL[d.mime ?? ""] ?? "—"}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">
+                      {d.is_primary && (
+                        <span className="mr-1 text-accent" title="Primary document for its project">
+                          ★
+                        </span>
+                      )}
+                      {d.title}
                     </p>
-                  )}
-                </div>
-                <span className={`stamp shrink-0 ${STATUS_STYLE[d.status]}`}>
-                  {STATUS_LABEL[d.status]}
-                </span>
-                <span className="flex shrink-0 items-center gap-3 text-xs">
-                  {(d.status === "ready" || d.status === "failed") &&
-                    confirmingId !== d.id && (
+                    {d.status === "failed" && d.error ? (
+                      <p className="mt-0.5 truncate text-xs text-danger">{d.error}</p>
+                    ) : (
+                      <p className="data mt-0.5 text-ink-faint">
+                        Added {new Date(d.created_at).toLocaleDateString("en-GB")}
+                        {!activeProjectId && d.project_id && (
+                          <> · {projects.find((p) => p.id === d.project_id)?.name ?? "project"}</>
+                        )}
+                      </p>
+                    )}
+                  </div>
+                  <span className={`stamp shrink-0 ${STATUS_STYLE[d.status]}`}>
+                    {STATUS_LABEL[d.status]}
+                  </span>
+                  <span className="flex shrink-0 items-center gap-3 text-xs">
+                    {d.summary && (
                       <button
-                        onClick={() => reprocess(d)}
+                        onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}
                         className="text-ink-muted underline hover:text-ink"
                       >
-                        Re-index
+                        {expandedId === d.id ? "Hide summary" : "Summary"}
                       </button>
                     )}
-                  {confirmingId === d.id ? (
-                    <>
-                      <button
-                        onClick={() => remove(d)}
-                        className="font-medium text-danger underline"
+                    {projects.length > 0 && confirmingId !== d.id && (
+                      <select
+                        value={d.project_id ?? ""}
+                        onChange={(e) =>
+                          patchDoc(d, { project_id: e.target.value || null })
+                        }
+                        className="max-w-28 rounded-sm border border-line bg-surface px-1 py-0.5 text-xs text-ink-muted"
+                        title="Assign to a project"
                       >
-                        Delete for good
-                      </button>
+                        <option value="">No project</option>
+                        {projects
+                          .filter((p) => !p.archived)
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                      </select>
+                    )}
+                    {d.project_id && confirmingId !== d.id && (
                       <button
-                        onClick={() => setConfirmingId(null)}
-                        className="text-ink-muted underline hover:text-ink"
+                        onClick={() => patchDoc(d, { is_primary: !d.is_primary })}
+                        className={d.is_primary ? "text-accent" : "text-ink-faint hover:text-accent"}
+                        title={d.is_primary ? "Unmark as primary" : "Mark as a primary document"}
                       >
-                        Keep
+                        ★
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      onClick={() => setConfirmingId(d.id)}
-                      className="text-ink-muted underline hover:text-danger"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </span>
+                    )}
+                    {(d.status === "ready" || d.status === "failed") &&
+                      confirmingId !== d.id && (
+                        <button
+                          onClick={() => reprocess(d)}
+                          className="text-ink-muted underline hover:text-ink"
+                        >
+                          Re-index
+                        </button>
+                      )}
+                    {confirmingId === d.id ? (
+                      <>
+                        <button
+                          onClick={() => remove(d)}
+                          className="font-medium text-danger underline"
+                        >
+                          Delete for good
+                        </button>
+                        <button
+                          onClick={() => setConfirmingId(null)}
+                          className="text-ink-muted underline hover:text-ink"
+                        >
+                          Keep
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={() => setConfirmingId(d.id)}
+                        className="text-ink-muted underline hover:text-danger"
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </span>
+                </div>
+                {expandedId === d.id && d.summary && (
+                  <p className="mt-2 ml-13 rounded-sm border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink-muted">
+                    {d.summary}
+                  </p>
+                )}
               </li>
             ))}
           </ul>

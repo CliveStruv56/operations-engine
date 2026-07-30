@@ -15,6 +15,11 @@ import asyncpg
 RRF_K = 60
 CANDIDATES_PER_ARM = 24
 TOP_N = 8
+# Fusion boosts for project-scoped chat (Slice 4.5): the whole vault stays in
+# the candidate pool, but the conversation's project docs rank first and its
+# primary docs first of all.
+PROJECT_WEIGHT = 1.5
+PRIMARY_WEIGHT = 2.25
 # Vector candidates below this cosine similarity are noise, not evidence —
 # dropping them here is what makes "the vault doesn't cover this" honest.
 SIM_FLOOR = 0.25

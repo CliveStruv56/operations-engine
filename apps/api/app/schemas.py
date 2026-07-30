@@ -61,11 +61,13 @@ class InviteAcceptOut(BaseModel):
 
 class ConversationCreate(BaseModel):
     title: str | None = Field(default=None, max_length=200)
+    project_id: UUID | None = None
 
 
 class ConversationOut(BaseModel):
     id: UUID
     title: str | None
+    project_id: UUID | None
     created_at: datetime
     updated_at: datetime
 
@@ -99,16 +101,47 @@ class MessageOut(BaseModel):
     created_at: datetime
 
 
+class ProjectCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2_000)
+
+
+class ProjectUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=2_000)
+    archived: bool | None = None
+
+
+class ProjectOut(BaseModel):
+    id: UUID
+    name: str
+    description: str | None
+    archived: bool
+    created_at: datetime
+    updated_at: datetime
+    document_count: int = 0
+
+
 class DocumentCreate(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     mime: str
     size_bytes: int = Field(gt=0)
+    project_id: UUID | None = None
+
+
+class DocumentUpdate(BaseModel):
+    # Sentinel-free: PATCH sends the full desired assignment each time.
+    project_id: UUID | None = None
+    is_primary: bool | None = None
 
 
 class DocumentOut(BaseModel):
     id: UUID
     title: str
     mime: str | None
+    project_id: UUID | None
+    is_primary: bool
+    summary: str | None
     status: str
     error: str | None
     created_by: UUID | None

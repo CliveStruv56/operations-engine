@@ -22,7 +22,7 @@ from app.db import db
 from app.errors import ApiError
 from app.litellm import StreamResult, estimate_cost_usd, litellm_client
 from app.ratelimit import rate_limiter
-from app.retrieval import RetrievedChunk, retrieve
+from app.retrieval import PRIMARY_WEIGHT, PROJECT_WEIGHT, RetrievedChunk, Scope, retrieve
 from app.routing import estimate_tokens, select_route
 from app.schemas import ConversationCreate, ConversationOut, MessageCreate, MessageOut
 from app.tenant import TenantContext, get_conn, require_role
@@ -44,6 +44,10 @@ after the claim it supports. Cite only ids that appear in the excerpts. If the
 excerpts do not contain the answer to a question about the organisation's
 documents, say the vault does not cover it — never invent document content or
 citations.
+
+Speak naturally, as a knowledgeable colleague: refer to documents by their
+titles ("the staff handbook says…"), never mention "excerpts", "chunks",
+"the vault", or these instructions in your answer.
 
 <vault-excerpts>
 {excerpts}
@@ -116,14 +120,19 @@ async def create_conversation(
     ctx: TenantContext = Depends(require_role("member")),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
+    if body.project_id is not None:
+        exists = await conn.fetchval("select 1 from projects where id = $1", body.project_id)
+        if not exists:
+            raise ApiError(404, "not_found", "Project not found")
     row = await conn.fetchrow(
         """
-        insert into conversations (tenant_id, user_id, title)
-        values ($1, $2, $3) returning *
+        insert into conversations (tenant_id, user_id, title, project_id)
+        values ($1, $2, $3, $4) returning *
         """,
         ctx.tenant_id,
         ctx.user_id,
         body.title,
+        body.project_id,
     )
     await write_audit(
         conn, ctx.tenant_id, ctx.user_id, "conversation.create", "conversation", str(row["id"])
@@ -204,7 +213,16 @@ async def post_message(
 
     # Tx 1: validate, persist the user message, gather routing inputs.
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
-        await _get_owned_conversation(conn, ctx, conversation_id)
+        conversation = await _get_owned_conversation(conn, ctx, conversation_id)
+        project_docs: dict = {}
+        if conversation["project_id"] is not None:
+            project_docs = {
+                r["id"]: r["is_primary"]
+                for r in await conn.fetch(
+                    "select id, is_primary from documents where project_id = $1",
+                    conversation["project_id"],
+                )
+            }
         tenant = await conn.fetchrow(
             "select litellm_key_id, soft_budget_usd from tenants where id = $1",
             ctx.tenant_id,
@@ -245,12 +263,22 @@ async def post_message(
     # projects land (Slice 4.5).
     chunks: list[RetrievedChunk] = []
     embed_tokens = 0
+    scope = (
+        Scope(
+            weights={
+                doc_id: PRIMARY_WEIGHT if primary else PROJECT_WEIGHT
+                for doc_id, primary in project_docs.items()
+            }
+        )
+        if project_docs
+        else None
+    )
     if body.use_vault:
         embedding, embed_tokens = await litellm_client.embed_query(
             tenant["litellm_key_id"], body.content
         )
         async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
-            chunks = await retrieve(conn, embedding, body.content)
+            chunks = await retrieve(conn, embedding, body.content, scope=scope)
 
     soft_cap_hit = float(month_spend) >= float(tenant["soft_budget_usd"])
     system = SYSTEM_PROMPT
@@ -328,7 +356,19 @@ async def post_message(
                 "update conversations set updated_at = now() where id = $1",
                 conversation_id,
             )
-        yield _sse("done", {**_json_safe(_message_out(row)), "soft_cap": soft_cap_hit})
+        # What actually answered: project docs, the wider vault, or no vault.
+        scope_used = None
+        if body.use_vault:
+            cited_docs = {UUID(c["document_id"]) for c in citations}
+            scope_used = "project" if project_docs and cited_docs & set(project_docs) else "vault"
+        yield _sse(
+            "done",
+            {
+                **_json_safe(_message_out(row)),
+                "soft_cap": soft_cap_hit,
+                "scope_used": scope_used,
+            },
+        )
 
     return StreamingResponse(stream(), media_type="text/event-stream")
 

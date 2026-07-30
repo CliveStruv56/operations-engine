@@ -83,6 +83,7 @@ class Tenant:
     id: UUID
     owner_id: UUID
     membership_id: UUID
+    project_id: UUID
     document_id: UUID
     conversation_id: UUID
     invite_id: UUID
@@ -109,6 +110,15 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         membership_id = await conn.fetchval(
             "select id from memberships where tenant_id = $1 and user_id = $2",
             tenant_id,
+            owner_id,
+        )
+        project_id = await conn.fetchval(
+            """
+            insert into projects (tenant_id, name, created_by)
+            values ($1, $2, $3) returning id
+            """,
+            tenant_id,
+            f"{name} project",
             owner_id,
         )
         document_id = await conn.fetchval(
@@ -157,6 +167,7 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         id=tenant_id,
         owner_id=owner_id,
         membership_id=membership_id,
+        project_id=project_id,
         document_id=document_id,
         conversation_id=conversation_id,
         invite_id=UUID(invite["id"]),

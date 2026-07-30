@@ -3,7 +3,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, apiStream } from "@/lib/api";
 
-type Conversation = { id: string; title: string | null; updated_at: string };
+import type { Project } from "./page";
+
+type Conversation = {
+  id: string;
+  title: string | null;
+  project_id: string | null;
+  updated_at: string;
+};
 type Citation = {
   n: number;
   chunk_id: string;
@@ -22,9 +29,19 @@ type Message = {
   cost_usd: number | null;
 };
 
-export default function ChatPanel({ tenantId }: { tenantId: string }) {
+export default function ChatPanel({
+  tenantId,
+  projects,
+  activeProjectId,
+}: {
+  tenantId: string;
+  projects: Project[];
+  activeProjectId: string | null;
+}) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [scopes, setScopes] = useState<Record<string, string>>({});
+  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [streamText, setStreamText] = useState<string | null>(null);
@@ -69,7 +86,13 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
       if (!convId) {
         const created = await api<Conversation>(
           "/conversations",
-          { method: "POST", body: JSON.stringify({ title: content.slice(0, 80) }) },
+          {
+            method: "POST",
+            body: JSON.stringify({
+              title: content.slice(0, 80),
+              project_id: activeProjectId,
+            }),
+          },
           tenantId
         );
         convId = created.id;
@@ -99,7 +122,9 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
       onDone: (message) => {
         setSoftCap(Boolean(message.soft_cap));
         setStreamText(null);
-        setMessages((m) => [...m, message as unknown as Message]);
+        const done = message as unknown as Message & { scope_used?: string | null };
+        setMessages((m) => [...m, done]);
+        if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
         loadConversations();
       },
       onError: (_code, msg) => {
@@ -124,7 +149,10 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
           </button>
         </div>
         <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
-          {conversations.map((c) => (
+          {(activeProjectId
+            ? conversations.filter((c) => c.project_id === activeProjectId)
+            : conversations
+          ).map((c) => (
             <button
               key={c.id}
               onClick={() => openConversation(c.id)}
@@ -141,6 +169,13 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {activeProject && (
+          <p className="border-b border-line bg-paper px-6 py-1.5">
+            <span className="data text-ink-muted uppercase">
+              Project: {activeProject.name} — answers prefer this project&apos;s documents
+            </span>
+          </p>
+        )}
         {softCap && (
           <p className="border-b border-line bg-warn-soft px-6 py-2 text-sm text-warn">
             This workspace has used its monthly budget — replies use the economy model until it
@@ -183,7 +218,11 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
                 </div>
               )}
               {m.role === "assistant" && m.model && (
-                <p className="data mt-1 text-ink-faint uppercase">{m.model}</p>
+                <p className="data mt-1 text-ink-faint uppercase">
+                  {m.model}
+                  {scopes[m.id] === "project" && " · from project documents"}
+                  {scopes[m.id] === "vault" && " · from the whole vault"}
+                </p>
               )}
             </div>
           ))}

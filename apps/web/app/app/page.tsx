@@ -18,6 +18,14 @@ type Tenant = {
 
 type MembershipRef = { tenant_id: string; name: string; role: string };
 
+export type Project = {
+  id: string;
+  name: string;
+  description: string | null;
+  archived: boolean;
+  document_count: number;
+};
+
 const NAV = [
   { key: "chat", label: "Chat", hint: "Ask about your documents" },
   { key: "vault", label: "Vault", hint: "The documents behind the answers" },
@@ -32,6 +40,18 @@ export default function WorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"chat" | "vault">("chat");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(null);
+  const [addingProject, setAddingProject] = useState(false);
+  const [projectName, setProjectName] = useState("");
+
+  const loadProjects = useCallback(async (tenantId: string) => {
+    try {
+      setProjects(await api<Project[]>("/projects", {}, tenantId));
+    } catch {
+      /* project list failing must not take down the workspace */
+    }
+  }, []);
 
   const loadTenant = useCallback(async (tenantId?: string) => {
     try {
@@ -40,6 +60,7 @@ export default function WorkspacePage() {
       setMemberships(null);
       setError(null);
       if (tenantId) localStorage.setItem("tenantId", tenantId);
+      loadProjects(me.id);
     } catch (e) {
       if (e instanceof ApiError && e.code === "tenant_required") {
         const list = (e.payload as { memberships?: MembershipRef[] })?.memberships ?? [];
@@ -50,7 +71,7 @@ export default function WorkspacePage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadProjects]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -68,6 +89,24 @@ export default function WorkspacePage() {
         body: JSON.stringify({ name: newName }),
       });
       await loadTenant(created.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
+  }
+
+  async function createProject(e: React.FormEvent) {
+    e.preventDefault();
+    if (!tenant) return;
+    try {
+      const created = await api<Project>(
+        "/projects",
+        { method: "POST", body: JSON.stringify({ name: projectName }) },
+        tenant.id
+      );
+      setProjectName("");
+      setAddingProject(false);
+      await loadProjects(tenant.id);
+      setActiveProjectId(created.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -153,7 +192,7 @@ export default function WorkspacePage() {
           <h1 className="mt-1 truncate text-base font-semibold tracking-tight">{tenant.name}</h1>
         </div>
 
-        <nav className="flex-1 p-3">
+        <nav className="min-h-0 flex-1 overflow-y-auto p-3">
           {NAV.map((item) => (
             <button
               key={item.key}
@@ -168,6 +207,54 @@ export default function WorkspacePage() {
               <span className="mt-0.5 block text-xs font-normal text-ink-faint">{item.hint}</span>
             </button>
           ))}
+
+          <p className="data mt-5 mb-1 px-3 text-ink-faint uppercase">Projects</p>
+          <button
+            onClick={() => setActiveProjectId(null)}
+            className={`mb-0.5 block w-full rounded-sm border-l-2 px-3 py-1.5 text-left text-sm ${
+              activeProjectId === null
+                ? "border-accent bg-accent-soft font-medium"
+                : "border-transparent text-ink-muted hover:bg-surface hover:text-ink"
+            }`}
+          >
+            Everything
+          </button>
+          {projects
+            .filter((p) => !p.archived)
+            .map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setActiveProjectId(p.id)}
+                className={`mb-0.5 flex w-full items-baseline justify-between gap-2 rounded-sm border-l-2 px-3 py-1.5 text-left text-sm ${
+                  activeProjectId === p.id
+                    ? "border-accent bg-accent-soft font-medium"
+                    : "border-transparent text-ink-muted hover:bg-surface hover:text-ink"
+                }`}
+              >
+                <span className="truncate">{p.name}</span>
+                <span className="data shrink-0 text-ink-faint">{p.document_count}</span>
+              </button>
+            ))}
+          {addingProject ? (
+            <form onSubmit={createProject} className="mt-1 px-3">
+              <input
+                autoFocus
+                required
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                onBlur={() => !projectName && setAddingProject(false)}
+                placeholder="Project name"
+                className="w-full rounded-sm border border-line bg-surface px-2 py-1 text-sm"
+              />
+            </form>
+          ) : (
+            <button
+              onClick={() => setAddingProject(true)}
+              className="mt-1 block w-full px-3 py-1 text-left text-xs text-ink-faint hover:text-ink"
+            >
+              + New project
+            </button>
+          )}
         </nav>
 
         <div className="space-y-2 border-t border-line px-5 py-4">
@@ -193,9 +280,18 @@ export default function WorkspacePage() {
           </p>
         )}
         {tab === "chat" ? (
-          <ChatPanel tenantId={tenant.id} />
+          <ChatPanel
+            tenantId={tenant.id}
+            projects={projects}
+            activeProjectId={activeProjectId}
+          />
         ) : (
-          <VaultPanel tenantId={tenant.id} />
+          <VaultPanel
+            tenantId={tenant.id}
+            projects={projects}
+            activeProjectId={activeProjectId}
+            onProjectsChanged={() => loadProjects(tenant.id)}
+          />
         )}
       </div>
     </main>

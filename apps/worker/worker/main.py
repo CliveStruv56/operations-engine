@@ -23,6 +23,7 @@ from worker.chunking import chunk_blocks
 from worker.embed import embed_texts
 from worker.parsing import parse_file
 from worker.settings import get_settings
+from worker.summarize import summarize_document
 
 PARSE_TIMEOUT_S = 600
 
@@ -90,6 +91,17 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
             raise RuntimeError("No model key provisioned for this workspace")
         embedded = await embed_texts(virtual_key, [c.content for c in chunks])
 
+        # Summary (Slice 4.5) — best-effort: its absence never fails ingest.
+        summary = None
+        summary_vec: list[float] | None = None
+        try:
+            summary = await summarize_document(
+                virtual_key, doc["title"], [c.content for c in chunks]
+            )
+            summary_vec = (await embed_texts(virtual_key, [summary.text])).vectors[0]
+        except Exception:
+            summary = None
+
         async with tenant_tx(pool, tenant_id) as conn:
             await conn.execute("delete from doc_chunks where document_id = $1", document_id)
             await conn.executemany(
@@ -124,10 +136,36 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
                 embedded.tokens,
                 embedded.cost_usd,
             )
+            if summary is not None and summary_vec is not None:
+                await conn.execute(
+                    """
+                    insert into doc_chunks (tenant_id, document_id, content,
+                                            is_summary, token_count, embedding)
+                    values ($1, $2, $3, true, $4, $5::vector)
+                    """,
+                    tenant_id,
+                    document_id,
+                    f"Summary of the document:\n\n{summary.text}",
+                    estimate_tokens(summary.text),
+                    "[" + ",".join(f"{x:.7g}" for x in summary_vec) + "]",
+                )
+                await conn.execute(
+                    """
+                    insert into usage_events (tenant_id, user_id, kind, model,
+                                              tokens_in, tokens_out, cost_usd)
+                    values ($1, $2, 'summary', 'drafter', $3, $4, $5)
+                    """,
+                    tenant_id,
+                    user_id,
+                    summary.tokens_in,
+                    summary.tokens_out,
+                    summary.cost_usd,
+                )
             await conn.execute(
-                "update documents set status = 'ready', error = null, updated_at = now()"
-                " where id = $1",
+                "update documents set status = 'ready', error = null, summary = $2,"
+                " updated_at = now() where id = $1",
                 document_id,
+                summary.text if summary else None,
             )
         return f"ready:{len(chunks)} chunks"
     except Exception as exc:

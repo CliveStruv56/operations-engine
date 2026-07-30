@@ -11,7 +11,7 @@ from app.errors import register_error_handlers
 from app.litellm import litellm_client
 from app.queue import ingest_queue
 from app.ratelimit import rate_limiter
-from app.routers import conversations, documents, invites, members, tenants, usage
+from app.routers import conversations, documents, invites, members, projects, tenants, usage
 
 
 @asynccontextmanager
@@ -51,6 +51,7 @@ def create_app() -> FastAPI:
         tenants.router,
         members.router,
         invites.router,
+        projects.router,
         conversations.router,
         documents.router,
         usage.router,
