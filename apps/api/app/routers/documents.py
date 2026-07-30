@@ -14,9 +14,17 @@ from fastapi import APIRouter, Depends, Query
 from app.audit import write_audit
 from app.db import db
 from app.errors import ApiError
+from app.litellm import litellm_client
 from app.queue import ingest_queue
 from app.ratelimit import rate_limiter
-from app.schemas import DocumentCreate, DocumentCreateOut, DocumentOut
+from app.retrieval import retrieve
+from app.schemas import (
+    DocumentCreate,
+    DocumentCreateOut,
+    DocumentOut,
+    VaultSearchHit,
+    VaultSearchIn,
+)
 from app.storage import ALLOWED_MIMES, MAX_UPLOAD_BYTES, storage
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -150,6 +158,36 @@ async def delete_document(
         await write_audit(
             conn, ctx.tenant_id, ctx.user_id, "document.delete", "document", str(document_id)
         )
+
+
+@router.post("/vault/search", response_model=list[VaultSearchHit])
+async def vault_search(
+    body: VaultSearchIn,
+    ctx: TenantContext = Depends(require_role("admin")),
+):
+    """Raw fused retrieval results — admin debug surface for tuning (spec §6)."""
+    async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
+        virtual_key = await conn.fetchval(
+            "select litellm_key_id from tenants where id = $1", ctx.tenant_id
+        )
+    if not virtual_key:
+        raise ApiError(503, "llm_unavailable", "No model key is provisioned for this workspace")
+    embedding, _ = await litellm_client.embed_query(virtual_key, body.query)
+    async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
+        chunks = await retrieve(conn, embedding, body.query)
+    return [
+        {
+            "chunk_id": c.chunk_id,
+            "document_id": c.document_id,
+            "title": c.title,
+            "heading_path": c.heading_path,
+            "page_start": c.page_start,
+            "page_end": c.page_end,
+            "content": c.content,
+            "score": c.score,
+        }
+        for c in chunks
+    ]
 
 
 @router.post("/documents/{document_id}/reprocess", response_model=DocumentOut)

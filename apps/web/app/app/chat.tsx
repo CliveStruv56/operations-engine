@@ -4,10 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api, apiStream } from "@/lib/api";
 
 type Conversation = { id: string; title: string | null; updated_at: string };
+type Citation = {
+  n: number;
+  chunk_id: string;
+  document_id: string;
+  title: string;
+  page_start: number | null;
+  page_end: number | null;
+  snippet: string;
+};
 type Message = {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
+  citations: Citation[];
   model: string | null;
   cost_usd: number | null;
 };
@@ -19,6 +29,8 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
   const [draft, setDraft] = useState("");
   const [streamText, setStreamText] = useState<string | null>(null);
   const [softCap, setSoftCap] = useState(false);
+  const [useVault, setUseVault] = useState(true);
+  const [evidence, setEvidence] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -71,11 +83,18 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
 
     setMessages((m) => [
       ...m,
-      { id: `local-${Date.now()}`, role: "user", content, model: null, cost_usd: null },
+      {
+        id: `local-${Date.now()}`,
+        role: "user",
+        content,
+        citations: [],
+        model: null,
+        cost_usd: null,
+      },
     ]);
     setStreamText("");
 
-    await apiStream(`/conversations/${convId}/messages`, { content }, tenantId, {
+    await apiStream(`/conversations/${convId}/messages`, { content, use_vault: useVault }, tenantId, {
       onDelta: (delta) => setStreamText((t) => (t ?? "") + delta),
       onDone: (message) => {
         setSoftCap(Boolean(message.soft_cap));
@@ -148,6 +167,21 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
               >
                 {m.content}
               </div>
+              {m.role === "assistant" && m.citations?.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {m.citations.map((c) => (
+                    <button
+                      key={c.chunk_id}
+                      onClick={() => setEvidence(c)}
+                      className="stamp bg-accent-soft text-accent hover:opacity-80"
+                      title={c.title}
+                    >
+                      {c.n} · {c.title.length > 32 ? c.title.slice(0, 32) + "…" : c.title}
+                      {c.page_start != null && ` · p.${c.page_start}`}
+                    </button>
+                  ))}
+                </div>
+              )}
               {m.role === "assistant" && m.model && (
                 <p className="data mt-1 text-ink-faint uppercase">{m.model}</p>
               )}
@@ -166,13 +200,28 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
             {error}
           </p>
         )}
-        <form onSubmit={send} className="flex gap-2 border-t border-line p-4">
+        <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-4">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Ask a question…"
+            placeholder={useVault ? "Ask about your documents…" : "Ask anything…"}
             className="min-w-0 flex-1 rounded-sm border border-line bg-surface px-3 py-2 text-sm"
           />
+          <button
+            type="button"
+            onClick={() => setUseVault((v) => !v)}
+            aria-pressed={useVault}
+            title={
+              useVault
+                ? "Answers use your vault and cite documents"
+                : "Vault off — answers come from the model alone"
+            }
+            className={`stamp shrink-0 ${
+              useVault ? "bg-accent-soft text-accent" : "text-ink-faint"
+            }`}
+          >
+            vault {useVault ? "on" : "off"}
+          </button>
           <button
             type="submit"
             disabled={streamText !== null}
@@ -182,6 +231,35 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
           </button>
         </form>
       </div>
+
+      {evidence && (
+        <aside className="flex w-80 shrink-0 flex-col border-l border-line bg-paper">
+          <header className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
+            <div className="min-w-0">
+              <p className="data text-ink-faint uppercase">Source {evidence.n}</p>
+              <h3 className="mt-0.5 truncate text-sm font-semibold">{evidence.title}</h3>
+              {evidence.page_start != null && (
+                <p className="data mt-0.5 text-ink-muted">
+                  Page {evidence.page_start}
+                  {evidence.page_end != null && evidence.page_end !== evidence.page_start
+                    ? `–${evidence.page_end}`
+                    : ""}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={() => setEvidence(null)}
+              className="shrink-0 text-ink-muted hover:text-ink"
+              aria-label="Close source panel"
+            >
+              ✕
+            </button>
+          </header>
+          <div className="min-h-0 flex-1 overflow-y-auto p-4">
+            <p className="text-sm whitespace-pre-wrap text-ink-muted">{evidence.snippet}</p>
+          </div>
+        </aside>
+      )}
     </section>
   );
 }

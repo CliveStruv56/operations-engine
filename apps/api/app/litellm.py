@@ -102,6 +102,26 @@ class LiteLLMClient:
         )
         resp.raise_for_status()
 
+    # -- embeddings (tenant virtual key) ---------------------------------------
+
+    async def embed_query(self, virtual_key: str, text: str) -> tuple[list[float], int]:
+        """Embed one retrieval query; returns (vector, prompt_tokens)."""
+        if not self.enabled:
+            raise ApiError(503, "llm_unavailable", "Model gateway is not configured")
+        resp = await self._http().post(
+            "/v1/embeddings",
+            headers={"Authorization": f"Bearer {virtual_key}"},
+            json={"model": "embedder", "input": [text]},
+        )
+        if resp.status_code >= 400:
+            raise ApiError(
+                502 if resp.status_code >= 500 else 400,
+                "llm_error",
+                _safe_upstream_message(resp.status_code, resp.content),
+            )
+        payload = resp.json()
+        return payload["data"][0]["embedding"], payload.get("usage", {}).get("prompt_tokens", 0)
+
     # -- chat (tenant virtual key) --------------------------------------------
 
     async def stream_chat(

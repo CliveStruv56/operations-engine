@@ -36,6 +36,11 @@ def fake_llm(monkeypatch):
         result.tokens_out = 50
 
     monkeypatch.setattr(litellm_client, "stream_chat", _fake)
+
+    async def _fake_embed(virtual_key, text):
+        return [0.0] * 2048, 7
+
+    monkeypatch.setattr(litellm_client, "embed_query", _fake_embed)
     return calls
 
 
@@ -92,9 +97,9 @@ async def test_stream_and_persist(client, fake_llm):
         assert row["model"] == "workhorse"
     assert row is not None and row["tokens_in"] == 100
 
-    # Usage summary reflects the call (plus the seeded 10/20 event).
+    # Usage summary: seeded 10/20 + chat 100/50 + retrieval embed 7/0.
     summary = (await client.get("/api/v1/usage/summary", headers=headers)).json()
-    assert summary["tokens_in"] == 110
+    assert summary["tokens_in"] == 117
     assert summary["tokens_out"] == 70
 
 
@@ -161,7 +166,7 @@ async def test_stream_error_emits_error_event_without_assistant_row(client, monk
     monkeypatch.setattr(litellm_client, "stream_chat", _boom)
     resp = await client.post(
         f"/api/v1/conversations/{tenant.conversation_id}/messages",
-        json={"content": "hi"},
+        json={"content": "hi", "use_vault": False},
         headers=headers,
     )
     events = parse_sse(resp.text)

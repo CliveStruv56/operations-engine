@@ -73,6 +73,17 @@ class ConversationOut(BaseModel):
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=200_000)
     task_kind: str | None = Field(default=None, pattern="^(chat|analyse|report|financial)$")
+    use_vault: bool = True
+
+
+class Citation(BaseModel):
+    n: int
+    chunk_id: UUID
+    document_id: UUID
+    title: str
+    page_start: int | None
+    page_end: int | None
+    snippet: str
 
 
 class MessageOut(BaseModel):
@@ -80,7 +91,7 @@ class MessageOut(BaseModel):
     conversation_id: UUID
     role: str
     content: str
-    citations: list[Any]
+    citations: list[Citation]
     model: str | None
     tokens_in: int | None
     tokens_out: int | None
@@ -108,6 +119,21 @@ class DocumentOut(BaseModel):
 class DocumentCreateOut(BaseModel):
     id: UUID
     upload_url: str
+
+
+class VaultSearchIn(BaseModel):
+    query: str = Field(min_length=1, max_length=2_000)
+
+
+class VaultSearchHit(BaseModel):
+    chunk_id: UUID
+    document_id: UUID
+    title: str
+    heading_path: list[str]
+    page_start: int | None
+    page_end: int | None
+    content: str
+    score: float
 
 
 class UsageBucket(BaseModel):
