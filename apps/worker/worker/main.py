@@ -148,7 +148,9 @@ async def startup(ctx: dict) -> None:
 
 
 async def shutdown(ctx: dict) -> None:
-    await ctx["pool"].close()
+    pool = ctx.get("pool")  # absent when startup itself failed
+    if pool is not None:
+        await pool.close()
 
 
 class WorkerSettings:

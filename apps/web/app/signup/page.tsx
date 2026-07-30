@@ -29,40 +29,48 @@ export default function SignupPage() {
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
-      <form onSubmit={onSubmit} className="w-full max-w-sm space-y-4">
-        <h1 className="text-2xl font-semibold">Create account</h1>
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        <input
-          type="password"
-          required
-          minLength={8}
-          placeholder="Password (8+ characters)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded border border-neutral-300 px-3 py-2"
-        />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        <button
-          type="submit"
-          disabled={busy}
-          className="w-full rounded bg-neutral-900 px-3 py-2 text-white disabled:opacity-50"
+      <div className="w-full max-w-sm">
+        <p className="data mb-2 text-ink-faint uppercase">Operations Engine</p>
+        <form
+          onSubmit={onSubmit}
+          className="space-y-4 rounded-md border border-line bg-surface p-6 shadow-sm"
         >
-          {busy ? "Creating…" : "Sign up"}
-        </button>
-        <p className="text-sm text-neutral-600">
-          Have an account?{" "}
-          <Link href="/login" className="underline">
-            Sign in
-          </Link>
-        </p>
-      </form>
+          <h1 className="text-xl font-semibold tracking-tight">Create account</h1>
+          <input
+            type="email"
+            required
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full rounded-sm border border-line px-3 py-2 text-sm"
+          />
+          <input
+            type="password"
+            required
+            minLength={8}
+            placeholder="Password (8+ characters)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full rounded-sm border border-line px-3 py-2 text-sm"
+          />
+          {error && (
+            <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          )}
+          <button
+            type="submit"
+            disabled={busy}
+            className="w-full rounded-sm bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
+          >
+            {busy ? "Creating…" : "Sign up"}
+          </button>
+          <p className="text-sm text-ink-muted">
+            Have an account?{" "}
+            <Link href="/login" className="underline hover:text-ink">
+              Sign in
+            </Link>
+          </p>
+        </form>
+      </div>
     </main>
   );
 }

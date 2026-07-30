@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 import sentry_sdk
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.db import db
@@ -33,6 +34,12 @@ def create_app() -> FastAPI:
             send_default_pii=False,
         )
     app = FastAPI(title="Operations Engine API", version="0.1.0", lifespan=lifespan)
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors_origins.split(","),
+        allow_methods=["*"],
+        allow_headers=["Authorization", "Content-Type", "X-Tenant-Id"],
+    )
     register_error_handlers(app)
 
     @app.get("/health", tags=["health"])

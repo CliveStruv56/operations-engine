@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
+/* Design tokens. --accent is the white-label hook: Slice 5 tenant theming
+   overrides it (and --accent-soft/--accent-ink) per workspace. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --paper: #f6f5f1;
+  --surface: #ffffff;
+  --ink: #1c1e21;
+  --ink-muted: #6b6e74;
+  --ink-faint: #9a9da3;
+  --line: #e3e1da;
+  --accent: #1f6d53;
+  --accent-ink: #ffffff;
+  --accent-soft: #edf5f0;
+  --warn: #935f10;
+  --warn-soft: #fbf3e2;
+  --danger: #a33a2e;
+  --danger-soft: #fbefea;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The register voice: true data (statuses, dates, counts, costs) is set in
+   mono so it reads as typed entries, distinct from UI prose. */
+.data {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+}
+
+.stamp {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 1px solid currentcolor;
+  border-radius: 2px;
+  padding: 0.125rem 0.4375rem;
 }

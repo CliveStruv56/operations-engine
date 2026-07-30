@@ -91,75 +91,92 @@ export default function ChatPanel({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <section className="flex h-[32rem] rounded border border-neutral-200 text-sm">
-      <aside className="w-56 shrink-0 overflow-y-auto border-r border-neutral-200 p-2 space-y-1">
-        <button
-          onClick={() => {
-            setActiveId(null);
-            setMessages([]);
-          }}
-          className="w-full rounded bg-neutral-900 px-3 py-2 text-left text-white"
-        >
-          New chat
-        </button>
-        {conversations.map((c) => (
+    <section className="flex min-h-0 flex-1">
+      <aside className="flex w-60 shrink-0 flex-col border-r border-line">
+        <div className="border-b border-line p-3">
           <button
-            key={c.id}
-            onClick={() => openConversation(c.id)}
-            className={`block w-full truncate rounded px-3 py-2 text-left hover:bg-neutral-100 ${
-              c.id === activeId ? "bg-neutral-100 font-medium" : ""
-            }`}
+            onClick={() => {
+              setActiveId(null);
+              setMessages([]);
+            }}
+            className="w-full rounded-sm bg-accent px-3 py-2 text-left text-sm font-medium text-accent-ink hover:opacity-90"
           >
-            {c.title ?? "Untitled"}
+            New conversation
           </button>
-        ))}
+        </div>
+        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
+          {conversations.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => openConversation(c.id)}
+              className={`block w-full truncate rounded-sm px-3 py-2 text-left text-sm ${
+                c.id === activeId
+                  ? "bg-accent-soft font-medium"
+                  : "text-ink-muted hover:bg-paper hover:text-ink"
+              }`}
+            >
+              {c.title ?? "Untitled"}
+            </button>
+          ))}
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
         {softCap && (
-          <p className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-amber-800">
-            This workspace has hit its monthly usage budget — replies use the
-            economy model until it resets.
+          <p className="border-b border-line bg-warn-soft px-6 py-2 text-sm text-warn">
+            This workspace has used its monthly budget — replies use the economy model until it
+            resets.
           </p>
         )}
-        <div ref={scrollRef} className="flex-1 space-y-3 overflow-y-auto p-4">
+        <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
           {messages.length === 0 && streamText === null && (
-            <p className="text-neutral-400">Ask anything to start a conversation.</p>
+            <div className="flex h-full items-center justify-center">
+              <p className="max-w-sm text-center text-sm text-ink-faint">
+                Ask about anything in your vault — policies, prices, procedures — or draft
+                something new.
+              </p>
+            </div>
           )}
           {messages.map((m) => (
             <div key={m.id} className={m.role === "user" ? "text-right" : ""}>
               <div
-                className={`inline-block max-w-[85%] whitespace-pre-wrap rounded px-3 py-2 text-left ${
-                  m.role === "user" ? "bg-neutral-900 text-white" : "bg-neutral-100"
+                className={`inline-block max-w-[85%] rounded-md px-4 py-2.5 text-left text-sm whitespace-pre-wrap ${
+                  m.role === "user"
+                    ? "bg-ink text-surface"
+                    : "border border-line bg-paper"
                 }`}
               >
                 {m.content}
               </div>
               {m.role === "assistant" && m.model && (
-                <p className="mt-1 text-xs text-neutral-400">{m.model}</p>
+                <p className="data mt-1 text-ink-faint uppercase">{m.model}</p>
               )}
             </div>
           ))}
           {streamText !== null && (
             <div>
-              <div className="inline-block max-w-[85%] whitespace-pre-wrap rounded bg-neutral-100 px-3 py-2">
+              <div className="inline-block max-w-[85%] rounded-md border border-line bg-paper px-4 py-2.5 text-sm whitespace-pre-wrap">
                 {streamText || "…"}
               </div>
             </div>
           )}
         </div>
-        {error && <p className="px-4 pb-2 text-red-600">{error}</p>}
-        <form onSubmit={send} className="flex gap-2 border-t border-neutral-200 p-3">
+        {error && (
+          <p className="border-t border-line bg-danger-soft px-6 py-2 text-sm text-danger">
+            {error}
+          </p>
+        )}
+        <form onSubmit={send} className="flex gap-2 border-t border-line p-4">
           <input
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="Message…"
-            className="min-w-0 flex-1 rounded border border-neutral-300 px-3 py-2"
+            placeholder="Ask a question…"
+            className="min-w-0 flex-1 rounded-sm border border-line bg-surface px-3 py-2 text-sm"
           />
           <button
             type="submit"
             disabled={streamText !== null}
-            className="rounded bg-neutral-900 px-4 py-2 text-white disabled:opacity-50"
+            className="rounded-sm bg-accent px-5 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
           >
             Send
           </button>

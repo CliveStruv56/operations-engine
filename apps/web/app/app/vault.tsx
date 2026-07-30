@@ -29,12 +29,30 @@ const EXT_MIMES: Record<string, string> = {
   csv: "text/csv",
 };
 
+const MIME_LABEL: Record<string, string> = {
+  "application/pdf": "PDF",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "DOC",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "XLS",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "PPT",
+  "text/plain": "TXT",
+  "text/markdown": "MD",
+  "text/csv": "CSV",
+};
+
+const STATUS_LABEL: Record<Doc["status"], string> = {
+  uploaded: "queued",
+  parsing: "reading",
+  embedding: "indexing",
+  ready: "ready",
+  failed: "failed",
+};
+
 const STATUS_STYLE: Record<Doc["status"], string> = {
-  uploaded: "bg-neutral-100 text-neutral-600",
-  parsing: "bg-blue-50 text-blue-700",
-  embedding: "bg-blue-50 text-blue-700",
-  ready: "bg-green-50 text-green-700",
-  failed: "bg-red-50 text-red-700",
+  uploaded: "text-ink-muted",
+  parsing: "text-warn bg-warn-soft",
+  embedding: "text-warn bg-warn-soft",
+  ready: "text-accent bg-accent-soft",
+  failed: "text-danger bg-danger-soft",
 };
 
 export default function VaultPanel({ tenantId }: { tenantId: string }) {
@@ -42,6 +60,7 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = useCallback(async () => {
@@ -54,7 +73,9 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
   }, [refresh]);
 
   // Poll while anything is still working its way through the pipeline.
-  const active = docs.some((d) => d.status === "parsing" || d.status === "embedding");
+  const active = docs.some(
+    (d) => d.status === "uploaded" || d.status === "parsing" || d.status === "embedding"
+  );
   useEffect(() => {
     if (!active) return;
     const t = setInterval(() => refresh().catch(() => {}), 3000);
@@ -66,7 +87,7 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
     for (const file of Array.from(files)) {
       const mime = file.type || EXT_MIMES[file.name.split(".").pop()?.toLowerCase() ?? ""];
       if (!mime || !Object.values(EXT_MIMES).includes(mime)) {
-        setError(`${file.name}: unsupported file type`);
+        setError(`${file.name}: this file type isn't supported`);
         continue;
       }
       setBusy(`Uploading ${file.name}…`);
@@ -95,7 +116,7 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
   }
 
   async function remove(doc: Doc) {
-    if (!confirm(`Delete "${doc.title}" and its indexed content?`)) return;
+    setConfirmingId(null);
     try {
       await api(`/documents/${doc.id}`, { method: "DELETE" }, tenantId);
       await refresh();
@@ -113,66 +134,124 @@ export default function VaultPanel({ tenantId }: { tenantId: string }) {
     }
   }
 
+  const readyCount = docs.filter((d) => d.status === "ready").length;
+
   return (
-    <section className="space-y-3 text-sm">
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          upload(e.dataTransfer.files);
-        }}
-        onClick={() => fileInput.current?.click()}
-        className={`cursor-pointer rounded border-2 border-dashed p-8 text-center transition-colors ${
-          dragging ? "border-neutral-900 bg-neutral-50" : "border-neutral-300"
-        }`}
-      >
-        <p className="font-medium">Drop files here or click to upload</p>
-        <p className="mt-1 text-neutral-500">PDF, Word, Excel, PowerPoint, text, Markdown or CSV — up to 50 MB</p>
-        <input
-          ref={fileInput}
-          type="file"
-          multiple
-          accept={ACCEPT}
-          className="hidden"
-          onChange={(e) => e.target.files && upload(e.target.files)}
-        />
+    <section className="flex min-h-0 flex-1 flex-col">
+      <header className="flex items-baseline justify-between border-b border-line px-6 py-4">
+        <div>
+          <h2 className="text-lg font-semibold tracking-tight">Vault</h2>
+          <p className="mt-0.5 text-sm text-ink-muted">
+            Everything here is read, indexed, and used to answer your questions.
+          </p>
+        </div>
+        <p className="data text-ink-muted uppercase">
+          {docs.length} documents · {readyCount} ready
+        </p>
+      </header>
+
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            upload(e.dataTransfer.files);
+          }}
+          onClick={() => fileInput.current?.click()}
+          className={`cursor-pointer rounded-md border border-dashed px-8 py-10 text-center transition-colors ${
+            dragging
+              ? "border-accent bg-accent-soft"
+              : "border-line bg-paper hover:border-ink-faint"
+          }`}
+        >
+          <p className="text-sm font-medium">Drop files here, or click to choose</p>
+          <p className="data mt-2 text-ink-faint uppercase">
+            PDF · Word · Excel · PowerPoint · Text · Markdown · CSV — up to 50 MB
+          </p>
+          <input
+            ref={fileInput}
+            type="file"
+            multiple
+            accept={ACCEPT}
+            className="hidden"
+            onChange={(e) => e.target.files && upload(e.target.files)}
+          />
+        </div>
+
+        {busy && <p className="data mt-3 text-ink-muted">{busy}</p>}
+        {error && (
+          <p className="mt-3 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        )}
+
+        {docs.length === 0 && !busy ? (
+          <p className="mt-8 text-center text-sm text-ink-faint">
+            No documents yet. Add your staff handbook, policies, or price lists — anything your
+            team asks questions about.
+          </p>
+        ) : (
+          <ul className="mt-6 divide-y divide-line border-y border-line">
+            {docs.map((d) => (
+              <li key={d.id} className="flex items-center gap-4 py-3">
+                <span className="data w-9 shrink-0 text-ink-faint">
+                  {MIME_LABEL[d.mime ?? ""] ?? "—"}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{d.title}</p>
+                  {d.status === "failed" && d.error ? (
+                    <p className="mt-0.5 truncate text-xs text-danger">{d.error}</p>
+                  ) : (
+                    <p className="data mt-0.5 text-ink-faint">
+                      Added {new Date(d.created_at).toLocaleDateString("en-GB")}
+                    </p>
+                  )}
+                </div>
+                <span className={`stamp shrink-0 ${STATUS_STYLE[d.status]}`}>
+                  {STATUS_LABEL[d.status]}
+                </span>
+                <span className="flex shrink-0 items-center gap-3 text-xs">
+                  {(d.status === "ready" || d.status === "failed") &&
+                    confirmingId !== d.id && (
+                      <button
+                        onClick={() => reprocess(d)}
+                        className="text-ink-muted underline hover:text-ink"
+                      >
+                        Re-index
+                      </button>
+                    )}
+                  {confirmingId === d.id ? (
+                    <>
+                      <button
+                        onClick={() => remove(d)}
+                        className="font-medium text-danger underline"
+                      >
+                        Delete for good
+                      </button>
+                      <button
+                        onClick={() => setConfirmingId(null)}
+                        className="text-ink-muted underline hover:text-ink"
+                      >
+                        Keep
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmingId(d.id)}
+                      className="text-ink-muted underline hover:text-danger"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-
-      {busy && <p className="text-neutral-500">{busy}</p>}
-      {error && <p className="text-red-600">{error}</p>}
-
-      {docs.length === 0 && !busy ? (
-        <p className="text-neutral-400">No documents yet — add your first file to build the vault.</p>
-      ) : (
-        <ul className="divide-y divide-neutral-100 rounded border border-neutral-200">
-          {docs.map((d) => (
-            <li key={d.id} className="flex items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{d.title}</p>
-                {d.status === "failed" && d.error && (
-                  <p className="truncate text-xs text-red-500">{d.error}</p>
-                )}
-              </div>
-              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${STATUS_STYLE[d.status]}`}>
-                {d.status === "parsing" || d.status === "embedding" ? `${d.status}…` : d.status}
-              </span>
-              {(d.status === "ready" || d.status === "failed") && (
-                <button onClick={() => reprocess(d)} className="shrink-0 text-neutral-400 hover:text-neutral-700" title="Reprocess">
-                  ↻
-                </button>
-              )}
-              <button onClick={() => remove(d)} className="shrink-0 text-neutral-400 hover:text-red-600" title="Delete">
-                ✕
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </section>
   );
 }

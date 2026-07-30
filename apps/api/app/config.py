@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     chat_rate_limit_per_min: int = 60
     upload_rate_limit_per_hour: int = 20
 
+    # Comma-separated browser origins; prod sets the tenant-facing domain(s).
+    cors_origins: str = "http://localhost:3000"
+
     # Object storage (MinIO in dev, Cloudflare R2 in prod). Empty endpoint =
     # storage disabled (unit tests, CI): vault endpoints return 503.
     storage_endpoint: str = ""

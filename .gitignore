@@ -26,3 +26,4 @@ out/
 
 # Supabase local
 supabase/.temp/
+.playwright-mcp/

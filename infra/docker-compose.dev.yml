@@ -89,6 +89,9 @@ services:
 
   worker:
     build: ../apps/worker
+    # First boot on a fresh volume races Alembic (the ops_app role doesn't
+    # exist until migration 0001 runs) — restart until migrations land.
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy

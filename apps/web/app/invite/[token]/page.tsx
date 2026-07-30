@@ -37,5 +37,9 @@ export default function InvitePage({
     })();
   }, [token, router]);
 
-  return <main className="p-8 text-neutral-600">{status}</main>;
+  return (
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <p className="data text-ink-muted">{status}</p>
+    </main>
+  );
 }
