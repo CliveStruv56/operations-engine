@@ -111,9 +111,16 @@ async def draft_document(
         with contextlib.suppress(Exception):
             await _mark_failed(pool, tenant_id, job_id, str(exc))
         raise
-    except Exception as exc:
-        # Sanitized failure reason only — no prompt or document content.
-        reason = f"Draft generation failed ({type(exc).__name__}: {str(exc)[:160]})"
-        with contextlib.suppress(Exception):
+    except BaseException as exc:
+        # BaseException on purpose: arq's job_timeout cancellation raises
+        # CancelledError (a BaseException since 3.8) — without this a
+        # timed-out job leaves a 'running' row the UI polls forever.
+        reason = (
+            "Draft generation was interrupted — try again"
+            if isinstance(exc, asyncio.CancelledError)
+            # Sanitized failure reason only — no prompt or document content.
+            else f"Draft generation failed ({type(exc).__name__}: {str(exc)[:160]})"
+        )
+        with contextlib.suppress(BaseException):
             await _mark_failed(pool, tenant_id, job_id, reason)
         raise

@@ -183,6 +183,8 @@ class WorkerSettings:
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    job_timeout = 1200
+    # Drafts make ~11 sequential LLM calls; live proof measured ~3 min/call
+    # on the drafter alias, so a full draft can run past 30 minutes.
+    job_timeout = 3600
     max_tries = 1  # failures surface as status=failed; users reprocess explicitly
     keep_result = 0  # frees the job id so reprocess can requeue immediately
