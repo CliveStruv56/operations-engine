@@ -46,8 +46,8 @@ def create_app() -> FastAPI:
     app = FastAPI(title="Operations Engine API", version="0.1.0", lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins.split(","),
-        allow_methods=["*"],
+        allow_origins=settings.cors_origin_list,
+        allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type", "X-Tenant-Id"],
     )
     register_error_handlers(app)

@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,7 +31,25 @@ class Settings(BaseSettings):
     upload_rate_limit_per_hour: int = 20
 
     # Comma-separated browser origins; prod sets the tenant-facing domain(s).
+    # Wildcards are rejected — origins must be enumerated explicitly.
     cors_origins: str = "http://localhost:3000"
+
+    @field_validator("cors_origins")
+    @classmethod
+    def _no_wildcard_origins(cls, v: str) -> str:
+        origins = [o.strip() for o in v.split(",") if o.strip()]
+        if not origins:
+            raise ValueError("cors_origins must list at least one origin")
+        for origin in origins:
+            if "*" in origin:
+                raise ValueError(
+                    "wildcard CORS origins are not allowed; enumerate origins explicitly"
+                )
+        return ",".join(origins)
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return self.cors_origins.split(",")
 
     # Object storage (MinIO in dev, Cloudflare R2 in prod). Empty endpoint =
     # storage disabled (unit tests, CI): vault endpoints return 503.
