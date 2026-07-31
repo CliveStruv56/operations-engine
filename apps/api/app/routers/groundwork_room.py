@@ -220,10 +220,16 @@ async def toggle_gate_item(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     row = await conn.fetchrow(
-        "select gate from proj_stages where project_id = $1 and id = $2", project_id, stage_id
+        "select gate, gate_signed_off_at from proj_stages where project_id = $1 and id = $2",
+        project_id,
+        stage_id,
     )
     if row is None:
         raise ApiError(404, "not_found", "Stage not found")
+    if row["gate_signed_off_at"] is not None:
+        raise ApiError(
+            409, "already_signed_off", "This gate is signed off — its items can no longer change"
+        )
     gate = json.loads(row["gate"])
     item = next((i for i in gate if i["id"] == item_id), None)
     if item is None:
@@ -259,6 +265,16 @@ async def signoff_stage(
         raise ApiError(404, "not_found", "Stage not found")
     if row["gate_signed_off_at"] is not None:
         raise ApiError(409, "already_signed_off", "This gate is already signed off")
+    # Only the project's active stage can be signed off — no stage skipping.
+    project = await conn.fetchrow(
+        "select stage_current from proj_projects where id = $1", project_id
+    )
+    if project is None or row["stage_key"] != project["stage_current"]:
+        raise ApiError(
+            422,
+            "stage_not_active",
+            "Only the project's current stage can be signed off",
+        )
     gate = json.loads(row["gate"])
     outstanding = [i["criterion"] for i in gate if not i["done"]]
     if outstanding and not body.exceptions:

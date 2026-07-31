@@ -103,6 +103,36 @@ async def test_signoff_blocked_then_exceptions_then_advance(client, gw):
     assert resp.status_code == 409
 
 
+async def test_signoff_rejects_non_active_stage(client, gw):
+    stages = await _stages(client, gw)
+    site = next(s for s in stages if s["stage_key"] == "site")
+    # Project is still on "group" — signing off "site" would skip a stage.
+    resp = await client.post(
+        f"/api/v1/projects/{gw['pid']}/stages/{site['id']}/signoff",
+        json={"exceptions": "trying to skip ahead"},
+        headers=gw["h"],
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "stage_not_active"
+
+
+async def test_gate_toggle_rejected_after_signoff(client, gw):
+    stages = await _stages(client, gw)
+    group = next(s for s in stages if s["stage_key"] == "group")
+    resp = await client.post(
+        f"/api/v1/projects/{gw['pid']}/stages/{group['id']}/signoff",
+        json={"exceptions": "accepted by the board"},
+        headers=gw["h"],
+    )
+    assert resp.status_code == 200, resp.text
+
+    resp = await client.post(
+        f"/api/v1/projects/{gw['pid']}/stages/{group['id']}/gate/g1/toggle", headers=gw["h"]
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "already_signed_off"
+
+
 async def test_stage_regression_requires_note(client, gw):
     stages = await _stages(client, gw)
     group = next(s for s in stages if s["stage_key"] == "group")
