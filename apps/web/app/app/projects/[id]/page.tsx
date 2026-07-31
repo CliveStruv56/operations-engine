@@ -18,6 +18,7 @@ import {
   fmtDate,
   fmtMoney,
   gw,
+  openPresigned,
 } from "@/lib/groundwork";
 import { RagDots } from "../page";
 
@@ -153,7 +154,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
         ))}
       </nav>
 
-      {tab === "Overview" && <OverviewTab id={id} detail={detail} />}
+      {tab === "Overview" && <OverviewTab id={id} />}
       {tab === "Stages & gates" && <StagesTab id={id} onAdvanced={refresh} />}
       {tab === "Tasks" && <TasksTab id={id} />}
       {tab === "Documents" && <DocumentsTab id={id} />}
@@ -168,7 +169,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
 
 // ---------------------------------------------------------------- Overview
 
-function OverviewTab({ id, detail }: { id: string; detail: Detail }) {
+function OverviewTab({ id }: { id: string }) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [funding, setFunding] = useState<Funding[]>([]);
   const [risks, setRisks] = useState<Risk[]>([]);
@@ -640,7 +641,7 @@ function DocumentsTab({ id }: { id: string }) {
     const { download_url } = await gw<{ download_url: string }>(
       `/projects/${id}/documents/${d.id}/download`
     );
-    window.open(download_url, "_blank");
+    openPresigned(download_url);
   }
 
   return (

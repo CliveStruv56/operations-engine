@@ -1,0 +1,17 @@
+diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
+index be9df86be09c7655787a65c55ae6da01858894c3..8a09e2628648aa8aca9aa2b1855fe51e6bdcce3d 100644
+--- a/dist/commonjs/index.js
++++ b/dist/commonjs/index.js
+@@ -261,3 +261,12 @@ function expand_(str, max, maxLength, isTop) {
+     return acc;
+ }
+ //# sourceMappingURL=index.js.map
++// Compatibility shim: brace-expansion v1/v2 exported the expand function
++// directly from require(); v5 only has named exports. Legacy consumers
++// (minimatch@3/@9 via eslint plugins) call require('brace-expansion')(str),
++// so make the CJS module callable while keeping the named exports.
++module.exports = exports.expand;
++module.exports.expand = exports.expand;
++module.exports.EXPANSION_MAX = exports.EXPANSION_MAX;
++module.exports.EXPANSION_MAX_LENGTH = exports.EXPANSION_MAX_LENGTH;
++module.exports.default = exports.expand;

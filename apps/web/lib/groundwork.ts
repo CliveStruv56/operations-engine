@@ -9,6 +9,21 @@ export function tenantId(): string | null {
 export const gw = <T,>(path: string, init: RequestInit = {}) =>
   api<T>(path, init, tenantId() ?? undefined);
 
+// Presigned URLs come back from the API; only open ones that are https/http
+// and, when NEXT_PUBLIC_STORAGE_ORIGIN is set, point at our storage host.
+export function openPresigned(url: string): void {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return;
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return;
+  const allowed = process.env.NEXT_PUBLIC_STORAGE_ORIGIN;
+  if (allowed && parsed.origin !== new URL(allowed).origin) return;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export type Rag = { programme: string; cost: string; risk: string };
 export type PortfolioRow = {
   id: string;
