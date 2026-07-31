@@ -37,6 +37,8 @@ jobs:
       - run: uv run mypy app
       # Includes the CI-blocking cross-tenant isolation suite (spec §9.1).
       - run: uv run pytest -q
+      # Fails on any known vulnerability (pip-audit has no severity filter).
+      - run: uv run pip-audit --progress-spinner off
 
   worker:
     name: Worker (lint, chunker tests)
@@ -55,6 +57,8 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run pytest -q
+      # Fails on any known vulnerability (pip-audit has no severity filter).
+      - run: uv run pip-audit --progress-spinner off
 
   web:
     name: Web (lint, types, build)
@@ -80,3 +84,5 @@ jobs:
       - run: pnpm lint
       - run: pnpm exec tsc --noEmit
       - run: pnpm build
+      # Fails on high/critical advisories, including transitive deps.
+      - run: pnpm audit --audit-level high
