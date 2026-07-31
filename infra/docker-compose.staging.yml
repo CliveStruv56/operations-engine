@@ -1,0 +1,144 @@
+# Staging stack (Hetzner + Coolify) — docs/staging-deploy-checklist.md is the
+# runbook. Values come from the environment (Coolify's env editor, or
+# `--env-file .env.staging` on a plain Docker host; template:
+# infra/.env.staging.example). Object storage is Cloudflare R2 — no MinIO here.
+#
+# Coolify proxies domains onto api (8000) and web (3000); nothing else is
+# exposed. On a plain Docker host, add `ports:` to api/web yourself.
+#
+# One-time steps before first boot (checklist §4):
+#   psql -U ops -d ops_engine -f infra/staging-roles.sql   # edit passwords first
+#   docker compose -f infra/docker-compose.staging.yml run --rm api alembic upgrade head
+#   docker compose -f infra/docker-compose.staging.yml run --rm api python -m app.groundwork.seeds
+
+name: ops-engine-staging
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ops
+      POSTGRES_PASSWORD: ${OPS_DB_PASSWORD:?}
+      POSTGRES_DB: ops_engine
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops -d ops_engine"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+
+  litellm-postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: ${LITELLM_DB_PASSWORD:?}
+      POSTGRES_DB: litellm
+    volumes:
+      - litellm_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U litellm -d litellm"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  litellm:
+    image: ghcr.io/berriai/litellm-database:main-stable
+    restart: unless-stopped
+    depends_on:
+      litellm-postgres:
+        condition: service_healthy
+    environment:
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?}
+      LITELLM_DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?}@litellm-postgres:5432/litellm
+      DATABASE_URL: postgresql://litellm:${LITELLM_DB_PASSWORD:?}@litellm-postgres:5432/litellm
+      DEEPINFRA_API_KEY: ${DEEPINFRA_API_KEY:-}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+    volumes:
+      - ./litellm/config.yaml:/app/config.yaml:ro
+    command: ["--config", "/app/config.yaml", "--port", "4000"]
+
+  api:
+    # CI builds and pushes this (.github/workflows/app-images.yml); pull, don't
+    # build on the host. GHCR is private — docker login ghcr.io first.
+    image: ghcr.io/clivestruv56/operations-engine-api:latest
+    build: ../apps/api
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      litellm:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://ops:${OPS_DB_PASSWORD:?}@postgres:5432/ops_engine
+      APP_DATABASE_URL: postgresql://ops_app:${OPS_APP_DB_PASSWORD:?}@postgres:5432/ops_engine
+      REDIS_URL: redis://redis:6379/0
+      SUPABASE_JWKS_URL: ${SUPABASE_JWKS_URL:?}
+      CORS_ORIGINS: ${CORS_ORIGINS:?}
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_MASTER_KEY: ${LITELLM_MASTER_KEY:?}
+      LITELLM_KEY_ENCRYPTION_KEY: ${LITELLM_KEY_ENCRYPTION_KEY:?}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:?}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?}
+      STORAGE_REGION: ${STORAGE_REGION:-auto}
+      SENTRY_DSN: ${SENTRY_DSN_API:-}
+      ENVIRONMENT: staging
+    expose:
+      - "8000"
+
+  worker:
+    image: ghcr.io/clivestruv56/operations-engine-worker:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      litellm:
+        condition: service_started
+    environment:
+      APP_DATABASE_URL: postgresql://ops_app:${OPS_APP_DB_PASSWORD:?}@postgres:5432/ops_engine
+      REDIS_URL: redis://redis:6379/0
+      LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_KEY_ENCRYPTION_KEY: ${LITELLM_KEY_ENCRYPTION_KEY:?}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:?}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?}
+      STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:?}
+      STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:?}
+      STORAGE_REGION: ${STORAGE_REGION:-auto}
+      SENTRY_DSN: ${SENTRY_DSN_WORKER:-}
+      ENVIRONMENT: staging
+    volumes:
+      - worker_model_cache:/home/worker/.cache
+
+  web:
+    # NEXT_PUBLIC_* are baked into the client bundle at build time, so web is
+    # built at deploy (Coolify builds this Dockerfile with the args below).
+    build:
+      context: ../apps/web
+      args:
+        NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL:?}
+        NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY:?}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?}
+        NEXT_PUBLIC_STORAGE_ORIGIN: ${NEXT_PUBLIC_STORAGE_ORIGIN:?}
+    restart: unless-stopped
+    depends_on:
+      - api
+    expose:
+      - "3000"
+
+volumes:
+  pgdata:
+  litellm_pgdata:
+  worker_model_cache:
