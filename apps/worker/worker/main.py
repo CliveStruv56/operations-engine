@@ -11,12 +11,14 @@ worker exactly as it does to request handlers.
 import asyncio
 import contextlib
 import tempfile
+from functools import lru_cache
 from pathlib import Path
 
 import asyncpg
 import boto3
 import sentry_sdk
 from arq.connections import RedisSettings
+from botocore.config import Config as BotoConfig
 
 from worker.blocks import estimate_tokens
 from worker.chunking import chunk_blocks
@@ -35,15 +37,24 @@ async def tenant_tx(pool: asyncpg.Pool, tenant_id: str):
         yield conn
 
 
-def _download(storage_key: str, dest: str) -> None:
+@lru_cache
+def _s3():
+    # Path-style + v4 signatures, matching the API's storage client:
+    # bucket-in-URL works on MinIO and R2 alike. Cached — boto3 clients are
+    # thread-safe and download runs on executor threads.
     settings = get_settings()
-    boto3.client(
+    return boto3.client(
         "s3",
         endpoint_url=settings.storage_endpoint,
         aws_access_key_id=settings.storage_access_key,
         aws_secret_access_key=settings.storage_secret_key,
         region_name=settings.storage_region,
-    ).download_file(settings.storage_bucket, storage_key, dest)
+        config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
+    )
+
+
+def _download(storage_key: str, dest: str) -> None:
+    _s3().download_file(get_settings().storage_bucket, storage_key, dest)
 
 
 async def _set_status(
