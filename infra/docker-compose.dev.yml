@@ -88,6 +88,12 @@ services:
       "
 
   worker:
+    # CI builds this image (.github/workflows/worker-image.yml) — refresh with
+    # `docker compose pull worker`, do NOT build locally: the heavy build
+    # crashes Docker Desktop 4.83's VM. `build:` stays as a fallback only
+    # (compose builds when the image is absent locally). GHCR is private:
+    # `gh auth token | docker login ghcr.io -u <user> --password-stdin` first.
+    image: ghcr.io/clivestruv56/operations-engine-worker:latest
     build: ../apps/worker
     # First boot on a fresh volume races Alembic (the ops_app role doesn't
     # exist until migration 0001 runs) — restart until migrations land.
