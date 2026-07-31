@@ -67,7 +67,9 @@ NO_COVERAGE_PROMPT = (
 # (staging saw [c:1a689315] for full UUIDs), so markers resolve by unique
 # prefix too. Keep in step with worker/drafts/assemble.py.
 CITATION_RE = re.compile(r"\[c:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
-SNIPPET_CHARS = 300
+# Evidence-panel excerpt length. Chunks run ~600 tokens (~2,400 chars); 300
+# was too little to carry context past a chunk's heading boilerplate.
+SNIPPET_CHARS = 800
 
 
 def _excerpt_block(chunks: list[RetrievedChunk]) -> str:
