@@ -15,7 +15,7 @@ from uuid import UUID
 import asyncpg
 from pydantic import BaseModel, Field
 
-DRAFT_KINDS = ("monthly_report", "feasibility_study", "funding_bid")
+DRAFT_KINDS = ("monthly_report", "feasibility_study", "funding_bid", "health_card")
 
 
 class ProjectFacts(BaseModel):
@@ -146,7 +146,7 @@ class VaultExcerpt(BaseModel):
 
 
 class ContextPack(BaseModel):
-    kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid)$")
+    kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid|health_card)$")
     generated_on: date
     project: ProjectFacts
     stages: list[StageFacts]
