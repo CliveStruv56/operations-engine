@@ -26,6 +26,7 @@ from app.schemas import (
     VaultSearchHit,
     VaultSearchIn,
 )
+from app.secrets import decrypt_llm_key
 from app.sqlutil import patch_sets
 from app.storage import ALLOWED_MIMES, MAX_UPLOAD_BYTES, storage
 from app.tenant import TenantContext, get_conn, require_role
@@ -209,8 +210,10 @@ async def vault_search(
 ):
     """Raw fused retrieval results — admin debug surface for tuning (spec §6)."""
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
-        virtual_key = await conn.fetchval(
-            "select litellm_key_id from tenants where id = $1", ctx.tenant_id
+        virtual_key = decrypt_llm_key(
+            await conn.fetchval(
+                "select litellm_key_encrypted from tenants where id = $1", ctx.tenant_id
+            )
         )
     if not virtual_key:
         raise ApiError(503, "llm_unavailable", "No model key is provisioned for this workspace")

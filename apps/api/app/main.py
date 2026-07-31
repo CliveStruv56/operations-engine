@@ -36,6 +36,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     settings = get_settings()
+    if settings.litellm_base_url and not settings.litellm_key_encryption_key:
+        # Fail at boot rather than write a tenant key to the DB in cleartext.
+        raise RuntimeError(
+            "LITELLM_KEY_ENCRYPTION_KEY must be set when LITELLM_BASE_URL is"
+            " configured — generate one with: python -c 'from cryptography.fernet"
+            " import Fernet; print(Fernet.generate_key().decode())'"
+        )
     if settings.sentry_dsn:
         # No client content in logs/errors (spec §9.5): ids and counts only.
         sentry_sdk.init(

@@ -47,7 +47,7 @@ def fake_llm(monkeypatch):
 async def enable_llm_key(tenant) -> None:
     async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
         await conn.execute(
-            "update tenants set litellm_key_id = 'sk-test-virtual' where id = $1", tenant.id
+            "update tenants set litellm_key_encrypted = 'sk-test-virtual' where id = $1", tenant.id
         )
 
 

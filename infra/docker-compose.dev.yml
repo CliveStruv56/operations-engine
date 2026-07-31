@@ -105,6 +105,7 @@ services:
       APP_DATABASE_URL: postgresql://ops_app:ops_app@postgres:5432/ops_engine
       REDIS_URL: redis://redis:6379/0
       LITELLM_BASE_URL: http://litellm:4000
+      LITELLM_KEY_ENCRYPTION_KEY: ${LITELLM_KEY_ENCRYPTION_KEY:-}
       STORAGE_ENDPOINT: http://minio:9000
       STORAGE_BUCKET: ${STORAGE_BUCKET:-vault}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-minio-dev}

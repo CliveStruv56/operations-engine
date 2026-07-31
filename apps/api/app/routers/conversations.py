@@ -25,6 +25,7 @@ from app.ratelimit import rate_limiter
 from app.retrieval import PRIMARY_WEIGHT, PROJECT_WEIGHT, RetrievedChunk, Scope, retrieve
 from app.routing import estimate_tokens, select_route
 from app.schemas import ConversationCreate, ConversationOut, MessageCreate, MessageOut
+from app.secrets import decrypt_llm_key
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["conversations"])
@@ -224,7 +225,7 @@ async def post_message(
                 )
             }
         tenant = await conn.fetchrow(
-            "select litellm_key_id, soft_budget_usd from tenants where id = $1",
+            "select litellm_key_encrypted, soft_budget_usd from tenants where id = $1",
             ctx.tenant_id,
         )
         month_spend = await conn.fetchval(
@@ -255,7 +256,8 @@ async def post_message(
             str(conversation_id),
         )
 
-    if not tenant["litellm_key_id"]:
+    virtual_key = decrypt_llm_key(tenant["litellm_key_encrypted"])
+    if not virtual_key:
         raise ApiError(503, "llm_unavailable", "No model key is provisioned for this workspace")
 
     # Retrieval (spec §5): embed the query (network — outside any tenant tx),
@@ -274,9 +276,7 @@ async def post_message(
         else None
     )
     if body.use_vault:
-        embedding, embed_tokens = await litellm_client.embed_query(
-            tenant["litellm_key_id"], body.content
-        )
+        embedding, embed_tokens = await litellm_client.embed_query(virtual_key, body.content)
         async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
             chunks = await retrieve(conn, embedding, body.content, scope=scope)
 
@@ -296,9 +296,7 @@ async def post_message(
     async def stream():
         result = StreamResult()
         try:
-            async for delta in litellm_client.stream_chat(
-                tenant["litellm_key_id"], alias, llm_messages, result
-            ):
+            async for delta in litellm_client.stream_chat(virtual_key, alias, llm_messages, result):
                 yield _sse("delta", {"content": delta})
         except ApiError as exc:
             yield _sse("error", {"error": {"code": exc.code, "message": exc.message}})

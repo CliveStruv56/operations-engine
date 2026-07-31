@@ -23,6 +23,7 @@ os.environ["REDIS_URL"] = ""
 # turn unit tests into integration tests (tests inject fakes instead).
 os.environ["LITELLM_BASE_URL"] = ""
 os.environ["LITELLM_MASTER_KEY"] = ""
+os.environ["LITELLM_KEY_ENCRYPTION_KEY"] = ""
 os.environ["STORAGE_ENDPOINT"] = ""
 
 import jwt as pyjwt  # noqa: E402

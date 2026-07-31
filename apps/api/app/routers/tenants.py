@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.db import db
 from app.litellm import litellm_client
 from app.schemas import TenantCreate, TenantMeOut, TenantOut, TenantPatch
+from app.secrets import encrypt_llm_key
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["tenants"])
@@ -35,7 +36,7 @@ async def create_tenant(body: TenantCreate, user: AuthUser = Depends(get_current
         await conn.execute(
             """
             insert into tenants (id, name, plan, seats, soft_budget_usd, trial_ends_at,
-                                 litellm_key_id)
+                                 litellm_key_encrypted)
             values ($1, $2, 'trial', $3, $4, $5, $6)
             """,
             tenant_id,
@@ -43,7 +44,7 @@ async def create_tenant(body: TenantCreate, user: AuthUser = Depends(get_current
             settings.default_seats,
             soft_budget,
             trial_ends,
-            litellm_key,
+            encrypt_llm_key(litellm_key),
         )
         await conn.execute(
             "insert into memberships (user_id, tenant_id, role) values ($1, $2, 'owner')",

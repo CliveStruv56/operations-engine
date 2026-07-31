@@ -11,6 +11,9 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379/0"
 
     litellm_base_url: str = "http://localhost:4000"
+    # Fernet key for tenants.litellm_key_encrypted — must match the API's.
+    # Empty = keys are read as-is (tests / gateway disabled).
+    litellm_key_encryption_key: str = ""
 
     storage_endpoint: str = ""
     storage_bucket: str = "vault"

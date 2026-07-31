@@ -24,6 +24,7 @@ from worker.blocks import estimate_tokens
 from worker.chunking import chunk_blocks
 from worker.embed import embed_texts
 from worker.parsing import parse_file
+from worker.secrets import decrypt_llm_key
 from worker.settings import get_settings
 from worker.summarize import summarize_document
 
@@ -77,8 +78,10 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
         doc = await conn.fetchrow("select * from documents where id = $1", document_id)
         if doc is None:
             return "gone"  # deleted between enqueue and run
-        virtual_key = await conn.fetchval(
-            "select litellm_key_id from tenants where id = $1", tenant_id
+        virtual_key = decrypt_llm_key(
+            await conn.fetchval(
+                "select litellm_key_encrypted from tenants where id = $1", tenant_id
+            )
         )
 
     try:

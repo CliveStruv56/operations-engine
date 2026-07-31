@@ -23,9 +23,13 @@ class Settings(BaseSettings):
     environment: str = "dev"
 
     # LiteLLM proxy. Empty base URL = gateway disabled (unit tests, CI):
-    # tenant bootstrap then leaves litellm_key_id null and chat returns 503.
+    # tenant bootstrap then leaves the tenant key null and chat returns 503.
     litellm_base_url: str = ""
     litellm_master_key: str = ""
+    # Fernet key encrypting tenants.litellm_key_encrypted at rest. Required
+    # whenever the gateway is enabled (enforced at app startup). Generate:
+    # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    litellm_key_encryption_key: str = ""
 
     chat_rate_limit_per_min: int = 60
     upload_rate_limit_per_hour: int = 20
