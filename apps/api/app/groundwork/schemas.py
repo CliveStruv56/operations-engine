@@ -298,3 +298,28 @@ class ActivityOut(BaseModel):
     action: str
     user_id: UUID | None
     created_at: datetime
+
+
+class DraftIn(BaseModel):
+    kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid)$")
+    # monthly_report: reporting period; required for that kind.
+    month: str | None = Field(default=None, pattern="^\\d{4}-(0[1-9]|1[0-2])$")
+    # funding_bid: the project funding source the bid targets; required there.
+    funding_source_id: UUID | None = None
+    # feasibility_study: optional free-text brief.
+    instructions: str | None = Field(default=None, max_length=2_000)
+
+
+class DraftJobOut(BaseModel):
+    id: UUID
+    project_id: UUID
+    kind: str
+    status: str
+    error: str | None
+    document_id: UUID | None
+    download_url: str | None = None
+    to_confirm_count: int
+    llm_calls: int
+    cost_usd: float
+    created_at: datetime
+    updated_at: datetime

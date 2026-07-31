@@ -42,5 +42,18 @@ class IngestQueue:
             _job_id=f"ingest:{document_id}",
         )
 
+    async def enqueue_draft(
+        self, tenant_id: UUID, project_id: UUID, job_id: UUID, user_id: UUID
+    ) -> None:
+        pool = await self._conn()
+        await pool.enqueue_job(
+            "draft_document",
+            str(tenant_id),
+            str(project_id),
+            str(job_id),
+            str(user_id),
+            _job_id=f"draft:{job_id}",
+        )
+
 
 ingest_queue = IngestQueue()
