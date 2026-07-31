@@ -38,13 +38,24 @@ async def remove_member(
     if target["role"] == "owner":
         if ctx.role != "owner":
             raise ApiError(403, "insufficient_role", "Only an owner can remove an owner")
-        owner_count = await conn.fetchval(
-            "select count(*) from memberships where tenant_id = $1 and role = 'owner'",
+        # Lock the tenant's owner rows (ordered, to avoid deadlocks) so
+        # concurrent removals serialise — otherwise two requests can each
+        # delete "the other" last owner and leave the tenant ownerless.
+        owners = await conn.fetch(
+            "select id from memberships where tenant_id = $1 and role = 'owner'"
+            " order by id for update",
             ctx.tenant_id,
         )
-        if owner_count <= 1:
+        if len(owners) <= 1:
             raise ApiError(409, "last_owner", "Cannot remove the last owner")
-    await conn.execute("delete from memberships where id = $1", membership_id)
+        if not any(o["id"] == membership_id for o in owners):
+            # Deleted or demoted after our initial read.
+            raise ApiError(404, "not_found", "Membership not found")
+    deleted = await conn.fetchval(
+        "delete from memberships where id = $1 returning id", membership_id
+    )
+    if deleted is None:
+        raise ApiError(404, "not_found", "Membership not found")
     await write_audit(
         conn,
         ctx.tenant_id,

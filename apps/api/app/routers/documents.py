@@ -102,23 +102,27 @@ async def complete_upload(
         async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
             await conn.execute(
                 "update documents set status = 'failed', error = 'File exceeds 50 MB',"
-                " updated_at = now() where id = $1",
+                " updated_at = now() where id = $1 and status = 'uploaded'",
                 document_id,
             )
         raise ApiError(400, "too_large", "Files are limited to 50 MB")
 
-    await ingest_queue.enqueue_ingest(ctx.tenant_id, document_id, ctx.user_id)
+    # Guarded claim: exactly one concurrent complete flips uploaded → parsing.
+    # Enqueue inside the transaction so a failed enqueue rolls the claim back.
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
         row = await conn.fetchrow(
             """
             update documents set status = 'parsing', error = null, updated_at = now()
-            where id = $1 returning *
+            where id = $1 and status = 'uploaded' returning *
             """,
             document_id,
         )
+        if row is None:
+            raise ApiError(409, "invalid_state", "Document is already being processed")
         await write_audit(
             conn, ctx.tenant_id, ctx.user_id, "document.complete", "document", str(document_id)
         )
+        await ingest_queue.enqueue_ingest(ctx.tenant_id, document_id, ctx.user_id)
     return dict(row)
 
 
@@ -180,15 +184,17 @@ async def delete_document(
     ctx: TenantContext = Depends(require_role("member")),
 ):
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
-        doc = await _get_document(conn, document_id)
+        doc = await conn.fetchrow("select * from documents where id = $1 for update", document_id)
+        if doc is None:  # RLS already scoped the select to the tenant
+            raise ApiError(404, "not_found", "Document not found")
         if ctx.role == "member" and doc["created_by"] != ctx.user_id:
             raise ApiError(403, "forbidden", "Only admins can delete documents added by others")
 
-    # Object first, row second: a leftover row is retryable, an orphaned
-    # object with no row is invisible (GDPR delete must not strand files).
-    if doc["storage_key"]:
-        await storage.delete_object(doc["storage_key"])
-    async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
+        # Object first, row second: a leftover row is retryable, an orphaned
+        # object with no row is invisible (GDPR delete must not strand files).
+        # The row lock serialises concurrent deletes for the storage call.
+        if doc["storage_key"]:
+            await storage.delete_object(doc["storage_key"])
         await conn.execute("delete from documents where id = $1", document_id)  # cascades chunks
         await write_audit(
             conn, ctx.tenant_id, ctx.user_id, "document.delete", "document", str(document_id)
@@ -230,21 +236,21 @@ async def reprocess_document(
     document_id: UUID,
     ctx: TenantContext = Depends(require_role("member")),
 ):
+    # Guarded claim, same shape as complete_upload: one concurrent reprocess
+    # wins; a failed enqueue rolls the status change back.
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
         doc = await _get_document(conn, document_id)
-        if doc["status"] not in ("ready", "failed"):
-            raise ApiError(409, "invalid_state", f"Document is currently {doc['status']}")
-
-    await ingest_queue.enqueue_ingest(ctx.tenant_id, document_id, ctx.user_id)
-    async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
         row = await conn.fetchrow(
             """
             update documents set status = 'parsing', error = null, updated_at = now()
-            where id = $1 returning *
+            where id = $1 and status in ('ready', 'failed') returning *
             """,
             document_id,
         )
+        if row is None:
+            raise ApiError(409, "invalid_state", f"Document is currently {doc['status']}")
         await write_audit(
             conn, ctx.tenant_id, ctx.user_id, "document.reprocess", "document", str(document_id)
         )
+        await ingest_queue.enqueue_ingest(ctx.tenant_id, document_id, ctx.user_id)
     return dict(row)
