@@ -1,7 +1,7 @@
 """Groundwork W1: feature flag, spine seeding (exact counts + applicability),
 portfolio RAG, dormancy rules, ref-seed idempotency, and module isolation."""
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
@@ -243,8 +243,8 @@ async def test_dormant_requires_reason(client):
 
 # -- isolation ---------------------------------------------------------------
 
-# All nine tenant-scoped module tables (PRD §2) — setup seeds the first five;
-# _seed_room_rows fills the user-created remainder.
+# All ten tenant-scoped module tables (PRD §2 + W3 draft jobs) — setup seeds
+# the first five; _seed_room_rows fills the user-created remainder.
 MODULE_TABLES = [
     "proj_projects",
     "proj_stages",
@@ -255,6 +255,7 @@ MODULE_TABLES = [
     "proj_funding_sources",
     "proj_conditions",
     "proj_stakeholders",
+    "proj_draft_jobs",
 ]
 
 
@@ -281,6 +282,16 @@ async def _seed_room_rows(client, tenant, pid: str) -> None:
         f"{base}/stakeholders", json={"name": "Cllr Jones", "role": "lpa"}, headers=headers
     )
     assert resp.status_code == 201, resp.text
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            """
+            insert into proj_draft_jobs (tenant_id, project_id, kind, created_by)
+            values ($1, $2, 'monthly_report', $3)
+            """,
+            tenant.id,
+            UUID(pid),
+            tenant.owner_id,
+        )
 
 
 async def test_module_isolation(client):
