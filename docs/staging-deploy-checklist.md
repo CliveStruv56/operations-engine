@@ -1,6 +1,22 @@
 # Staging deploy checklist (W4 pilot prep)
 
-Target: Hetzner + Coolify per spec §12. Postgres 16 + pgvector, Redis,
+> **Deployed 31 Jul 2026 — divergence from spec §12**: staging runs on
+> **Railway** (backend: project `ops-engine-staging` — postgres/pgvector,
+> redis, litellm + own postgres, api, worker; `railway up` per app dir,
+> volumes on both postgres + worker cache, api domain
+> https://api-production-71150.up.railway.app) and **Vercel** (web: project
+> `ops-engine-staging-web`, https://ops-engine-staging-web.vercel.app,
+> NEXT_PUBLIC_* set in Vercel env, no Docker build). Chosen over
+> Hetzner+Coolify because the user already had Railway/Vercel accounts and
+> Railway supplies domains — no server ops for the pilot. The compose file
+> below stays for a later self-hosted move. Railway gotchas: PGDATA must
+> point at a subdir of the volume mount (lost+found breaks initdb); do NOT
+> set LC_ALL=C (SQL_ASCII cluster breaks psycopg3 — returns bytes);
+> apps must bind `::` (IPv6 private mesh) and the Dockerfile needs EXPOSE
+> for edge port detection; LiteLLM config is baked via infra/litellm/Dockerfile
+> (Railway can't mount files).
+
+Original plan below — target: Hetzner + Coolify per spec §12. Postgres 16 + pgvector, Redis,
 LiteLLM proxy (own Postgres), API, worker, web. Cloudflare R2 replaces dev
 MinIO. Work through in order; every step is verifiable before the next.
 
