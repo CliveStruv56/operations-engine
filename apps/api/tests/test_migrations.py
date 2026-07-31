@@ -32,6 +32,16 @@ def test_migrations_are_reversible():
     try:
         get_settings.cache_clear()
         command.upgrade(cfg, "head")
+        # Downgrades must survive real data: narrowing usage_events_kind_check
+        # validates existing rows, so plant the kinds later revisions added.
+        with psycopg.connect(url, autocommit=True) as conn:
+            row = conn.execute(
+                "insert into tenants (name) values ('migtest') returning id"
+            ).fetchone()
+            conn.execute(
+                "insert into usage_events (tenant_id, kind) values (%s, 'summary'), (%s, 'draft')",
+                (row[0], row[0]),
+            )
         command.downgrade(cfg, "base")
         command.upgrade(cfg, "head")
     finally:

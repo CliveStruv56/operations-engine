@@ -67,6 +67,10 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.execute("alter table usage_events drop constraint usage_events_kind_check")
+    # Narrowing the check validates existing rows — drop the ones this
+    # revision introduced ('summary') or the ADD CONSTRAINT aborts. Their
+    # metering history does not survive the downgrade.
+    op.execute("delete from usage_events where kind not in ('chat', 'embed', 'parse')")
     op.execute(
         "alter table usage_events add constraint usage_events_kind_check"
         " check (kind in ('chat', 'embed', 'parse'))"
