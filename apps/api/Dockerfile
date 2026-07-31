@@ -21,8 +21,9 @@ COPY migrations/ migrations/
 COPY app/ app/
 
 USER api
-# EXPOSE is Railway's port-detection signal for its edge proxy; "::" binds
-# dual-stack — Railway's private/edge networking is IPv6-only, and IPv4-mapped
-# addresses keep plain-Docker hosts working too.
+# EXPOSE is Railway's port-detection signal for its edge proxy. 0.0.0.0, not
+# "::": Railway's public edge connects over IPv4 and its runtime forces
+# v6-only sockets, so a "::" bind 502s every public request. Only the public
+# domain talks to the api — nothing uses it over the IPv6 private mesh.
 EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "::", "--port", "8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
