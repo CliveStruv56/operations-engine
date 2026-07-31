@@ -186,6 +186,9 @@ export const submitDraft = (
 
 export const getDraftJob = (jobId: string) => gw<DraftJob>(`/projects/drafts/${jobId}`);
 
+export const listActiveDraftJobs = (projectId: string) =>
+  gw<DraftJob[]>(`/projects/${projectId}/drafts`);
+
 export const submitHealthCard = (projectId: string) =>
   gw<DraftJob>(`/projects/${projectId}/health-card`, { method: "POST" });
 

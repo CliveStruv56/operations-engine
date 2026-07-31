@@ -96,6 +96,38 @@ async def test_submit_validation_per_kind(client, gw, fake_draft_queue):
     assert resp.status_code == 422  # pydantic pattern
 
 
+async def test_duplicate_in_flight_draft_rejected(client, gw, fake_draft_queue):
+    """A second submit of the same kind while one is queued/running 409s;
+    other kinds stay allowed, and completion clears the guard."""
+    base = f"/api/v1/projects/{gw['pid']}/drafts"
+    body = {"kind": "monthly_report", "month": "2026-07"}
+    first = await client.post(base, json=body, headers=gw["h"])
+    assert first.status_code == 202, first.text
+
+    dup = await client.post(base, json=body, headers=gw["h"])
+    assert dup.status_code == 409
+    assert dup.json()["error"]["code"] == "draft_in_flight"
+
+    other_kind = await client.post(base, json={"kind": "feasibility_study"}, headers=gw["h"])
+    assert other_kind.status_code == 202
+
+    # The active listing exposes both in-flight jobs, newest first.
+    active = await client.get(base, headers=gw["h"])
+    assert active.status_code == 200
+    assert [j["kind"] for j in active.json()] == ["feasibility_study", "monthly_report"]
+
+    async with db.tenant_tx(gw["t"].owner_id, gw["t"].id) as conn:
+        await conn.execute(
+            "update proj_draft_jobs set status = 'succeeded' where id = $1",
+            UUID(first.json()["id"]),
+        )
+    again = await client.post(base, json=body, headers=gw["h"])
+    assert again.status_code == 202  # finished jobs no longer block
+
+    active = await client.get(base, headers=gw["h"])
+    assert [j["kind"] for j in active.json()] == ["monthly_report", "feasibility_study"]
+
+
 async def test_failed_enqueue_rolls_back_job_row(client, gw, monkeypatch):
     async def broken(*args):
         raise ApiError(503, "queue_unavailable", "Ingestion queue is not configured")

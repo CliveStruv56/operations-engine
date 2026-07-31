@@ -25,6 +25,11 @@ from app.tenant import TenantContext, get_conn
 
 router = APIRouter(tags=["groundwork"])
 
+# A queued/running job older than this is treated as stranded (worker killed
+# mid-job) rather than in flight — 2h clears the worker's 3600s job_timeout,
+# so the duplicate guard self-heals instead of blocking drafts forever.
+IN_FLIGHT_WINDOW = "2 hours"
+
 
 def _job_out(row: asyncpg.Record, download_url: str | None = None) -> dict:
     return {**dict(row), "cost_usd": float(row["cost_usd"]), "download_url": download_url}
@@ -57,6 +62,24 @@ async def submit_draft(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     await module_project(conn, project_id)
+    # One in-flight draft per document kind: a second click mid-draft doubles
+    # the LLM spend for an identical result (the register would just version it).
+    in_flight = await conn.fetchval(
+        f"""
+        select 1 from proj_draft_jobs
+        where project_id = $1 and kind = $2 and status in ('queued', 'running')
+          and created_at > now() - interval '{IN_FLIGHT_WINDOW}'
+        """,
+        project_id,
+        body.kind,
+    )
+    if in_flight:
+        raise ApiError(
+            409,
+            "draft_in_flight",
+            "This draft is already being generated — it lands in the document "
+            "registry when done.",
+        )
     params = await _draft_params(conn, project_id, body)
     row = await conn.fetchrow(
         """
@@ -112,6 +135,27 @@ async def submit_health_card(
     )
     await ingest_queue.enqueue_health_card(ctx.tenant_id, project_id, row["id"], ctx.user_id)
     return _job_out(row)
+
+
+@router.get("/projects/{project_id}/drafts", response_model=list[DraftJobOut])
+async def list_active_draft_jobs(
+    project_id: UUID,
+    ctx: TenantContext = Depends(require_projects),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Queued/running jobs for the project — lets a reopened launcher resume
+    polling an in-flight draft instead of offering a duplicate submit."""
+    await module_project(conn, project_id)
+    rows = await conn.fetch(
+        f"""
+        select * from proj_draft_jobs
+        where project_id = $1 and status in ('queued', 'running')
+          and created_at > now() - interval '{IN_FLIGHT_WINDOW}'
+        order by created_at desc
+        """,
+        project_id,
+    )
+    return [_job_out(row) for row in rows]
 
 
 @router.get("/projects/drafts/{job_id}", response_model=DraftJobOut)

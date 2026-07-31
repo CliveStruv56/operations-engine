@@ -11,6 +11,7 @@ import {
   Funding,
   getDraftJob,
   gw,
+  listActiveDraftJobs,
   openPresigned,
   submitDraft,
 } from "@/lib/groundwork";
@@ -42,6 +43,18 @@ export function DraftModal({
   const [job, setJob] = useState<DraftJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // A draft may already be running (the modal invites closing mid-draft) —
+  // resume polling it instead of offering a duplicate submit; the API also
+  // 409s duplicates as the authoritative guard.
+  useEffect(() => {
+    listActiveDraftJobs(projectId)
+      .then((jobs) => {
+        const active = jobs.find((j) => j.kind === kind);
+        if (active) setJob((current) => current ?? active);
+      })
+      .catch(() => {});
+  }, [projectId, kind]);
 
   useEffect(() => {
     if (kind !== "funding_bid") return;
