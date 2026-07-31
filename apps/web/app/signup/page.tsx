@@ -17,7 +17,14 @@ export default function SignupPage() {
     setBusy(true);
     setError(null);
     const supabase = createClient();
-    const { error } = await supabase.auth.signUp({ email, password });
+    // Confirm-email links follow the environment the user signed up from —
+    // the Supabase project's site_url points at dev, which would otherwise
+    // bounce staging/production signups to localhost.
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${window.location.origin}/app` },
+    });
     setBusy(false);
     if (error) {
       setError(error.message);
