@@ -149,6 +149,10 @@ export type Condition = {
   pre_commencement: boolean;
   status: string;
 };
+export type ActivityEntry = { action: string; created_at: string };
+export type UploadTicket = { upload_url: string; file_key: string };
+export type DownloadTicket = { download_url: string };
+export type Budget = { lines: BudgetLine[] };
 export type Stakeholder = {
   id: string;
   name: string;
