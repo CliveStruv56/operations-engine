@@ -106,8 +106,11 @@ def test_assemble_monthly_report_structure_citations_and_to_confirm():
     sections = SKELETONS["monthly_report"]
     texts = [f"Narrative for {s.title}." for s in sections]
     # Section 1 carries a real citation, a fabricated one, and two TO CONFIRMs.
+    # A full id, a model-truncated 8-char prefix of the same id (must share
+    # its numbering), and a fabricated id (must strip).
     texts[0] = (
         f"On track overall [c:{excerpt.chunk_id}] and also [c:{uuid4()}]. "
+        f"Truncated echo [c:{str(excerpt.chunk_id)[:8]}]. "
         "[TO CONFIRM: contract start date] [TO CONFIRM: insurance renewal]"
     )
     draft = assemble_docx(pack, list(zip(sections, texts, strict=True)), date(2026, 7, 31))
@@ -122,6 +125,7 @@ def test_assemble_monthly_report_structure_citations_and_to_confirm():
     for i, section in enumerate(sections, start=1):
         assert f"{i}. {section.title}" in body
     assert "On track overall [1] and also ." in body  # resolved + stripped
+    assert "Truncated echo [1]." in body  # prefix marker shares the numbering
     assert "[TO CONFIRM: contract start date]" in body  # markers stay visible
     assert "References" in body and "[1] Housing Needs Survey, p.12–13" in body
     assert "Data sources" in body and "10 stages" not in body  # counts are real, not invented

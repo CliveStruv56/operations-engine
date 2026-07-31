@@ -86,6 +86,36 @@ def test_resolve_citations_drops_hallucinated_ids():
     assert len(citations) == 1
 
 
+def test_resolve_citations_accepts_unique_truncated_prefix():
+    # Models routinely echo only the first UUID segment (seen live in staging).
+    c1, c2 = _chunk(title="Handbook"), _chunk()
+    short = str(c1.chunk_id)[:8]
+    content, citations = _resolve_citations(f"Leave is 25 days [c:{short}].", [c1, c2])
+    assert content == "Leave is 25 days [1]."
+    assert citations[0]["chunk_id"] == str(c1.chunk_id)
+
+
+def test_resolve_citations_truncated_prefix_shares_numbering_with_full_id():
+    c1 = _chunk()
+    text = f"A [c:{c1.chunk_id}] and B [c:{str(c1.chunk_id)[:8]}]."
+    content, citations = _resolve_citations(text, [c1])
+    assert content == "A [1] and B [1]."
+    assert len(citations) == 1
+
+
+def test_resolve_citations_drops_ambiguous_and_fabricated_prefixes():
+    twin_a = _chunk(cid=UUID("aaaabbbb-0000-4000-8000-000000000001"))
+    twin_b = _chunk(cid=UUID("aaaabbbb-0000-4000-8000-000000000002"))
+    # Fabricated short id that prefixes nothing supplied.
+    content, citations = _resolve_citations("Fake [c:ffff1234].", [twin_a, twin_b])
+    assert content == "Fake ."
+    assert citations == []
+    # Ambiguous: the prefix matches both supplied ids — must not resolve.
+    content, citations = _resolve_citations("X [c:aaaabbbb].", [twin_a, twin_b])
+    assert content == "X ."
+    assert citations == []
+
+
 # -- hybrid SQL under RLS ----------------------------------------------------
 
 

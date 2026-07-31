@@ -19,7 +19,10 @@ from docx.shared import Pt
 from worker.drafts.context import ContextPack, VaultExcerpt
 from worker.drafts.prompts import DOC_TITLES, Section
 
-CITATION_RE = re.compile(r"\[c:([0-9a-fA-F-]{36})\]")
+# 4–36 id chars: models routinely truncate long hex ids when echoing them, so
+# markers resolve by unique prefix too. Keep in step with the api's
+# app/routers/conversations.py.
+CITATION_RE = re.compile(r"\[c:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
 TO_CONFIRM_RE = re.compile(r"\[TO CONFIRM:[^\]]*\]")
 
 
@@ -43,8 +46,13 @@ class _CitationIndex:
         def _sub(match: re.Match) -> str:
             cid = match.group(1).lower()
             if cid not in self.by_id:
-                self.stripped += 1
-                return ""
+                # Truncated markers resolve only as a unique prefix of one
+                # supplied id — fabricated or ambiguous ids still strip.
+                matches = [full for full in self.by_id if full.startswith(cid)]
+                if len(matches) != 1:
+                    self.stripped += 1
+                    return ""
+                cid = matches[0]
             if cid not in self.order:
                 self.order[cid] = len(self.order) + 1
             return f"[{self.order[cid]}]"

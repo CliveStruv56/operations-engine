@@ -63,7 +63,10 @@ NO_COVERAGE_PROMPT = (
     "Otherwise answer normally from general knowledge, without citations."
 )
 
-CITATION_RE = re.compile(r"\[c:([0-9a-fA-F-]{36})\]")
+# 4–36 id chars: models routinely truncate long hex ids when echoing them
+# (staging saw [c:1a689315] for full UUIDs), so markers resolve by unique
+# prefix too. Keep in step with worker/drafts/assemble.py.
+CITATION_RE = re.compile(r"\[c:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
 SNIPPET_CHARS = 300
 
 
@@ -84,11 +87,20 @@ def _resolve_citations(text: str, chunks: list[RetrievedChunk]) -> tuple[str, li
     order: dict[str, int] = {}
     citations: list[dict] = []
 
-    def _sub(match: re.Match) -> str:
-        cid = match.group(1).lower()
+    def _lookup(cid: str) -> tuple[str, RetrievedChunk] | None:
         chunk = by_id.get(cid)
-        if chunk is None:
+        if chunk is not None:
+            return cid, chunk
+        # A truncated marker resolves only when it prefixes exactly one
+        # supplied id — fabricated or ambiguous ids still drop.
+        matches = [(full, c) for full, c in by_id.items() if full.startswith(cid)]
+        return matches[0] if len(matches) == 1 else None
+
+    def _sub(match: re.Match) -> str:
+        found = _lookup(match.group(1).lower())
+        if found is None:
             return ""
+        cid, chunk = found
         if cid not in order:
             order[cid] = len(order) + 1
             citations.append(
