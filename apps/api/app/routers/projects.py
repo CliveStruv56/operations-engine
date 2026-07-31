@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends
 from app.audit import write_audit
 from app.errors import ApiError
 from app.schemas import ProjectCreate, ProjectOut, ProjectUpdate
+from app.sqlutil import patch_sets
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["projects"])
@@ -64,11 +65,11 @@ async def update_project(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
-    sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
+    sets, values = patch_sets("projects", updates)
     row = await conn.fetchrow(
         f"update projects set {sets}, updated_at = now() where id = $1 returning *",
         project_id,
-        *updates.values(),
+        *values,
     )
     if row is None:
         raise ApiError(404, "not_found", "Project not found")

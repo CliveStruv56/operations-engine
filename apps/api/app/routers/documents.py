@@ -26,6 +26,7 @@ from app.schemas import (
     VaultSearchHit,
     VaultSearchIn,
 )
+from app.sqlutil import patch_sets
 from app.storage import ALLOWED_MIMES, MAX_UPLOAD_BYTES, storage
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -166,11 +167,11 @@ async def update_document(
         if not exists:
             raise ApiError(404, "not_found", "Project not found")
     await _get_document(conn, document_id)
-    sets = ", ".join(f"{k} = ${i + 2}" for i, k in enumerate(updates))
+    sets, values = patch_sets("documents", updates)
     row = await conn.fetchrow(
         f"update documents set {sets}, updated_at = now() where id = $1 returning *",
         document_id,
-        *updates.values(),
+        *values,
     )
     await write_audit(
         conn, ctx.tenant_id, ctx.user_id, "document.update", "document", str(document_id)

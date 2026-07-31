@@ -46,6 +46,7 @@ from app.groundwork.schemas import (
     TaskPatch,
 )
 from app.routers.groundwork import require_projects
+from app.sqlutil import patch_sets
 from app.storage import ALLOWED_MIMES, MAX_UPLOAD_BYTES, storage
 from app.tenant import TenantContext, get_conn
 
@@ -66,11 +67,6 @@ async def _module_project(conn: asyncpg.Connection, project_id: UUID) -> asyncpg
     if row is None:
         raise ApiError(404, "not_found", "Project not found")
     return row
-
-
-def _patch_sql(table: str, updates: dict, id_param: int = 1) -> tuple[str, list]:
-    sets = ", ".join(f"{k} = ${i + id_param + 1}" for i, k in enumerate(updates))
-    return sets, list(updates.values())
 
 
 def _stage_out(row: asyncpg.Record) -> dict:
@@ -139,7 +135,7 @@ async def patch_project(
     for key in ("applicability", "contract_facts"):
         if key in updates:
             updates[key] = json.dumps(updates[key])
-    sets, values = _patch_sql("proj_projects", updates)
+    sets, values = patch_sets("proj_projects", updates)
     await conn.execute(
         f"update proj_projects set {sets}, updated_at = now() where id = $1",
         project_id,
@@ -198,7 +194,7 @@ async def patch_stage(
         updates["gate_exceptions"] = (
             f"{existing}\n[{stamp}] {note}" if existing else f"[{stamp}] {note}"
         )
-    sets, values = _patch_sql("proj_stages", updates)
+    sets, values = patch_sets("proj_stages", updates)
     updated = await conn.fetchrow(
         f"update proj_stages set {sets} where id = $1 returning *", stage_id, *values
     )
@@ -395,7 +391,7 @@ async def patch_task(
         updates["completed_at"] = datetime.now(UTC)
     elif "status" in updates:
         updates["completed_at"] = None
-    sets, values = _patch_sql("proj_tasks", updates, id_param=2)
+    sets, values = patch_sets("proj_tasks", updates, id_param=2)
     row = await conn.fetchrow(
         f"update proj_tasks set {sets} where project_id = $1 and id = $2 returning *",
         project_id,
@@ -482,7 +478,7 @@ async def patch_registry_doc(
         )
         if not ok:
             raise ApiError(404, "not_found", "Vault document not found")
-    sets, values = _patch_sql("proj_documents", updates, id_param=2)
+    sets, values = patch_sets("proj_documents", updates, id_param=2)
     row = await conn.fetchrow(
         f"""update proj_documents set {sets}, updated_at = now()
             where project_id = $1 and id = $2 returning *""",
@@ -735,7 +731,7 @@ async def patch_funding(
         raise ApiError(400, "no_changes", "Nothing to update")
     if "drawdown_schedule" in updates:
         updates["drawdown_schedule"] = json.dumps(updates["drawdown_schedule"])
-    sets, values = _patch_sql("proj_funding_sources", updates, id_param=2)
+    sets, values = patch_sets("proj_funding_sources", updates, id_param=2)
     row = await conn.fetchrow(
         f"""update proj_funding_sources set {sets}, updated_at = now()
             where project_id = $1 and id = $2 returning id""",
@@ -829,7 +825,7 @@ async def patch_risk(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
-    sets, values = _patch_sql("proj_risks", updates, id_param=2)
+    sets, values = patch_sets("proj_risks", updates, id_param=2)
     row = await conn.fetchrow(
         f"""update proj_risks set {sets}, updated_at = now()
             where project_id = $1 and id = $2 returning id""",
@@ -898,7 +894,7 @@ async def patch_condition(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
-    sets, values = _patch_sql("proj_conditions", updates, id_param=2)
+    sets, values = patch_sets("proj_conditions", updates, id_param=2)
     row = await conn.fetchrow(
         f"update proj_conditions set {sets} where project_id = $1 and id = $2 returning id",
         project_id,
@@ -1001,7 +997,7 @@ async def patch_stakeholder(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
-    sets, values = _patch_sql("proj_stakeholders", updates, id_param=2)
+    sets, values = patch_sets("proj_stakeholders", updates, id_param=2)
     row = await conn.fetchrow(
         f"update proj_stakeholders set {sets} where project_id = $1 and id = $2 returning id",
         project_id,
