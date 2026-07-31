@@ -473,11 +473,15 @@ async def patch_registry_doc(
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
     if updates.get("vault_document_id") is not None:
+        # Only unassigned vault documents or ones already in this project can
+        # back a registry entry — no cross-project links.
         ok = await conn.fetchval(
-            "select 1 from documents where id = $1", updates["vault_document_id"]
+            "select 1 from documents where id = $1 and (project_id is null or project_id = $2)",
+            updates["vault_document_id"],
+            project_id,
         )
         if not ok:
-            raise ApiError(404, "not_found", "Vault document not found")
+            raise ApiError(404, "not_found", "Vault document not found in this project")
     sets, values = patch_sets("proj_documents", updates, id_param=2)
     row = await conn.fetchrow(
         f"""update proj_documents set {sets}, updated_at = now()

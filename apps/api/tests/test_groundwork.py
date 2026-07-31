@@ -243,13 +243,44 @@ async def test_dormant_requires_reason(client):
 
 # -- isolation ---------------------------------------------------------------
 
+# All nine tenant-scoped module tables (PRD §2) — setup seeds the first five;
+# _seed_room_rows fills the user-created remainder.
 MODULE_TABLES = [
     "proj_projects",
     "proj_stages",
     "proj_tasks",
     "proj_documents",
     "proj_risks",
+    "proj_budget_lines",
+    "proj_funding_sources",
+    "proj_conditions",
+    "proj_stakeholders",
 ]
+
+
+async def _seed_room_rows(client, tenant, pid: str) -> None:
+    headers = auth(tenant.owner_id, tenant.id)
+    base = f"/api/v1/projects/{pid}"
+    resp = await client.put(
+        f"{base}/budget",
+        json=[{"category": "land", "label": "Acquisition", "budget": 1000}],
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    resp = await client.post(
+        f"{base}/funding", json={"name": "CLT grant", "kind": "grant"}, headers=headers
+    )
+    assert resp.status_code == 201, resp.text
+    resp = await client.post(
+        f"{base}/conditions",
+        json={"number": "3", "description": "Drainage details"},
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    resp = await client.post(
+        f"{base}/stakeholders", json={"name": "Cllr Jones", "role": "lpa"}, headers=headers
+    )
+    assert resp.status_code == 201, resp.text
 
 
 async def test_module_isolation(client):
@@ -257,8 +288,10 @@ async def test_module_isolation(client):
     b = await seed_tenant(client, f"gwb-{uuid4().hex[:6]}")
     await enable_module(a)
     await enable_module(b)
-    await gw_setup(client, a, name="A scheme")
+    a_pid = (await gw_setup(client, a, name="A scheme"))["project_id"]
     b_pid = (await gw_setup(client, b, name="B scheme"))["project_id"]
+    await _seed_room_rows(client, a, a_pid)
+    await _seed_room_rows(client, b, b_pid)
 
     # SQL level: tenant A context sees only A rows in every seeded module table.
     async with db.tenant_tx(a.owner_id, a.id) as conn:

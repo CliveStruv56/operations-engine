@@ -2,10 +2,11 @@
 exceptions, stage advance), tasks, registry uploads, budget, funding +
 catalogue, risks/conditions/stakeholders, activity."""
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
+from app.db import db
 from app.storage import storage
 from tests.conftest import auth, seed_tenant
 from tests.test_groundwork import enable_module, gw_setup
@@ -375,3 +376,81 @@ async def test_project_patch_contract_facts(client, gw):
     )
     assert resp.status_code == 200
     assert resp.json()["contract_facts"]["contract_form"] == "JCT ICD"
+
+
+async def test_delete_task_funding_condition_stakeholder(client, gw):
+    base = f"/api/v1/projects/{gw['pid']}"
+    h = gw["h"]
+
+    task = (
+        await client.post(
+            f"{base}/tasks", json={"stage_key": "group", "title": "Temp task"}, headers=h
+        )
+    ).json()
+    assert (await client.delete(f"{base}/tasks/{task['id']}", headers=h)).status_code == 204
+    titles = [t["title"] for t in (await client.get(f"{base}/tasks", headers=h)).json()]
+    assert "Temp task" not in titles
+
+    fund = (
+        await client.post(
+            f"{base}/funding", json={"name": "Temp grant", "kind": "grant"}, headers=h
+        )
+    ).json()
+    assert (await client.delete(f"{base}/funding/{fund['id']}", headers=h)).status_code == 204
+    assert (await client.delete(f"{base}/funding/{fund['id']}", headers=h)).status_code == 404
+
+    cond = (
+        await client.post(
+            f"{base}/conditions", json={"number": "9", "description": "Temp"}, headers=h
+        )
+    ).json()
+    assert (await client.delete(f"{base}/conditions/{cond['id']}", headers=h)).status_code == 204
+
+    stake = (
+        await client.post(
+            f"{base}/stakeholders", json={"name": "Temp person", "role": "other"}, headers=h
+        )
+    ).json()
+    assert (await client.delete(f"{base}/stakeholders/{stake['id']}", headers=h)).status_code == 204
+
+
+async def test_vault_link_rejects_cross_project_documents(client, gw):
+    other_pid = (await gw_setup(client, gw["t"], name="Other scheme"))["project_id"]
+
+    async def make_vault_doc(project_id):
+        doc_id = uuid4()
+        async with db.tenant_tx(gw["t"].owner_id, gw["t"].id) as conn:
+            await conn.execute(
+                """
+                insert into documents (id, tenant_id, title, storage_key, mime,
+                                       project_id, created_by)
+                values ($1, $2, 'Survey', 'k.pdf', 'application/pdf', $3, $4)
+                """,
+                doc_id,
+                gw["t"].id,
+                project_id,
+                gw["t"].owner_id,
+            )
+        return doc_id
+
+    docs = (await client.get(f"/api/v1/projects/{gw['pid']}/documents", headers=gw["h"])).json()
+    target = docs[0]
+
+    # A vault document owned by another project can never back this registry.
+    other_doc = await make_vault_doc(UUID(other_pid))
+    resp = await client.patch(
+        f"/api/v1/projects/{gw['pid']}/documents/{target['id']}",
+        json={"vault_document_id": str(other_doc)},
+        headers=gw["h"],
+    )
+    assert resp.status_code == 404
+
+    # Unassigned vault documents are linkable.
+    unassigned = await make_vault_doc(None)
+    resp = await client.patch(
+        f"/api/v1/projects/{gw['pid']}/documents/{target['id']}",
+        json={"vault_document_id": str(unassigned)},
+        headers=gw["h"],
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["vault_document_id"] == str(unassigned)
