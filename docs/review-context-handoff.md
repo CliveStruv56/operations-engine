@@ -36,10 +36,24 @@ This file captures the minimum context a new session needs to start work immedia
 
 ### Known blockers for pilot onboarding
 
-1. 4 high-severity transitive web dependency vulnerabilities (`sharp`, `postcss`, `brace-expansion`).
-2. CORS defaults are development-only/permissive.
-3. Groundwork stage sign-off and gate-toggle edge cases are not enforced server-side.
-4. Drafting/health-card workflows are not implemented.
+1. ~~4 high-severity transitive web dependency vulnerabilities~~ — **resolved 2026-07-31** (pnpm overrides + `patches/brace-expansion@5.0.8.patch`; `pnpm audit` clean; audits now run in CI).
+2. ~~CORS defaults are development-only/permissive~~ — **resolved** (wildcards rejected at config validation, methods pinned).
+3. ~~Groundwork stage sign-off and gate-toggle edge cases~~ — **resolved** (active-stage-only sign-off, gates frozen after sign-off, cross-project vault links rejected; all server-side with tests).
+4. Drafting/health-card workflows are not implemented — **still open; this is the next phase (W3)**.
+
+### Pre-build hardening pass (completed 2026-07-31)
+
+All FIX-001–005 plus NEXT-001/NEXT-007 from `docs/next-phase-brief.md` landed,
+plus: document/member transaction races closed (guarded UPDATE claims +
+FOR UPDATE), worker S3 path-style fixed, migration downgrades fixed for
+DBs with real usage data, a column allowlist for dynamic SET builders
+(`app/sqlutil.py`), and tenant LiteLLM virtual keys are now Fernet-encrypted
+at rest (`tenants.litellm_key_encrypted`, migration 0004).
+
+**New env var:** `LITELLM_KEY_ENCRYPTION_KEY` (Fernet) — required by API and
+worker whenever `LITELLM_BASE_URL` is set; the API refuses to boot without
+it. Dev `.env` files already carry a shared key; production needs one
+generated before deploy.
 
 ---
 
@@ -76,7 +90,7 @@ cd apps/worker && uv run pytest -q
 cd apps/web && pnpm exec tsc --noEmit && pnpm build
 ```
 
-Expected: API 82 passed, Worker 10 passed, web build passes with 1 lint warning.
+Expected: API 99 passed, Worker 10 passed, web lint/build clean (0 warnings), `pnpm audit` and `pip-audit` clean.
 
 ---
 
@@ -88,7 +102,7 @@ Read in this order:
 2. `docs/next-phase-brief.md` — start executing from the **Pre-Build Fixes** section.
 3. `docs/review-report.md` — refer back for detailed evidence and rationale.
 
-Recommended first action: run `pnpm audit` in `apps/web`, then apply FIX-001 through FIX-005 from `docs/next-phase-brief.md` before starting W3 drafting work.
+Recommended first action: the Pre-Build Fixes are done — start W3 drafting work (NEXT-002 through NEXT-005 in `docs/next-phase-brief.md`).
 
 ---
 
