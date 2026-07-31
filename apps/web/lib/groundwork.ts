@@ -186,6 +186,9 @@ export const submitDraft = (
 
 export const getDraftJob = (jobId: string) => gw<DraftJob>(`/projects/drafts/${jobId}`);
 
+export const submitHealthCard = (projectId: string) =>
+  gw<DraftJob>(`/projects/${projectId}/health-card`, { method: "POST" });
+
 export const STAGES = ["group", "site", "plan", "build", "live"] as const;
 export const STAGE_LABEL: Record<string, string> = {
   group: "Group",

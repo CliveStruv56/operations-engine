@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityEntry,
   Detail,
@@ -9,9 +9,13 @@ import {
   Task,
   fmtDate,
   fmtMoney,
+  getDraftJob,
   gw,
+  openPresigned,
+  submitHealthCard,
 } from "@/lib/groundwork";
 import { RagDots } from "../../page";
+import { DraftModal } from "./DraftModal";
 import { btn } from "./ui";
 
 export function OverviewTab({ id }: { id: string }) {
@@ -20,6 +24,36 @@ export function OverviewTab({ id }: { id: string }) {
   const [risks, setRisks] = useState<Risk[]>([]);
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [portfolio, setPortfolio] = useState<Detail["rag"] | null>(null);
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [cardState, setCardState] = useState<"idle" | "working" | "failed">("idle");
+  const cardTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (cardTimer.current) clearInterval(cardTimer.current);
+    },
+    []
+  );
+
+  async function healthCard() {
+    setCardState("working");
+    try {
+      const job = await submitHealthCard(id);
+      cardTimer.current = setInterval(async () => {
+        const next = await getDraftJob(job.id).catch(() => null);
+        if (!next || next.status === "queued" || next.status === "running") return;
+        if (cardTimer.current) clearInterval(cardTimer.current);
+        if (next.status === "succeeded" && next.download_url) {
+          setCardState("idle");
+          openPresigned(next.download_url);
+        } else {
+          setCardState("failed");
+        }
+      }, 2000);
+    } catch {
+      setCardState("failed");
+    }
+  }
 
   useEffect(() => {
 
@@ -50,14 +84,25 @@ export function OverviewTab({ id }: { id: string }) {
         <p className="mt-2 text-xs text-ink-faint">
           Programme · Cost · Risk — hover each dot for what drives it.
         </p>
-        <div className="mt-4 flex gap-2">
-          <button disabled title="Arrives with drafting in week 3" className={`${btn} opacity-40`}>
+        <div className="mt-4 flex items-center gap-2">
+          <button onClick={() => setDraftOpen(true)} className={btn}>
             Draft monthly report
           </button>
-          <button disabled title="Arrives in week 4" className={`${btn} opacity-40`}>
-            Health card (PDF)
+          <button onClick={healthCard} disabled={cardState === "working"} className={btn}>
+            {cardState === "working" ? "Generating…" : "Health card (PDF)"}
           </button>
+          {cardState === "failed" && (
+            <span className="text-xs text-danger">Health card failed — try again.</span>
+          )}
         </div>
+        {draftOpen && (
+          <DraftModal
+            projectId={id}
+            kind="monthly_report"
+            onClose={() => setDraftOpen(false)}
+            onRegistered={() => {}}
+          />
+        )}
       </section>
 
       <section className="rounded-md border border-line bg-surface p-4">

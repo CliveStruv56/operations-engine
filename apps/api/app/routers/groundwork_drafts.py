@@ -85,6 +85,35 @@ async def submit_draft(
     return _job_out(row)
 
 
+@router.post("/projects/{project_id}/health-card", status_code=202, response_model=DraftJobOut)
+async def submit_health_card(
+    project_id: UUID,
+    ctx: TenantContext = Depends(require_projects),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    await module_project(conn, project_id)
+    row = await conn.fetchrow(
+        """
+        insert into proj_draft_jobs (tenant_id, project_id, kind, created_by)
+        values ($1, $2, 'health_card', $3)
+        returning *
+        """,
+        ctx.tenant_id,
+        project_id,
+        ctx.user_id,
+    )
+    await write_audit(
+        conn,
+        ctx.tenant_id,
+        ctx.user_id,
+        "projects.health_card_submit",
+        "proj_draft_job",
+        str(row["id"]),
+    )
+    await ingest_queue.enqueue_health_card(ctx.tenant_id, project_id, row["id"], ctx.user_id)
+    return _job_out(row)
+
+
 @router.get("/projects/drafts/{job_id}", response_model=DraftJobOut)
 async def get_draft_job(
     job_id: UUID,

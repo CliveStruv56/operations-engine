@@ -171,3 +171,43 @@ async def test_second_project_draft_reuses_module_setup(client, gw, fake_draft_q
         headers=gw["h"],
     )
     assert resp.status_code == 202
+
+
+@pytest.fixture
+def fake_health_card_queue(monkeypatch):
+    jobs = []
+
+    async def enqueue(tenant_id, project_id, job_id, user_id):
+        jobs.append((tenant_id, project_id, job_id, user_id))
+
+    monkeypatch.setattr(ingest_queue, "enqueue_health_card", enqueue)
+    return jobs
+
+
+async def test_health_card_submit_and_poll(client, gw, fake_health_card_queue, monkeypatch):
+    resp = await client.post(f"/api/v1/projects/{gw['pid']}/health-card", headers=gw["h"])
+    assert resp.status_code == 202, resp.text
+    job = resp.json()
+    assert job["kind"] == "health_card" and job["status"] == "queued"
+    assert len(fake_health_card_queue) == 1
+
+    # Same poll endpoint serves health cards.
+    polled = await client.get(f"/api/v1/projects/drafts/{job['id']}", headers=gw["h"])
+    assert polled.status_code == 200 and polled.json()["kind"] == "health_card"
+
+    async with db.tenant_tx(gw["t"].owner_id, gw["t"].id) as conn:
+        await conn.execute(
+            "update proj_draft_jobs set status = 'succeeded', file_key = 'k/x.pdf' where id = $1",
+            UUID(job["id"]),
+        )
+    monkeypatch.setattr(storage, "presign_get", lambda key: f"http://fake-storage/{key}?get")
+    done = (await client.get(f"/api/v1/projects/drafts/{job['id']}", headers=gw["h"])).json()
+    assert done["download_url"] == "http://fake-storage/k/x.pdf?get"
+
+
+async def test_health_card_isolated_and_gated(client, gw, fake_health_card_queue):
+    intruder = await seed_tenant(client, f"hc-{uuid4().hex[:6]}")
+    headers = auth(intruder.owner_id, intruder.id)
+    # Module flag off → 404; A's project id under B's context → 404 either way.
+    resp = await client.post(f"/api/v1/projects/{gw['pid']}/health-card", headers=headers)
+    assert resp.status_code == 404
