@@ -11,51 +11,24 @@ worker exactly as it does to request handlers.
 import asyncio
 import contextlib
 import tempfile
-from functools import lru_cache
 from pathlib import Path
 
 import asyncpg
-import boto3
 import sentry_sdk
 from arq.connections import RedisSettings
-from botocore.config import Config as BotoConfig
 
 from worker.blocks import estimate_tokens
 from worker.chunking import chunk_blocks
+from worker.db import tenant_tx
+from worker.drafts.job import draft_document
 from worker.embed import embed_texts
 from worker.parsing import parse_file
 from worker.secrets import decrypt_llm_key
 from worker.settings import get_settings
+from worker.storage import download_file
 from worker.summarize import summarize_document
 
 PARSE_TIMEOUT_S = 600
-
-
-@contextlib.asynccontextmanager
-async def tenant_tx(pool: asyncpg.Pool, tenant_id: str):
-    async with pool.acquire() as conn, conn.transaction():
-        await conn.execute("select set_config('app.current_tenant', $1, true)", tenant_id)
-        yield conn
-
-
-@lru_cache
-def _s3():
-    # Path-style + v4 signatures, matching the API's storage client:
-    # bucket-in-URL works on MinIO and R2 alike. Cached — boto3 clients are
-    # thread-safe and download runs on executor threads.
-    settings = get_settings()
-    return boto3.client(
-        "s3",
-        endpoint_url=settings.storage_endpoint,
-        aws_access_key_id=settings.storage_access_key,
-        aws_secret_access_key=settings.storage_secret_key,
-        region_name=settings.storage_region,
-        config=BotoConfig(signature_version="s3v4", s3={"addressing_style": "path"}),
-    )
-
-
-def _download(storage_key: str, dest: str) -> None:
-    _s3().download_file(get_settings().storage_bucket, storage_key, dest)
 
 
 async def _set_status(
@@ -88,7 +61,7 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
         await _set_status(pool, tenant_id, document_id, "parsing")
         with tempfile.TemporaryDirectory() as tmp:
             local = str(Path(tmp) / Path(doc["storage_key"]).name)
-            await loop.run_in_executor(None, _download, doc["storage_key"], local)
+            await loop.run_in_executor(None, download_file, doc["storage_key"], local)
             blocks = await asyncio.wait_for(
                 loop.run_in_executor(None, parse_file, local), timeout=PARSE_TIMEOUT_S
             )
@@ -206,7 +179,7 @@ async def shutdown(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    functions = [ingest_document]
+    functions = [ingest_document, draft_document]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
