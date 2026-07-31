@@ -3,17 +3,22 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   DownloadTicket,
+  DraftKind,
   RegistryDoc,
   UploadTicket,
   fmtDate,
   gw,
   openPresigned,
 } from "@/lib/groundwork";
+import { DraftModal } from "./DraftModal";
 import { btnGhost, input } from "./ui";
+
+const DRAFT_KINDS: DraftKind[] = ["monthly_report", "feasibility_study", "funding_bid"];
 
 export function DocumentsTab({ id }: { id: string }) {
   const [docs, setDocs] = useState<RegistryDoc[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [draftKind, setDraftKind] = useState<DraftKind | null>(null);
 
   const refresh = useCallback(
     () => gw<RegistryDoc[]>(`/projects/${id}/documents`).then(setDocs).catch(() => {}),
@@ -111,8 +116,11 @@ export function DocumentsTab({ id }: { id: string }) {
                       Download
                     </button>
                   )}
-                  {d.ai_draftable && (
-                    <button disabled title="Drafting arrives in week 3" className="stamp opacity-40">
+                  {d.ai_draftable && DRAFT_KINDS.includes(d.doc_type_key as DraftKind) && (
+                    <button
+                      onClick={() => setDraftKind(d.doc_type_key as DraftKind)}
+                      className="stamp"
+                    >
                       Draft with AI
                     </button>
                   )}
@@ -122,6 +130,14 @@ export function DocumentsTab({ id }: { id: string }) {
           ))}
         </tbody>
       </table>
+      {draftKind && (
+        <DraftModal
+          projectId={id}
+          kind={draftKind}
+          onClose={() => setDraftKind(null)}
+          onRegistered={refresh}
+        />
+      )}
     </div>
   );
 }

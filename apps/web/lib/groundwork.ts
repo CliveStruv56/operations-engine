@@ -163,6 +163,29 @@ export type Stakeholder = {
   last_contact: string | null;
 };
 
+export type DraftKind = "monthly_report" | "feasibility_study" | "funding_bid";
+export type DraftJob = {
+  id: string;
+  project_id: string;
+  kind: DraftKind;
+  status: "queued" | "running" | "succeeded" | "failed";
+  error: string | null;
+  document_id: string | null;
+  download_url: string | null;
+  to_confirm_count: number;
+  llm_calls: number;
+  cost_usd: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export const submitDraft = (
+  projectId: string,
+  body: { kind: DraftKind; month?: string; funding_source_id?: string; instructions?: string }
+) => gw<DraftJob>(`/projects/${projectId}/drafts`, { method: "POST", body: JSON.stringify(body) });
+
+export const getDraftJob = (jobId: string) => gw<DraftJob>(`/projects/drafts/${jobId}`);
+
 export const STAGES = ["group", "site", "plan", "build", "live"] as const;
 export const STAGE_LABEL: Record<string, string> = {
   group: "Group",
