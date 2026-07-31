@@ -42,5 +42,34 @@ and every divergence is recorded here.
    after this module; pilot invoiced manually per PRD §6 — no impact).
    Production R2 is not yet provisioned (dev uses MinIO) — required before the
    W4 staging/pilot step.
-8. **Worker upload helper.** The worker currently only downloads from storage;
-   W3 adds a small upload helper for registering generated DOCX files.
+8. **Worker upload helper.** ~~The worker currently only downloads from
+   storage~~ — added in W3 (`worker/storage.py: upload_bytes`).
+
+## Recorded during W3 (31 Jul 2026)
+
+9. **Draft instance registry rows.** `proj_documents` has
+   `unique (project_id, doc_type_key)`, so the PRD's per-instance rows for
+   monthly reports and funding bids get suffixed keys
+   (`monthly_report_2026_07`, `funding_bid_<first-8-of-source-id>`) with the
+   month / source name in the title. The seeded generic rows stay as the
+   "Draft with AI" launchers (`ai_draftable=true`); instance rows are created
+   `ai_draftable=false`. Feasibility studies version onto their single seeded
+   row.
+10. **Draft storage keys.** PRD §5 says `tenants/{tenant_id}/...`; the repo's
+    established convention has no `tenants/` prefix, so drafts land at
+    `{tenant_id}/projects/{project_id}/drafts/{job_id}.docx`.
+11. **Citation rendering.** python-docx has no first-class footnote API;
+    `[c:<id>]` markers render as numbered inline references `[n]` with a
+    References section (title + pages) before the Data sources appendix.
+    Unresolvable markers are stripped and counted in the audit meta, per the
+    PRD's no-fake-references rule.
+12. **Draft job polling.** No arq result polling (worker keeps
+    `keep_result=0`); jobs are tracked in a tenth tenant table
+    `proj_draft_jobs` (migration 0005) written by API + worker, so polling
+    inherits tenant isolation from RLS.
+13. **Worker retrieval/gather duplication.** `app/retrieval.py` is not
+    importable from the worker, so `worker/drafts/retrieval.py` mirrors its
+    SQL and fusion constants (as `worker/embed.py` mirrors the LiteLLM
+    client) — keep them in step. The worker's DB-touching drafts modules stay
+    asyncpg+pydantic-only so the **API** test suite imports and exercises
+    them against its migrated database (worker CI has no Postgres).
