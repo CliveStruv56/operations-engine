@@ -19,6 +19,9 @@ and every divergence is recorded here.
      existing core project and seed the spine (the UI's "New development
      project" form calls core create + setup in sequence).
    - `GET /projects/portfolio` — the module portfolio list.
+   - `GET`/`PATCH /projects/{id}/groundwork` — module detail/update (the core
+     owns `PATCH /projects/{id}` for container rename/archive, and wins by
+     registration order; discovered in W2).
    - All other PRD routes are `/projects/{id}/…` subresources as specified (no
      collisions).
 3. **`usage_events.kind`** is CHECK-constrained in the core schema; migration

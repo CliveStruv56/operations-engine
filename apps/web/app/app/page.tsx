@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { api, ApiError } from "@/lib/api";
 import ChatPanel from "./chat";
@@ -12,6 +13,7 @@ type Tenant = {
   name: string;
   plan: string;
   seats: number;
+  features: Record<string, unknown>;
   trial_ends_at: string | null;
   role: string;
 };
@@ -207,6 +209,18 @@ export default function WorkspacePage() {
               <span className="mt-0.5 block text-xs font-normal text-ink-faint">{item.hint}</span>
             </button>
           ))}
+
+          {tenant.features?.projects === true && (
+            <Link
+              href="/app/projects"
+              className="mt-3 block w-full rounded-sm border-l-2 border-transparent px-3 py-2 text-left text-sm text-ink-muted hover:bg-surface hover:text-ink"
+            >
+              Development projects
+              <span className="mt-0.5 block text-xs font-normal text-ink-faint">
+                Stage-gated schemes, gates & funding
+              </span>
+            </Link>
+          )}
 
           <p className="data mt-5 mb-1 px-3 text-ink-faint uppercase">Projects</p>
           <button
