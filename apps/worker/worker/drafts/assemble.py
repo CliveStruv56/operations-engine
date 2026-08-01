@@ -22,7 +22,9 @@ from worker.drafts.prompts import DOC_TITLES, Section
 # 4–36 id chars: models routinely truncate long hex ids when echoing them, so
 # markers resolve by unique prefix too. Keep in step with the api's
 # app/routers/conversations.py.
-CITATION_RE = re.compile(r"\[c:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
+# Fullwidth 【c:…】 accepted too — CJK-bracket echo seen live from the
+# GLM/DeepSeek model family. Keep in step with app/routers/conversations.py.
+CITATION_RE = re.compile(r"[\[【]c:([0-9a-fA-F][0-9a-fA-F-]{3,35})[\]】]")
 TO_CONFIRM_RE = re.compile(r"\[TO CONFIRM:[^\]]*\]")
 
 

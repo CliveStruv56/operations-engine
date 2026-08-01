@@ -158,8 +158,7 @@ function AssistantMessage({
       {cites.length > 0 && (
         <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[13px] py-1.5 text-[11.5px] font-bold text-grounded">
           <i className="h-1.5 w-1.5 rounded-full bg-grounded" />
-          {docCount > 0 &&
-            `Grounded in ${docCount} of your document${docCount === 1 ? "" : "s"}`}
+          {docCount > 0 && `Grounded in ${docCount} of your documents`}
           {docCount > 0 && webCount > 0 && " · "}
           {webCount > 0 && `${webCount} web source${webCount === 1 ? "" : "s"}`}
         </span>

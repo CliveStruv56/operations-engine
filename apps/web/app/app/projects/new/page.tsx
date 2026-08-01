@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { gw } from "@/lib/groundwork";
 import { Spinner } from "@/components/activity";
+import { useWorkspace } from "../../workspace";
 
 const TOGGLES = [
   { key: "wales", label: "In Wales", hint: "Adds the SAB drainage approval task" },
@@ -27,6 +28,7 @@ const TOGGLES = [
 
 export default function NewProjectPage() {
   const router = useRouter();
+  const ws = useWorkspace();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -64,6 +66,9 @@ export default function NewProjectPage() {
           applicability: flags,
         }),
       });
+      // The sidebar lists projects from workspace state — refresh it so the
+      // new scheme appears without a full reload.
+      await ws.refreshProjects();
       router.push(`/app/projects/${core.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));

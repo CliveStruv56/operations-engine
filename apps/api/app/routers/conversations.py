@@ -34,8 +34,10 @@ router = APIRouter(tags=["conversations"])
 
 # 4–36 id chars: models routinely truncate long hex ids when echoing them
 # (staging saw [c:1a689315] for full UUIDs), so markers resolve by unique
-# prefix too. Keep in step with worker/drafts/assemble.py.
-CITATION_RE = re.compile(r"\[c:([0-9a-fA-F][0-9a-fA-F-]{3,35})\]")
+# prefix too. Fullwidth brackets 【c:…】 are accepted as well — the GLM/
+# DeepSeek-family models occasionally emit CJK brackets when echoing markers
+# (seen live 1 Aug 2026). Keep in step with worker/drafts/assemble.py.
+CITATION_RE = re.compile(r"[\[【]c:([0-9a-fA-F][0-9a-fA-F-]{3,35})[\]】]")
 # Evidence-panel excerpt length. Chunks run ~600 tokens (~2,400 chars); 300
 # was too little to carry context past a chunk's heading boilerplate.
 SNIPPET_CHARS = 800

@@ -103,6 +103,15 @@ def test_resolve_citations_truncated_prefix_shares_numbering_with_full_id():
     assert len(citations) == 1
 
 
+def test_resolve_citations_accepts_fullwidth_brackets():
+    # GLM/DeepSeek-family models occasionally echo markers in CJK brackets
+    # (seen live 1 Aug 2026: 【c:4c5e01b1-…】 in a research answer).
+    c1 = _chunk(title="Handbook")
+    content, citations = _resolve_citations(f"Rate is 3.75% 【c:{c1.chunk_id}】.", [c1])
+    assert content == "Rate is 3.75% [1]."
+    assert citations[0]["chunk_id"] == str(c1.chunk_id)
+
+
 def test_resolve_citations_drops_ambiguous_and_fabricated_prefixes():
     twin_a = _chunk(cid=UUID("aaaabbbb-0000-4000-8000-000000000001"))
     twin_b = _chunk(cid=UUID("aaaabbbb-0000-4000-8000-000000000002"))
