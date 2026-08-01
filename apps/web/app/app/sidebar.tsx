@@ -28,8 +28,10 @@ const item =
 const itemRest = "text-subtle hover:bg-ink/[.045]";
 const itemActive =
   "bg-card text-ink shadow-card before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded before:bg-accent before:content-['']";
+// Each section starts with a hairline divider so the groups (Development
+// projects / Projects / Recent — …) read as clearly segmented blocks.
 const navLabel =
-  "flex items-baseline px-3 pb-1.5 pt-4 text-[10.5px] font-bold uppercase tracking-[.1em] text-faint";
+  "mt-4 flex items-baseline border-t border-edge px-3 pb-1.5 pt-3.5 text-[10.5px] font-bold uppercase tracking-[.1em] text-faint";
 
 /** Bucket a conversation into a Recent group by its updated_at date. */
 function groupOf(c: Conversation): string {
