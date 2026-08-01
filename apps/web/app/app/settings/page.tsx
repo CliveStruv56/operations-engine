@@ -58,6 +58,8 @@ function WorkspaceSection({ tenant }: { tenant: Tenant }) {
 }
 
 const LOGO_MIMES = ["image/png", "image/jpeg", "image/webp"];
+const PPTX_MIME =
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation";
 
 function BrandSection({ tenant }: { tenant: Tenant }) {
   const ws = useWorkspace();
@@ -66,6 +68,7 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const templateRef = useRef<HTMLInputElement>(null);
 
   async function patchBrand(brand: Record<string, unknown>) {
     await api("/tenants/me", { method: "PATCH", body: JSON.stringify({ brand }) }, tenant.id);
@@ -114,6 +117,52 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
     } finally {
       setBusy(null);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function uploadTemplate(file: File) {
+    setError(null);
+    if (file.type !== PPTX_MIME && !file.name.endsWith(".pptx")) {
+      setError("Templates must be .pptx files (save .potx masters as .pptx first).");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Templates are limited to 20 MB.");
+      return;
+    }
+    setBusy("template");
+    try {
+      const presign = await api<{ upload_url: string; template_key: string }>(
+        "/tenants/me/slides-template",
+        { method: "POST", body: JSON.stringify({ mime: PPTX_MIME, size_bytes: file.size }) },
+        tenant.id
+      );
+      const put = await fetch(presign.upload_url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": PPTX_MIME },
+      });
+      if (!put.ok) throw new Error("Upload failed — try again.");
+      await patchBrand({ ...tenant.brand, slides_template_key: presign.template_key });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
+      if (templateRef.current) templateRef.current.value = "";
+    }
+  }
+
+  async function removeTemplate() {
+    setBusy("template");
+    setError(null);
+    try {
+      const rest = { ...tenant.brand };
+      delete rest.slides_template_key;
+      await patchBrand(rest);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -168,6 +217,37 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
           {busy === "colour" ? <Spinner /> : "Save colour"}
         </button>
       </form>
+
+      <div className="mt-5 border-t border-line pt-4">
+        <p className="text-sm">Slides template</p>
+        <p className="text-xs text-ink-muted">
+          A PowerPoint file (.pptx) whose master and layouts brand every exported deck —
+          save your corporate template as .pptx first. Up to 20 MB.
+        </p>
+        <div className="mt-2 flex items-center gap-3">
+          {typeof tenant.brand?.slides_template_key === "string" && (
+            <span className="stamp bg-accent-soft text-accent">custom template active</span>
+          )}
+          <input
+            ref={templateRef}
+            type="file"
+            accept={PPTX_MIME}
+            onChange={(e) => e.target.files?.[0] && uploadTemplate(e.target.files[0])}
+            className="text-xs"
+            disabled={busy !== null}
+          />
+          {busy === "template" && <Spinner className="text-accent" />}
+          {typeof tenant.brand?.slides_template_key === "string" && (
+            <button
+              onClick={removeTemplate}
+              disabled={busy !== null}
+              className="text-xs text-ink-muted underline hover:text-danger"
+            >
+              Remove
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="mt-5 border-t border-line pt-4">
         <p className="text-sm">Logo</p>

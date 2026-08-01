@@ -84,7 +84,14 @@ and every divergence is recorded here.
       `POST …/messages/{id}/slides` (`app/slides.py`, python-pptx, MIT):
       synchronous render — deterministic and sub-second, so deliberately
       *not* on the draft-job queue; deck is themed from `brand.accent` +
-      logo and stored at `{tenant_id}/slides/{message_id}.pptx`.
+      logo and stored at `{tenant_id}/slides/{message_id}.pptx`. Tenants
+      may upload a corporate `.pptx` master (`brand.slides_template_key`,
+      Settings → Brand); exports then build on its layouts/placeholders,
+      with silent fallback to the generated theme when the template is
+      unreadable (presigned PUTs mean the API can't validate at upload).
+      Slides whose bullets all parse as "Label: number" (≥3 rows, not
+      year-only timelines) render as native column charts instead of
+      lists — theme-coloured on templates, accent-coloured otherwise.
     - **`research`** — Exa web search injected as pseudo-vault excerpts with
       the core citation format (item 4 unchanged), so web sources ride the
       existing evidence-panel pipeline with a `url`/`source_type` extension

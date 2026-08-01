@@ -14,6 +14,7 @@ from app.litellm import litellm_client
 from app.schemas import (
     LogoUploadIn,
     LogoUploadOut,
+    SlidesTemplateUploadOut,
     TenantCreate,
     TenantMeOut,
     TenantOut,
@@ -29,6 +30,11 @@ router = APIRouter(tags=["tenants"])
 # tenant user's workspace.
 LOGO_MIMES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
 MAX_LOGO_BYTES = 2 * 1024 * 1024
+
+# .pptx only (not .potx — python-pptx saves those with the wrong content
+# type). Corporate masters with imagery run large, hence the roomier cap.
+SLIDES_TEMPLATE_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+MAX_TEMPLATE_BYTES = 20 * 1024 * 1024
 
 
 def _tenant_out(row: asyncpg.Record) -> dict:
@@ -97,6 +103,21 @@ async def presign_logo_upload(
         raise ApiError(400, "too_large", "Logos are limited to 2 MB")
     key = f"{ctx.tenant_id}/brand/logo.{LOGO_MIMES[body.mime]}"
     return {"upload_url": storage.presign_put(key, body.mime), "logo_key": key}
+
+
+@router.post("/tenants/me/slides-template", response_model=SlidesTemplateUploadOut)
+async def presign_slides_template_upload(
+    body: LogoUploadIn,
+    ctx: TenantContext = Depends(require_role("admin")),
+):
+    """Presigned PUT for the tenant's PowerPoint master. The client uploads,
+    then PATCHes brand.slides_template_key; slide exports build on it."""
+    if body.mime != SLIDES_TEMPLATE_MIME:
+        raise ApiError(400, "unsupported_type", "Templates must be .pptx files")
+    if body.size_bytes > MAX_TEMPLATE_BYTES:
+        raise ApiError(400, "too_large", "Templates are limited to 20 MB")
+    key = f"{ctx.tenant_id}/brand/slides-template.pptx"
+    return {"upload_url": storage.presign_put(key, body.mime), "template_key": key}
 
 
 @router.patch("/tenants/me", response_model=TenantMeOut)

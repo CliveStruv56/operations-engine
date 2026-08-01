@@ -57,9 +57,12 @@ async def export_slides(
     logo = None
     if isinstance(brand.get("logo_key"), str):
         logo = await storage.download_bytes(brand["logo_key"])
+    template = None
+    if isinstance(brand.get("slides_template_key"), str):
+        template = await storage.download_bytes(brand["slides_template_key"])
     accent = brand.get("accent") if isinstance(brand.get("accent"), str) else None
 
-    data = await anyio.to_thread.run_sync(render_pptx, deck, accent, logo)
+    data = await anyio.to_thread.run_sync(render_pptx, deck, accent, logo, template)
     key = f"{ctx.tenant_id}/slides/{message_id}.pptx"  # re-export overwrites
     await storage.upload_bytes(key, data, PPTX_MIME)
 

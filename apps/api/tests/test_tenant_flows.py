@@ -113,6 +113,31 @@ async def test_brand_validation_and_logo_upload_guards(client):
     assert resp.status_code == 503
     assert resp.json()["error"]["code"] == "storage_unavailable"
 
+    # Slides template presign: same guard shapes.
+    resp = await client.post(
+        "/api/v1/tenants/me/slides-template",
+        json={"mime": "application/zip", "size_bytes": 100},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "unsupported_type"
+
+    pptx_mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+    resp = await client.post(
+        "/api/v1/tenants/me/slides-template",
+        json={"mime": pptx_mime, "size_bytes": 21 * 1024 * 1024},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "too_large"
+
+    resp = await client.post(
+        "/api/v1/tenants/me/slides-template",
+        json={"mime": pptx_mime, "size_bytes": 1000},
+        headers=headers,
+    )
+    assert resp.status_code == 503  # storage disabled in unit tests
+
     # Members cannot touch branding.
     member = uuid4()
     accepted = await client.post(

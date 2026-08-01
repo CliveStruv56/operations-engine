@@ -25,9 +25,9 @@ class TenantPatch(BaseModel):
         accent = v.get("accent")
         if accent is not None and not _HEX_COLOUR.match(str(accent)):
             raise ValueError("brand.accent must be a #rrggbb hex colour")
-        logo_key = v.get("logo_key")
-        if logo_key is not None and not isinstance(logo_key, str):
-            raise ValueError("brand.logo_key must be a string")
+        for key in ("logo_key", "slides_template_key"):
+            if v.get(key) is not None and not isinstance(v[key], str):
+                raise ValueError(f"brand.{key} must be a string")
         return v
 
 
@@ -68,6 +68,11 @@ class LogoUploadIn(BaseModel):
 class LogoUploadOut(BaseModel):
     upload_url: str
     logo_key: str
+
+
+class SlidesTemplateUploadOut(BaseModel):
+    upload_url: str
+    template_key: str
 
 
 class InviteCreate(BaseModel):
