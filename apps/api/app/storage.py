@@ -92,5 +92,29 @@ class Storage:
             lambda: _s3().delete_object(Bucket=get_settings().storage_bucket, Key=key)
         )
 
+    async def upload_bytes(self, key: str, data: bytes, mime: str) -> None:
+        """Server-generated artefacts (slide exports). User uploads still go
+        browser → storage via presigned PUT; this is not for file ingest."""
+        self._require()
+        await anyio.to_thread.run_sync(
+            lambda: _s3().put_object(
+                Bucket=get_settings().storage_bucket, Key=key, Body=data, ContentType=mime
+            )
+        )
+
+    async def download_bytes(self, key: str) -> bytes | None:
+        """Small objects only (brand logos); None if the object is missing."""
+        self._require()
+
+        def _get() -> bytes | None:
+            client = _s3()
+            try:
+                obj = client.get_object(Bucket=get_settings().storage_bucket, Key=key)
+                return obj["Body"].read()
+            except client.exceptions.NoSuchKey:
+                return None
+
+        return await anyio.to_thread.run_sync(_get)
+
 
 storage = Storage()

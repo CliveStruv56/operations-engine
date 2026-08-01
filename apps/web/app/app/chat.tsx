@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, apiStream } from "@/lib/api";
+import { openPresigned } from "@/lib/groundwork";
 import { PulsingDots, Spinner } from "@/components/activity";
 import { useWorkspace } from "./workspace";
 
@@ -17,6 +18,11 @@ type Citation = {
   url?: string | null;
   source_type?: string;
 };
+
+// Matches the "## Slide N — title" shape the slides task prompt enforces.
+function isSlideDeck(content: string): boolean {
+  return /^##\s*slide\s*\d/im.test(content);
+}
 
 function domainOf(url: string | null | undefined): string | null {
   if (!url) return null;
@@ -59,6 +65,7 @@ export default function ChatPanel({
   const webSearchEnabled = ws.tenant!.features?.web_search === true;
   const [evidence, setEvidence] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [exportingId, setExportingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   // Set when this panel just created the conversation itself: the URL update
   // that follows must not refetch (and clobber) the in-flight local state.
@@ -90,6 +97,24 @@ export default function ChatPanel({
     if (activeProjectId) q.set("project", activeProjectId);
     q.set("c", convId);
     return `/app?${q.toString()}`;
+  }
+
+  async function exportSlides(messageId: string) {
+    if (!activeConversationId) return;
+    setExportingId(messageId);
+    setError(null);
+    try {
+      const out = await api<{ download_url: string }>(
+        `/conversations/${activeConversationId}/messages/${messageId}/slides`,
+        { method: "POST" },
+        tenantId
+      );
+      openPresigned(out.download_url);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setExportingId(null);
+    }
   }
 
   async function send(e: React.FormEvent) {
@@ -210,6 +235,17 @@ export default function ChatPanel({
                         : c.page_start != null && ` · p.${c.page_start}`}
                     </button>
                   ))}
+                </div>
+              )}
+              {m.role === "assistant" && isSlideDeck(m.content) && !m.id.startsWith("local-") && (
+                <div className="mt-1.5">
+                  <button
+                    onClick={() => exportSlides(m.id)}
+                    disabled={exportingId !== null}
+                    className="stamp bg-accent-soft text-accent hover:opacity-80 disabled:opacity-50"
+                  >
+                    {exportingId === m.id ? "building deck…" : "download .pptx"}
+                  </button>
                 </div>
               )}
               {m.role === "assistant" && m.model && (

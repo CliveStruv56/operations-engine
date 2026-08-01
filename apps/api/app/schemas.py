@@ -139,6 +139,12 @@ class MessageOut(BaseModel):
     created_at: datetime
 
 
+class SlidesExportOut(BaseModel):
+    download_url: str
+    filename: str
+    slide_count: int
+
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2_000)

@@ -25,6 +25,9 @@ os.environ["LITELLM_BASE_URL"] = ""
 os.environ["LITELLM_MASTER_KEY"] = ""
 os.environ["LITELLM_KEY_ENCRYPTION_KEY"] = ""
 os.environ["STORAGE_ENDPOINT"] = ""
+# A developer .env with a live Exa key must not turn the search unit tests
+# into integration tests.
+os.environ["EXA_API_KEY"] = ""
 
 import jwt as pyjwt  # noqa: E402
 import psycopg  # noqa: E402

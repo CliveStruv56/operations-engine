@@ -80,7 +80,11 @@ and every divergence is recorded here.
     (chat/analyse/report/financial) plus two additions the Phase-1 spec parks
     as P2 non-goals, added at founder request:
     - **`slides`** — routes to `drafter` with a structured-outline system
-      prompt (`app/prompts.py`). Text outline only; no PPTX generation yet.
+      prompt (`app/prompts.py`). Outlines export to native PPTX via
+      `POST …/messages/{id}/slides` (`app/slides.py`, python-pptx, MIT):
+      synchronous render — deterministic and sub-second, so deliberately
+      *not* on the draft-job queue; deck is themed from `brand.accent` +
+      logo and stored at `{tenant_id}/slides/{message_id}.pptx`.
     - **`research`** — Exa web search injected as pseudo-vault excerpts with
       the core citation format (item 4 unchanged), so web sources ride the
       existing evidence-panel pipeline with a `url`/`source_type` extension

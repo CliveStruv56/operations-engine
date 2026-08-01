@@ -20,6 +20,7 @@ from app.routers import (
     invites,
     members,
     projects,
+    slides,
     tenants,
     usage,
 )
@@ -74,6 +75,7 @@ def create_app() -> FastAPI:
         groundwork_drafts.router,  # literal /projects/drafts path before room matchers
         groundwork_room.router,
         conversations.router,
+        slides.router,
         documents.router,
         usage.router,
     ):
