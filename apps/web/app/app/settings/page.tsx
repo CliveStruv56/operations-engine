@@ -7,10 +7,10 @@ import { Spinner } from "@/components/activity";
 import { useWorkspace, type Tenant } from "../workspace";
 import Members from "./members";
 
-const card = "rounded-md border border-line bg-paper p-5";
-const input = "w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm";
+const card = "rounded-card border border-edge bg-card p-5 shadow-card";
+const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
 const btn =
-  "rounded-sm bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50";
+  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
 
 function WorkspaceSection({ tenant }: { tenant: Tenant }) {
   const ws = useWorkspace();
@@ -195,7 +195,7 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
               type="color"
               value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#1f6d53"}
               onChange={(e) => setAccent(e.target.value)}
-              className="h-9 w-12 cursor-pointer rounded-sm border border-line bg-surface"
+              className="h-9 w-12 cursor-pointer rounded-[10px] border border-line bg-surface"
               aria-label="Pick accent colour"
             />
             <input
@@ -208,13 +208,13 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
           </span>
         </label>
         <span
-          className="rounded-sm px-3 py-2 text-sm"
+          className="rounded-[10px] px-3 py-2 text-sm"
           style={deriveBrandVars(accent)}
         >
-          <span className="rounded-sm bg-accent px-2 py-1 text-xs font-medium text-accent-ink">
+          <span className="rounded-[10px] bg-accent px-2 py-1 text-xs font-medium text-accent-ink">
             Preview
           </span>{" "}
-          <span className="rounded-sm bg-accent-soft px-2 py-1 text-xs text-accent">soft</span>
+          <span className="rounded-[10px] bg-accent-soft px-2 py-1 text-xs text-accent">soft</span>
         </span>
         <button type="submit" disabled={busy !== null || accent === stored} className={btn}>
           {busy === "colour" ? <Spinner /> : "Save colour"}
@@ -307,7 +307,7 @@ export default function SettingsPage() {
     <main className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto max-w-3xl space-y-5 p-6">
         <header>
-          <h1 className="text-xl font-semibold tracking-tight">Workspace settings</h1>
+          <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Workspace settings</h1>
           <p className="mt-0.5 text-sm text-ink-muted">
             Branding, people and roles for {tenant.name}.
           </p>

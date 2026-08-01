@@ -71,7 +71,7 @@ export default function NewProjectPage() {
     }
   }
 
-  const input = "w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm";
+  const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto">
@@ -81,9 +81,9 @@ export default function NewProjectPage() {
           ← Development projects
         </Link>
       </p>
-      <h1 className="mt-1 mb-6 text-xl font-semibold tracking-tight">New development project</h1>
+      <h1 className="mt-1 mb-6 font-display text-[26px] font-medium tracking-[-0.01em]">New development project</h1>
 
-      <form onSubmit={submit} className="space-y-5 rounded-md border border-line bg-surface p-6">
+      <form onSubmit={submit} className="space-y-5 rounded-card border border-edge bg-surface p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="text-sm sm:col-span-2">
             Project name
@@ -138,11 +138,11 @@ export default function NewProjectPage() {
           ))}
         </fieldset>
 
-        {error && <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+        {error && <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-sm bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
+          className="w-full rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
         >
           {busy ? (
             <>

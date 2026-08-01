@@ -48,12 +48,12 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
   return (
     <div className="space-y-3">
       <LoadError failed={failed} onRetry={refresh} className="mb-0" />
-      {error && <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
       {stages.map((s) => {
         const outstanding = s.gate.filter((g) => !g.done).length;
         const expanded = open === s.id;
         return (
-          <section key={s.id} className="rounded-md border border-line bg-surface">
+          <section key={s.id} className="rounded-card border border-edge bg-surface">
             <button
               onClick={() => setOpen(expanded ? null : s.id)}
               className="flex w-full items-center justify-between px-4 py-3 text-left"
@@ -134,7 +134,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
                   ))}
                 </ul>
                 {s.gate_exceptions && (
-                  <p className="mt-3 rounded-sm bg-warn-soft px-3 py-2 text-xs whitespace-pre-wrap text-warn">
+                  <p className="mt-3 rounded-[10px] bg-warn-soft px-3 py-2 text-xs whitespace-pre-wrap text-warn">
                     Exceptions & notes: {s.gate_exceptions}
                   </p>
                 )}

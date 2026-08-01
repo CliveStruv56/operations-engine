@@ -82,7 +82,7 @@ export function OverviewTab({ id }: { id: string }) {
         onRetry={() => loads.forEach((l) => l.refresh())}
         className="mb-0 lg:col-span-2"
       />
-      <section className="rounded-md border border-line bg-surface p-4">
+      <section className="rounded-card border border-edge bg-surface p-4">
         <h3 className="data mb-2 text-ink-muted uppercase">Health</h3>
         {portfolio ? <RagDots rag={portfolio} /> : <p className="data text-ink-faint">…</p>}
         <p className="mt-2 text-xs text-ink-faint">
@@ -115,7 +115,7 @@ export function OverviewTab({ id }: { id: string }) {
         )}
       </section>
 
-      <section className="rounded-md border border-line bg-surface p-4">
+      <section className="rounded-card border border-edge bg-surface p-4">
         <h3 className="data mb-2 text-ink-muted uppercase">Funding position</h3>
         <p className="text-sm">
           Sought {fmtMoney(sought)} · Secured{" "}
@@ -124,7 +124,7 @@ export function OverviewTab({ id }: { id: string }) {
         <p className="mt-1 text-xs text-ink-faint">{funding.length} source(s) in the stack</p>
       </section>
 
-      <section className="rounded-md border border-line bg-surface p-4">
+      <section className="rounded-card border border-edge bg-surface p-4">
         <h3 className="data mb-2 text-ink-muted uppercase">Next milestones</h3>
         {milestones.length === 0 && (
           <p className="text-sm text-ink-faint">No dated milestones yet — add due dates in Tasks.</p>
@@ -145,7 +145,7 @@ export function OverviewTab({ id }: { id: string }) {
         </ul>
       </section>
 
-      <section className="rounded-md border border-line bg-surface p-4">
+      <section className="rounded-card border border-edge bg-surface p-4">
         <h3 className="data mb-2 text-ink-muted uppercase">Top open risks</h3>
         {topRisks.length === 0 && <p className="text-sm text-ink-faint">No open risks.</p>}
         <ul className="space-y-1.5">
@@ -160,7 +160,7 @@ export function OverviewTab({ id }: { id: string }) {
         </ul>
       </section>
 
-      <section className="rounded-md border border-line bg-surface p-4 lg:col-span-2">
+      <section className="rounded-card border border-edge bg-surface p-4 lg:col-span-2">
         <h3 className="data mb-2 text-ink-muted uppercase">Recent activity</h3>
         <ul className="space-y-1">
           {activity.map((a, i) => (

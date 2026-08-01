@@ -33,32 +33,38 @@ export default function LoginPage() {
         <p className="data mb-2 text-ink-faint uppercase">Operations Engine</p>
         <form
           onSubmit={onSubmit}
-          className="space-y-4 rounded-md border border-line bg-surface p-6 shadow-sm"
+          className="space-y-4 rounded-card border border-edge bg-surface p-6 shadow-sm"
         >
-          <h1 className="text-xl font-semibold tracking-tight">Sign in</h1>
-          <input
-            type="email"
-            required
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-sm border border-line px-3 py-2 text-sm"
-          />
-          <input
-            type="password"
-            required
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-sm border border-line px-3 py-2 text-sm"
-          />
+          <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Sign in</h1>
+          <label className="block text-sm font-semibold">
+            Email
+            <input
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="mt-1 w-full rounded-[10px] border border-line px-3 py-2 text-sm font-normal"
+            />
+          </label>
+          <label className="block text-sm font-semibold">
+            Password
+            <input
+              type="password"
+              required
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="mt-1 w-full rounded-[10px] border border-line px-3 py-2 text-sm font-normal"
+            />
+          </label>
           {error && (
-            <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+            <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
           )}
           <button
             type="submit"
             disabled={busy}
-            className="w-full rounded-sm bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
+            className="w-full rounded-[10px] bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
           >
             {busy ? "Signing in…" : "Sign in"}
           </button>

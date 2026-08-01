@@ -173,7 +173,7 @@ export default function VaultPanel({
     <section className="flex min-h-0 flex-1 flex-col">
       <header className="flex items-baseline justify-between border-b border-line px-6 py-4">
         <div>
-          <h2 className="text-lg font-semibold tracking-tight">
+          <h2 className="font-display text-[22px] font-medium tracking-[-0.01em]">
             {activeProject ? `Vault — ${activeProject.name}` : "Vault"}
           </h2>
           <p className="mt-0.5 text-sm text-ink-muted">
@@ -200,7 +200,7 @@ export default function VaultPanel({
             upload(e.dataTransfer.files);
           }}
           onClick={() => fileInput.current?.click()}
-          className={`cursor-pointer rounded-md border border-dashed px-8 py-10 text-center transition-colors ${
+          className={`cursor-pointer rounded-card border border-dashed px-8 py-10 text-center transition-colors ${
             dragging
               ? "border-accent bg-accent-soft"
               : "border-line bg-paper hover:border-ink-faint"
@@ -227,7 +227,7 @@ export default function VaultPanel({
           </p>
         )}
         {error && (
-          <p className="mt-3 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="mt-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
         {visible.length === 0 && !busy ? (
@@ -282,7 +282,7 @@ export default function VaultPanel({
                         onChange={(e) =>
                           patchDoc(d, { project_id: e.target.value || null })
                         }
-                        className="max-w-28 rounded-sm border border-line bg-surface px-1 py-0.5 text-xs text-ink-muted"
+                        className="max-w-28 rounded-[10px] border border-line bg-surface px-1 py-0.5 text-xs text-ink-muted"
                         title="Assign to a project"
                       >
                         <option value="">No project</option>
@@ -339,7 +339,7 @@ export default function VaultPanel({
                   </span>
                 </div>
                 {expandedId === d.id && d.summary && (
-                  <p className="mt-2 ml-13 rounded-sm border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink-muted">
+                  <p className="mt-2 ml-13 rounded-[10px] border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink-muted">
                     {d.summary}
                   </p>
                 )}

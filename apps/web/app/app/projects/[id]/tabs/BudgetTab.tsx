@@ -31,7 +31,7 @@ export function BudgetTab({ id }: { id: string }) {
   return (
     <div>
       <LoadError failed={failed} onRetry={refresh} />
-      <table className="w-full rounded-md border border-line bg-surface text-sm">
+      <table className="w-full rounded-card border border-edge bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">
             <th className="px-3 py-2">Category</th>

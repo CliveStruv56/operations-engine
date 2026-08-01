@@ -54,7 +54,7 @@ export function FundingTab({ id }: { id: string }) {
             {browse ? "Close programmes" : "Browse programmes"}
           </button>
         </div>
-        <table className="w-full rounded-md border border-line bg-surface text-sm">
+        <table className="w-full rounded-card border border-edge bg-surface text-sm">
           <thead>
             <tr className="data border-b border-line text-left text-ink-muted uppercase">
               <th className="px-3 py-2">Source</th>
@@ -129,7 +129,7 @@ export function FundingTab({ id }: { id: string }) {
       </div>
 
       {browse && (
-        <aside className="w-96 shrink-0 rounded-md border border-line bg-surface p-3">
+        <aside className="w-96 shrink-0 rounded-card border border-edge bg-surface p-3">
           <select value={nation} onChange={(e) => setNation(e.target.value)} className={`mb-2 w-full ${input}`}>
             <option value="">All nations</option>
             <option value="england">England</option>
@@ -137,7 +137,7 @@ export function FundingTab({ id }: { id: string }) {
             <option value="wales">Wales</option>
           </select>
           {progFailed && (
-            <p role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-sm bg-danger-soft px-2 py-1.5 text-xs text-danger">
+            <p role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-[10px] bg-danger-soft px-2 py-1.5 text-xs text-danger">
               Programme catalogue failed to load.
               <button onClick={loadProgrammes} className="shrink-0 underline">
                 Retry
@@ -146,7 +146,7 @@ export function FundingTab({ id }: { id: string }) {
           )}
           <ul className="max-h-130 space-y-2 overflow-y-auto">
             {programmes.map((p) => (
-              <li key={p.key} className="rounded-sm border border-line p-2 text-sm">
+              <li key={p.key} className="rounded-[10px] border border-line p-2 text-sm">
                 <p className="font-medium">
                   {p.name}
                   {p.stale && (

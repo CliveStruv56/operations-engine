@@ -15,9 +15,9 @@ type Member = {
 
 type Invite = { id: string; email: string; role: string; token: string; expires_at: string };
 
-const input = "rounded-sm border border-line bg-surface px-3 py-2 text-sm";
+const input = "rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
 const btn =
-  "rounded-sm bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50";
+  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
 
 export default function Members({ tenant }: { tenant: Tenant }) {
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -99,7 +99,7 @@ export default function Members({ tenant }: { tenant: Tenant }) {
   }
 
   return (
-    <section className="rounded-md border border-line bg-paper p-5">
+    <section className="rounded-card border border-edge bg-card p-5 shadow-card">
       <h2 className="data mb-3 text-ink-muted uppercase">People</h2>
 
       {members === null ? (
@@ -202,7 +202,7 @@ export default function Members({ tenant }: { tenant: Tenant }) {
       </form>
 
       {inviteLink && (
-        <div className="mt-3 flex items-center gap-2 rounded-sm bg-accent-soft px-3 py-2">
+        <div className="mt-3 flex items-center gap-2 rounded-[10px] bg-accent-soft px-3 py-2">
           <p className="data min-w-0 flex-1 truncate text-accent">{inviteLink}</p>
           <button
             onClick={() => {

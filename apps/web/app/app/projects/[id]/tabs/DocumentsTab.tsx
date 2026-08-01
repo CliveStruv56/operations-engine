@@ -67,8 +67,8 @@ export function DocumentsTab({ id }: { id: string }) {
   return (
     <div>
       <LoadError failed={failed} onRetry={refresh} />
-      {error && <p className="mb-2 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
-      <table className="w-full rounded-md border border-line bg-surface text-sm">
+      {error && <p className="mb-2 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      <table className="w-full rounded-card border border-edge bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">
             <th className="px-4 py-2">Document</th>

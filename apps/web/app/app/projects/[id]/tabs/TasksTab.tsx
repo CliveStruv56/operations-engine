@@ -83,7 +83,7 @@ export function TasksTab({ id }: { id: string }) {
         )}
       </div>
 
-      <ul className="divide-y divide-line rounded-md border border-line bg-surface">
+      <ul className="divide-y divide-line rounded-card border border-edge bg-surface">
         {tasks.map((t) => (
           <li key={t.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
             <input

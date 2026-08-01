@@ -14,14 +14,14 @@ function Onboarding() {
       <div className="w-full max-w-md">
         <p className="data mb-2 text-ink-faint uppercase">Operations Engine</p>
         {ws.error && (
-          <p className="mb-4 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p className="mb-4 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
             {ws.error}
           </p>
         )}
 
         {ws.memberships && ws.memberships.length > 0 ? (
-          <section className="rounded-md border border-line bg-surface p-6 shadow-sm">
-            <h1 className="text-xl font-semibold tracking-tight">Choose a workspace</h1>
+          <section className="rounded-card border border-edge bg-surface p-6 shadow-sm">
+            <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Choose a workspace</h1>
             <div className="mt-4 divide-y divide-line border-y border-line">
               {ws.memberships.map((m) => (
                 <button
@@ -36,8 +36,8 @@ function Onboarding() {
             </div>
           </section>
         ) : (
-          <section className="rounded-md border border-line bg-surface p-6 shadow-sm">
-            <h1 className="text-xl font-semibold tracking-tight">Set up your workspace</h1>
+          <section className="rounded-card border border-edge bg-surface p-6 shadow-sm">
+            <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Set up your workspace</h1>
             <p className="mt-1 text-sm text-ink-muted">
               Your team&apos;s documents and conversations live here.
             </p>
@@ -53,11 +53,11 @@ function Onboarding() {
                 placeholder="Company name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm"
               />
               <button
                 type="submit"
-                className="w-full rounded-sm bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
+                className="w-full rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
               >
                 Create workspace
               </button>
@@ -91,7 +91,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setNavOpen(true)}
           aria-label="Open navigation"
-          className="rounded-sm border border-line px-2 py-1 text-sm"
+          className="rounded-[10px] border border-line px-2 py-1 text-sm"
         >
           ☰
         </button>

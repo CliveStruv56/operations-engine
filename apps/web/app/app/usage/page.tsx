@@ -28,7 +28,7 @@ type Member = { user_id: string; email: string | null };
 // Display-only conversion for the £ column; costs are metered in USD.
 const GBP_PER_USD = Number(process.env.NEXT_PUBLIC_GBP_PER_USD ?? "0.79");
 
-const card = "rounded-md border border-line bg-paper p-5";
+const card = "rounded-card border border-edge bg-card p-5 shadow-card";
 
 const num = new Intl.NumberFormat("en-GB");
 const usd = (v: number) => `$${v.toFixed(v >= 1 ? 2 : 4)}`;
@@ -156,7 +156,7 @@ export default function UsagePage() {
       <div className="mx-auto max-w-3xl space-y-5 p-6">
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Usage</h1>
+            <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Usage</h1>
             <p className="mt-0.5 text-sm text-ink-muted">
               Model spend for {tenant.name}. £ shown at {GBP_PER_USD.toFixed(2)}/$ for
               reference — billing is metered in USD.
@@ -169,13 +169,13 @@ export default function UsagePage() {
               value={month}
               max={currentMonth()}
               onChange={(e) => e.target.value && setMonth(e.target.value)}
-              className="mt-1 rounded-sm border border-line bg-surface px-3 py-2 text-sm"
+              className="mt-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-sm"
             />
           </label>
         </header>
 
         {error && (
-          <p role="alert" className="rounded-sm border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p role="alert" className="rounded-[10px] border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger">
             {error}
           </p>
         )}

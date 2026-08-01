@@ -71,20 +71,20 @@ export default function PortfolioPage() {
       <div className="mx-auto max-w-6xl p-6">
       <header className="mb-6 flex items-baseline justify-between">
         <div>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight">Development projects</h1>
+          <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">Development projects</h1>
         </div>
         <Link
           href="/app/projects/new"
-          className="rounded-sm bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90"
+          className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
         >
           New development project
         </Link>
       </header>
 
-      {error && <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
 
       {rows && rows.length === 0 && (
-        <div className="rounded-md border border-line bg-surface p-10 text-center">
+        <div className="rounded-card border border-edge bg-surface p-10 text-center">
           <p className="text-sm font-medium">
             Track each development scheme from first meeting to occupied homes.
           </p>
@@ -96,7 +96,7 @@ export default function PortfolioPage() {
       )}
 
       {rows && rows.length > 0 && (
-        <div className="overflow-x-auto rounded-md border border-line bg-surface">
+        <div className="overflow-x-auto rounded-card border border-edge bg-surface">
           <table className="w-full text-sm">
             <thead>
               <tr className="data border-b border-line text-left text-ink-muted uppercase">

@@ -62,7 +62,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
   if (error)
     return (
       <main className="p-8">
-        <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       </main>
     );
   if (!detail) return <main className="p-8 data text-ink-faint">Loading project…</main>;
@@ -79,7 +79,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
       </p>
       <header className="mt-1 mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight">{detail.name}</h1>
+          <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">{detail.name}</h1>
           <p className="mt-0.5 text-sm text-ink-muted">
             {detail.client_org ?? "No client group set"}
             {detail.homes_planned ? ` · ${detail.homes_planned} homes` : ""}
@@ -117,12 +117,12 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
       </header>
 
       {detail.status === "dormant" && (
-        <p className="mb-3 rounded-sm bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
           Dormant — {detail.dormancy_reason}. Set the project back to Active to resume.
         </p>
       )}
       {hrb && (
-        <p className="mb-3 rounded-sm bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
           Higher-Risk Building — Building Safety Act gateways apply; track them manually for now.
         </p>
       )}

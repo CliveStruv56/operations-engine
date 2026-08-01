@@ -100,7 +100,7 @@ export function DraftModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
-      <div className="w-full max-w-md rounded-md border border-line bg-surface p-5 shadow-lg">
+      <div className="w-full max-w-md rounded-card border border-edge bg-surface p-5 shadow-lg">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-medium">Draft with AI — {KIND_LABEL[kind]}</h2>
           <button onClick={onClose} className={btnGhost}>
@@ -161,7 +161,7 @@ export function DraftModal({
               doesn&apos;t cover is marked [TO CONFIRM] — nothing is sent anywhere without you.
             </p>
             {error && (
-              <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+              <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
             )}
             <button
               onClick={submit}
@@ -196,7 +196,7 @@ export function DraftModal({
 
         {job?.status === "succeeded" && (
           <div className="space-y-3 text-sm">
-            <p className="rounded-sm bg-accent-soft px-3 py-2">
+            <p className="rounded-[10px] bg-accent-soft px-3 py-2">
               Draft ready — {job.to_confirm_count}{" "}
               {job.to_confirm_count === 1 ? "item" : "items"} to confirm before it leaves the
               building.
@@ -211,7 +211,7 @@ export function DraftModal({
 
         {job?.status === "failed" && (
           <div className="space-y-3 text-sm">
-            <p className="rounded-sm bg-danger-soft px-3 py-2 text-danger">
+            <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-danger">
               {job.error ?? "Draft generation failed."}
             </p>
             <button onClick={() => setJob(null)} className={btn}>

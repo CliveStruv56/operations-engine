@@ -207,7 +207,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                     href={`/app/projects/${p.id}`}
                     title="Open project room"
                     aria-label={`Open ${p.name} project room`}
-                    className="absolute top-1/2 right-2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-md text-faint hover:bg-card hover:text-accent-deep"
+                    className="absolute top-1/2 right-2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-card text-faint hover:bg-card hover:text-accent-deep"
                   >
                     ↗
                   </Link>
@@ -336,7 +336,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                         }}
                         title="Delete conversation"
                         aria-label={`Delete conversation ${c.title ?? "Untitled"}`}
-                        className="absolute top-1/2 right-2 hidden h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-md border border-edge bg-card text-subtle group-hover:grid hover:text-danger focus-visible:grid"
+                        className="absolute top-1/2 right-2 hidden h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-card border border-edge bg-card text-subtle group-hover:grid hover:text-danger focus-visible:grid"
                       >
                         ✕
                       </button>
