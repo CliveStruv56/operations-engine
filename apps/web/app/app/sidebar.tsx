@@ -31,7 +31,7 @@ const itemActive =
 // Each section starts with a hairline divider so the groups (Development
 // projects / Projects / Recent — …) read as clearly segmented blocks.
 const navLabel =
-  "mt-4 flex items-baseline border-t border-edge px-3 pb-1.5 pt-3.5 text-[10.5px] font-bold uppercase tracking-[.1em] text-faint";
+  "mt-4 flex items-baseline border-t border-edge-strong px-3 pb-1.5 pt-3.5 text-[10.5px] font-bold uppercase tracking-[.1em] text-faint";
 
 /** Bucket a conversation into a Recent group by its updated_at date. */
 function groupOf(c: Conversation): string {
