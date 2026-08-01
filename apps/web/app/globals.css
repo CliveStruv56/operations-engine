@@ -1,46 +1,83 @@
 @import "tailwindcss";
 
-/* Design tokens. --accent is the white-label hook: Slice 5 tenant theming
-   overrides it (and --accent-soft/--accent-ink) per workspace. */
+/* Hearth design tokens (docs/concept-01-hearth-warm-approachable.html).
+   The chrome palette is fixed platform-wide; the tenant's brand accent
+   appears only in exported artefacts (slides, health cards) and the logo.
+   Text floor: --faint (#6F6355, 5.5:1 on canvas) is the lightest colour
+   allowed for real text — edge colours are borders, never text. */
 :root {
   color-scheme: light;
-  --paper: #f6f5f1;
-  --surface: #ffffff;
-  --ink: #1c1e21;
-  --ink-muted: #6b6e74;
-  --ink-faint: #9a9da3;
-  --line: #e3e1da;
-  --accent: #1f6d53;
+  /* surfaces */
+  --canvas: #faf7f2;
+  --sidebar: #f4ede3;
+  --card: #ffffff;
+  --edge: #e8decf;
+  --edge-strong: #d9ccb8;
+  /* text */
+  --ink: #221c15;
+  --subtle: #5c5347;
+  --faint: #6f6355;
+  /* terracotta accent family */
+  --accent: #b14e2e;
+  --accent-deep: #98401f;
+  --accent-tint: #f7e8e0;
   --accent-ink: #ffffff;
-  --accent-soft: #edf5f0;
-  --warn: #935f10;
-  --warn-soft: #fbf3e2;
-  --danger: #a33a2e;
-  --danger-soft: #fbefea;
+  /* grounded (trust states only: vault chip, vault switch, grounded badges) */
+  --grounded: #33684b;
+  --grounded-tint: #e5f0e7;
+  /* status */
+  --warn: #8a5a14;
+  --warn-soft: #f7edda;
+  --danger: #9e2f1a;
+  --danger-deep: #8a2814;
+  --danger-soft: #f9e7e1;
 }
 
 @theme inline {
-  --color-paper: var(--paper);
-  --color-surface: var(--surface);
+  /* Hearth names */
+  --color-canvas: var(--canvas);
+  --color-sidebar: var(--sidebar);
+  --color-card: var(--card);
+  --color-edge: var(--edge);
+  --color-edge-strong: var(--edge-strong);
   --color-ink: var(--ink);
-  --color-ink-muted: var(--ink-muted);
-  --color-ink-faint: var(--ink-faint);
-  --color-line: var(--line);
+  --color-subtle: var(--subtle);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-accent-tint: var(--accent-tint);
   --color-accent-ink: var(--accent-ink);
-  --color-accent-soft: var(--accent-soft);
+  --color-grounded: var(--grounded);
+  --color-grounded-tint: var(--grounded-tint);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
+  --color-danger-deep: var(--danger-deep);
   --color-danger-soft: var(--danger-soft);
-  --font-sans: var(--font-geist-sans);
+  /* Legacy aliases — pre-Hearth utility names still in use; same palette. */
+  --color-paper: var(--canvas);
+  --color-surface: var(--card);
+  --color-line: var(--edge);
+  --color-ink-muted: var(--subtle);
+  --color-ink-faint: var(--faint);
+  --color-accent-soft: var(--accent-tint);
+
+  --font-sans: var(--font-ui);
+  --font-display: var(--font-fraunces);
   --font-mono: var(--font-geist-mono);
+
+  --radius-btn: 10px;
+  --radius-card: 14px;
+  --radius-composer: 18px;
+  --shadow-card: 0 1px 2px rgba(60, 42, 28, 0.04);
+  --shadow-hearth:
+    0 1px 2px rgba(60, 42, 28, 0.05), 0 10px 30px rgba(60, 42, 28, 0.08);
 }
 
 body {
-  background: var(--paper);
+  background: var(--canvas);
   color: var(--ink);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-family: var(--font-ui), system-ui, sans-serif;
 }
 
 :focus-visible {
@@ -48,12 +85,16 @@ body {
   outline-offset: 2px;
 }
 
-/* The register voice: true data (statuses, dates, counts, costs) is set in
-   mono so it reads as typed entries, distinct from UI prose. */
+::selection {
+  background: var(--accent-tint);
+}
+
+/* Label voice: small bold labels for statuses, dates, counts and section
+   headings. (Previously mono "register" type — retired with Hearth.) */
 .data {
-  font-family: var(--font-geist-mono), monospace;
   font-size: 0.6875rem;
-  letter-spacing: 0.04em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
 }
 
 /* Activity dots: staggered pulse, distinct enough to read at a glance. */
@@ -82,11 +123,10 @@ body {
 }
 
 .stamp {
-  font-family: var(--font-geist-mono), monospace;
   font-size: 0.625rem;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  border: 1px solid currentcolor;
-  border-radius: 2px;
-  padding: 0.125rem 0.4375rem;
+  border-radius: 999px;
+  padding: 0.1875rem 0.5625rem;
 }

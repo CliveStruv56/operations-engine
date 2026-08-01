@@ -184,9 +184,12 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
     <section className={card}>
       <h2 className="data mb-3 text-ink-muted uppercase">Brand</h2>
 
+      <p className="mb-3 text-xs text-ink-muted">
+        Your brand colour appears on exported slide decks and health-card PDFs.
+      </p>
       <form onSubmit={saveAccent} className="flex flex-wrap items-end gap-2">
         <label className="text-sm">
-          Accent colour
+          Brand colour
           <span className="mt-1 flex items-center gap-2">
             <input
               type="color"

@@ -9,7 +9,10 @@ function hexToRgb(hex: string): [number, number, number] | null {
 
 const toWhite = (c: number, ratio: number) => Math.round(c * (1 - ratio) + 255 * ratio);
 
-/** Derive the accent CSS variables from a tenant's brand accent colour.
+/** Derive accent CSS variables from a tenant's brand accent colour.
+ * Since Hearth, the app chrome is fixed — this is used only for the
+ * settings preview swatch; the tenant accent itself is applied server-side
+ * to exported artefacts (slide decks, health-card PDFs).
  * Soft is the accent washed nearly to white; ink flips black/white by
  * luminance — tenants pick one colour and cannot create unreadable pairs. */
 export function deriveBrandVars(accent: unknown): CSSProperties | undefined {
