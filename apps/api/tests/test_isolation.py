@@ -34,6 +34,7 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("PATCH", "/api/v1/tenants/me"),
         ("POST", "/api/v1/invites"),
         ("DELETE", f"/api/v1/members/{b.membership_id}"),
+        ("PATCH", f"/api/v1/members/{b.membership_id}"),
         ("GET", "/api/v1/conversations"),
         ("POST", "/api/v1/conversations"),
         ("GET", f"/api/v1/conversations/{b.conversation_id}/messages"),
@@ -59,6 +60,11 @@ async def test_direct_object_reference_attacks(client, two_tenants):
     headers = auth(a.owner_id, a.id)
 
     resp = await client.delete(f"/api/v1/members/{b.membership_id}", headers=headers)
+    assert resp.status_code == 404
+
+    resp = await client.patch(
+        f"/api/v1/members/{b.membership_id}", json={"role": "member"}, headers=headers
+    )
     assert resp.status_code == 404
 
     members = (await client.get("/api/v1/members", headers=headers)).json()

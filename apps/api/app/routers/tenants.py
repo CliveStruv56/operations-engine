@@ -47,9 +47,11 @@ async def create_tenant(body: TenantCreate, user: AuthUser = Depends(get_current
             encrypt_llm_key(litellm_key),
         )
         await conn.execute(
-            "insert into memberships (user_id, tenant_id, role) values ($1, $2, 'owner')",
+            "insert into memberships (user_id, tenant_id, role, email)"
+            " values ($1, $2, 'owner', $3)",
             user.id,
             tenant_id,
+            user.email,
         )
         await write_audit(conn, tenant_id, user.id, "tenant.create", "tenant", str(tenant_id))
         row = await conn.fetchrow("select * from tenants where id = $1", tenant_id)

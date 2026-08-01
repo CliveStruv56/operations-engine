@@ -46,6 +46,29 @@ async def test_project_crud_and_document_counts(client):
     assert resp.json()["archived"] is True
 
 
+async def test_projects_list_flags_development(client):
+    t = await seed_tenant(client, f"dev-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+
+    # Attach a Groundwork extension row -> the core list flags it.
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            "insert into proj_projects (id, tenant_id) values ($1, $2)", t.project_id, t.id
+        )
+    plain = await client.post("/api/v1/projects", json={"name": "Plain"}, headers=headers)
+    assert plain.json()["is_development"] is False
+
+    by_id = {p["id"]: p for p in (await client.get("/api/v1/projects", headers=headers)).json()}
+    assert by_id[str(t.project_id)]["is_development"] is True
+    assert by_id[plain.json()["id"]]["is_development"] is False
+
+    # PATCH responses keep the flag.
+    resp = await client.patch(
+        f"/api/v1/projects/{t.project_id}", json={"description": "x"}, headers=headers
+    )
+    assert resp.json()["is_development"] is True
+
+
 async def test_project_delete_orphans_content_not_deletes(client):
     t = await seed_tenant(client, f"orph-{uuid4().hex[:6]}")
     headers = auth(t.owner_id, t.id)

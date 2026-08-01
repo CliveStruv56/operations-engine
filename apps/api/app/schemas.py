@@ -34,7 +34,12 @@ class MemberOut(BaseModel):
     id: UUID
     user_id: UUID
     role: str
+    email: str | None = None
     created_at: datetime
+
+
+class MemberRolePatch(BaseModel):
+    role: str = Field(pattern="^(owner|admin|member)$")
 
 
 class InviteCreate(BaseModel):
@@ -120,6 +125,7 @@ class ProjectOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     document_count: int = 0
+    is_development: bool = False
 
 
 class DocumentCreate(BaseModel):

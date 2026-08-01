@@ -69,7 +69,9 @@ async def accept_invite(body: InviteAccept, user: AuthUser = Depends(get_current
     # the membership without a tenant context, which RLS otherwise forbids.
     async with db.user_tx(user.id) as conn:
         try:
-            row = await conn.fetchrow("select * from accept_invite($1, $2)", body.token, user.id)
+            row = await conn.fetchrow(
+                "select * from accept_invite($1, $2, $3)", body.token, user.id, user.email
+            )
         except asyncpg.RaiseError as exc:
             raise ApiError(400, "invalid_invite", "Invite is invalid or expired") from exc
     tenant_id, role = row["out_tenant_id"], row["out_role"]

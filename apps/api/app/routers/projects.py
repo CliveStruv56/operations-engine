@@ -19,10 +19,11 @@ from app.tenant import TenantContext, get_conn, require_role
 router = APIRouter(tags=["projects"])
 
 _LIST_SQL = """
-    select p.*, count(d.id) as document_count
+    select p.*, count(d.id) as document_count, (pp.id is not null) as is_development
     from projects p
+    left join proj_projects pp on pp.id = p.id
     left join documents d on d.project_id = p.id
-    group by p.id
+    group by p.id, pp.id
     order by p.archived, p.created_at desc
 """
 
@@ -74,10 +75,13 @@ async def update_project(
     if row is None:
         raise ApiError(404, "not_found", "Project not found")
     count = await conn.fetchval("select count(*) from documents where project_id = $1", project_id)
+    is_dev = await conn.fetchval(
+        "select exists (select 1 from proj_projects where id = $1)", project_id
+    )
     await write_audit(
         conn, ctx.tenant_id, ctx.user_id, "project.update", "project", str(project_id)
     )
-    return {**dict(row), "document_count": count}
+    return {**dict(row), "document_count": count, "is_development": is_dev}
 
 
 @router.delete("/projects/{project_id}", status_code=204)

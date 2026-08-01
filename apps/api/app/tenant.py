@@ -19,6 +19,21 @@ class TenantContext:
     role: str
 
 
+async def _heal_membership_email(user: AuthUser, row: asyncpg.Record) -> None:
+    """Backfill memberships.email from the JWT claim when missing or stale.
+    Runs in its own tenant tx (the memberships UPDATE policy needs a tenant
+    context); a no-op in steady state, so it costs nothing per request."""
+    if user.email is None or row["email"] == user.email:
+        return
+    async with db.tenant_tx(user.id, row["tenant_id"]) as conn:
+        await conn.execute(
+            "update memberships set email = $3 where user_id = $1 and tenant_id = $2",
+            user.id,
+            row["tenant_id"],
+            user.email,
+        )
+
+
 async def resolve_tenant(
     request: Request, user: AuthUser = Depends(get_current_user)
 ) -> TenantContext:
@@ -27,7 +42,7 @@ async def resolve_tenant(
     async with db.user_tx(user.id) as conn:
         rows = await conn.fetch(
             """
-            select m.tenant_id, m.role, t.name
+            select m.tenant_id, m.role, m.email, t.name
             from memberships m
             join tenants t on t.id = m.tenant_id
             where m.user_id = $1
@@ -43,10 +58,12 @@ async def resolve_tenant(
             raise ApiError(400, "invalid_tenant_id", "X-Tenant-Id is not a UUID") from exc
         for row in rows:
             if row["tenant_id"] == wanted:
+                await _heal_membership_email(user, row)
                 return TenantContext(user_id=user.id, tenant_id=wanted, role=row["role"])
         raise ApiError(403, "not_a_member", "You are not a member of this tenant")
     if len(rows) == 1:
         row = rows[0]
+        await _heal_membership_email(user, row)
         return TenantContext(user_id=user.id, tenant_id=row["tenant_id"], role=row["role"])
     raise ApiError(
         400,

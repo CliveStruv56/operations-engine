@@ -77,8 +77,7 @@ async def submit_draft(
         raise ApiError(
             409,
             "draft_in_flight",
-            "This draft is already being generated — it lands in the document "
-            "registry when done.",
+            "This draft is already being generated — it lands in the document registry when done.",
         )
     params = await _draft_params(conn, project_id, body)
     row = await conn.fetchrow(
