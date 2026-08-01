@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
+import { Spinner } from "@/components/activity";
 import type { Project } from "./workspace";
 
 type Doc = {
@@ -219,7 +220,12 @@ export default function VaultPanel({
           />
         </div>
 
-        {busy && <p className="data mt-3 text-ink-muted">{busy}</p>}
+        {busy && (
+          <p className="data mt-3 flex items-center gap-2 text-ink-muted">
+            <Spinner className="text-accent" />
+            {busy}
+          </p>
+        )}
         {error && (
           <p className="mt-3 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}

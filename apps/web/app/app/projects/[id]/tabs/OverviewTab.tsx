@@ -14,6 +14,7 @@ import {
   openPresigned,
   submitHealthCard,
 } from "@/lib/groundwork";
+import { Spinner } from "@/components/activity";
 import { RagDots } from "../../page";
 import { DraftModal } from "./DraftModal";
 import { btn } from "./ui";
@@ -89,7 +90,13 @@ export function OverviewTab({ id }: { id: string }) {
             Draft monthly report
           </button>
           <button onClick={healthCard} disabled={cardState === "working"} className={btn}>
-            {cardState === "working" ? "Generating…" : "Health card (PDF)"}
+            {cardState === "working" ? (
+              <>
+                <Spinner className="mr-1.5" /> Generating…
+              </>
+            ) : (
+              "Health card (PDF)"
+            )}
           </button>
           {cardState === "failed" && (
             <span className="text-xs text-danger">Health card failed — try again.</span>

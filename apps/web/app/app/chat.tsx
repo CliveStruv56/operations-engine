@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, apiStream } from "@/lib/api";
+import { PulsingDots, Spinner } from "@/components/activity";
 import { useWorkspace } from "./workspace";
 
 type Citation = {
@@ -199,7 +200,14 @@ export default function ChatPanel({
           {streamText !== null && (
             <div>
               <div className="inline-block max-w-[85%] rounded-md border border-line bg-paper px-4 py-2.5 text-sm whitespace-pre-wrap">
-                {streamText || "…"}
+                {streamText ? (
+                  <>
+                    {streamText}
+                    <PulsingDots className="ml-1.5" />
+                  </>
+                ) : (
+                  <PulsingDots className="py-1" />
+                )}
               </div>
             </div>
           )}
@@ -236,7 +244,7 @@ export default function ChatPanel({
             disabled={streamText !== null}
             className="rounded-sm bg-accent px-5 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
           >
-            Send
+            {streamText !== null ? <Spinner /> : "Send"}
           </button>
         </form>
       </div>

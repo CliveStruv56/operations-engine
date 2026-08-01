@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { gw } from "@/lib/groundwork";
+import { Spinner } from "@/components/activity";
 
 const TOGGLES = [
   { key: "wales", label: "In Wales", hint: "Adds the SAB drainage approval task" },
@@ -143,7 +144,13 @@ export default function NewProjectPage() {
           disabled={busy}
           className="w-full rounded-sm bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
         >
-          {busy ? "Setting up the project spine…" : "Create project"}
+          {busy ? (
+            <>
+              <Spinner className="mr-1.5" /> Setting up the project spine…
+            </>
+          ) : (
+            "Create project"
+          )}
         </button>
         <p className="text-xs text-ink-faint">
           Creates the five-stage plan with gate checklists, the full task list, the document

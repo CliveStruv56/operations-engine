@@ -56,6 +56,31 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* Activity dots: staggered pulse, distinct enough to read at a glance. */
+@keyframes pulse-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.75);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.pulse-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse-dot {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
 .stamp {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.625rem;

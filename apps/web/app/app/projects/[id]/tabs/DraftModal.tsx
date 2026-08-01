@@ -15,6 +15,7 @@ import {
   openPresigned,
   submitDraft,
 } from "@/lib/groundwork";
+import { Spinner } from "@/components/activity";
 import { btn, btnGhost, input } from "./ui";
 
 const KIND_LABEL: Record<DraftKind, string> = {
@@ -167,16 +168,25 @@ export function DraftModal({
               disabled={submitting || (kind === "funding_bid" && !sourceId)}
               className={btn}
             >
-              {submitting ? "Submitting…" : "Generate draft"}
+              {submitting ? (
+                <>
+                  <Spinner className="mr-1.5" /> Submitting…
+                </>
+              ) : (
+                "Generate draft"
+              )}
             </button>
           </div>
         )}
 
         {running && (
           <div className="space-y-2 text-sm">
-            <p>
-              Drafting — this usually takes a minute or two.{" "}
-              <span className="data text-ink-muted uppercase">{job.status}</span>
+            <p className="flex items-center gap-2">
+              <Spinner className="text-accent" />
+              <span>
+                Drafting — this usually takes a minute or two.{" "}
+                <span className="data text-ink-muted uppercase">{job.status}</span>
+              </span>
             </p>
             <p className="text-xs text-ink-faint">
               You can close this window; the draft lands in the document registry when done.
