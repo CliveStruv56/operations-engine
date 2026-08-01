@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
-import type { Project } from "./page";
+import type { Project } from "./workspace";
 
 type Doc = {
   id: string;

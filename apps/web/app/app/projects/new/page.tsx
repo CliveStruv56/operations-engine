@@ -73,7 +73,8 @@ export default function NewProjectPage() {
   const input = "w-full rounded-sm border border-line bg-surface px-3 py-2 text-sm";
 
   return (
-    <main className="mx-auto max-w-2xl p-6">
+    <main className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-2xl p-6">
       <p className="data text-ink-faint uppercase">
         <Link href="/app/projects" className="hover:text-ink">
           ← Development projects
@@ -149,6 +150,7 @@ export default function NewProjectPage() {
           checklist and the standard risk register — ready to edit down.
         </p>
       </form>
+      </div>
     </main>
   );
 }

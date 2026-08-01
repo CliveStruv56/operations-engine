@@ -1,16 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { api, apiStream } from "@/lib/api";
+import { useWorkspace } from "./workspace";
 
-import type { Project } from "./page";
-
-type Conversation = {
-  id: string;
-  title: string | null;
-  project_id: string | null;
-  updated_at: string;
-};
 type Citation = {
   n: number;
   chunk_id: string;
@@ -30,18 +24,17 @@ type Message = {
 };
 
 export default function ChatPanel({
-  tenantId,
-  projects,
   activeProjectId,
+  activeConversationId,
 }: {
-  tenantId: string;
-  projects: Project[];
   activeProjectId: string | null;
+  activeConversationId: string | null;
 }) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const router = useRouter();
+  const ws = useWorkspace();
+  const tenantId = ws.tenant!.id;
+  const activeProject = ws.projects.find((p) => p.id === activeProjectId) ?? null;
   const [scopes, setScopes] = useState<Record<string, string>>({});
-  const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [streamText, setStreamText] = useState<string | null>(null);
@@ -50,29 +43,37 @@ export default function ChatPanel({
   const [evidence, setEvidence] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-
-  const loadConversations = useCallback(async () => {
-    const list = await api<Conversation[]>("/conversations", {}, tenantId);
-    setConversations(list);
-    return list;
-  }, [tenantId]);
-
-  const openConversation = useCallback(
-    async (id: string) => {
-      setActiveId(id);
-      setMessages(await api<Message[]>(`/conversations/${id}/messages`, {}, tenantId));
-    },
-    [tenantId]
-  );
+  // Set when this panel just created the conversation itself: the URL update
+  // that follows must not refetch (and clobber) the in-flight local state.
+  const justCreatedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    loadConversations().catch((e) => setError(String(e)));
-  }, [loadConversations]);
+    if (!activeConversationId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setMessages([]);
+      setEvidence(null);
+      return;
+    }
+    if (justCreatedRef.current === activeConversationId) {
+      justCreatedRef.current = null;
+      return;
+    }
+    setEvidence(null);
+    api<Message[]>(`/conversations/${activeConversationId}/messages`, {}, tenantId)
+      .then(setMessages)
+      .catch((e) => setError(String(e)));
+  }, [activeConversationId, tenantId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, streamText]);
+
+  function convHref(convId: string) {
+    const q = new URLSearchParams();
+    if (activeProjectId) q.set("project", activeProjectId);
+    q.set("c", convId);
+    return `/app?${q.toString()}`;
+  }
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
@@ -81,10 +82,10 @@ export default function ChatPanel({
     setError(null);
     setDraft("");
 
-    let convId = activeId;
+    let convId = activeConversationId;
     try {
       if (!convId) {
-        const created = await api<Conversation>(
+        const created = await api<{ id: string }>(
           "/conversations",
           {
             method: "POST",
@@ -96,8 +97,9 @@ export default function ChatPanel({
           tenantId
         );
         convId = created.id;
-        setActiveId(convId);
-        await loadConversations();
+        justCreatedRef.current = convId;
+        router.replace(convHref(convId));
+        ws.refreshConversations();
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -125,7 +127,7 @@ export default function ChatPanel({
         const done = message as unknown as Message & { scope_used?: string | null };
         setMessages((m) => [...m, done]);
         if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
-        loadConversations();
+        ws.refreshConversations();
       },
       onError: (_code, msg) => {
         setStreamText(null);
@@ -136,38 +138,6 @@ export default function ChatPanel({
 
   return (
     <section className="flex min-h-0 flex-1">
-      <aside className="flex w-60 shrink-0 flex-col border-r border-line">
-        <div className="border-b border-line p-3">
-          <button
-            onClick={() => {
-              setActiveId(null);
-              setMessages([]);
-            }}
-            className="w-full rounded-sm bg-accent px-3 py-2 text-left text-sm font-medium text-accent-ink hover:opacity-90"
-          >
-            New conversation
-          </button>
-        </div>
-        <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto p-2">
-          {(activeProjectId
-            ? conversations.filter((c) => c.project_id === activeProjectId)
-            : conversations
-          ).map((c) => (
-            <button
-              key={c.id}
-              onClick={() => openConversation(c.id)}
-              className={`block w-full truncate rounded-sm px-3 py-2 text-left text-sm ${
-                c.id === activeId
-                  ? "bg-accent-soft font-medium"
-                  : "text-ink-muted hover:bg-paper hover:text-ink"
-              }`}
-            >
-              {c.title ?? "Untitled"}
-            </button>
-          ))}
-        </div>
-      </aside>
-
       <div className="flex min-w-0 flex-1 flex-col">
         {activeProject && (
           <p className="border-b border-line bg-paper px-6 py-1.5">

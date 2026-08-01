@@ -70,7 +70,8 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
   const hrb = detail.applicability?.hrb;
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-6xl p-6">
       <p className="data text-ink-faint uppercase">
         <Link href="/app/projects" className="hover:text-ink">
           ← Development projects
@@ -151,6 +152,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
       {tab === "Risks" && <RisksTab id={id} />}
       {tab === "Conditions" && <ConditionsTab id={id} />}
       {tab === "Stakeholders" && <StakeholdersTab id={id} />}
+      </div>
     </main>
   );
 }

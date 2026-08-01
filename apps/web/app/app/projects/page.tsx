@@ -67,14 +67,10 @@ export default function PortfolioPage() {
   }, [router]);
 
   return (
-    <main className="mx-auto max-w-6xl p-6">
+    <main className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-6xl p-6">
       <header className="mb-6 flex items-baseline justify-between">
         <div>
-          <p className="data text-ink-faint uppercase">
-            <Link href="/app" className="hover:text-ink">
-              ← Workspace
-            </Link>
-          </p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight">Development projects</h1>
         </div>
         <Link
@@ -163,6 +159,7 @@ export default function PortfolioPage() {
           </table>
         </div>
       )}
+      </div>
     </main>
   );
 }
