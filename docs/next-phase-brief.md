@@ -5,6 +5,14 @@
 **Based on:** Review Report 2026-07-31  
 **Review Mode:** B — Documented Project
 
+> **Status (1 Aug 2026): this brief is complete.** All FIX items landed in
+> the 31 Jul hardening pass; NEXT-001–007 and 010 landed with W3/W4;
+> NEXT-008 (`/app/settings` 1 Aug morning, `/app/usage` commit 0c98c89) and
+> NEXT-009 (error/loading routes + surfaced failures, fd7743a) closed on
+> 1 Aug. Still open from the wider Phase 1 spec: Stripe billing
+> (deliberately re-sequenced). See `docs/review-context-handoff.md` for
+> everything that happened after this brief, including the Hearth UI system.
+
 ---
 
 ## Context

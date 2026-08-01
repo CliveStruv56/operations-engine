@@ -164,6 +164,21 @@ radiogroup with vault switch, auto-growing textarea and a working Stop
 QA of the Hearth screens is still outstanding (same blocker: needs a
 logged-in browser session).
 
+Follow-ups landed 1 Aug evening (user-reviewed live on :3000):
+- `01b93e2` — `suppressHydrationWarning` on `<body>` (browser extensions,
+  e.g. ColorZilla's `cz-shortcut-listen`, stamp attributes pre-hydration).
+- `80479de` + `02f3a34` — sidebar sections separated by `edge-strong`
+  hairline dividers above each label.
+- `41084f6` — **context-aware chat empty state**: hero extracted to
+  `apps/web/app/app/hero.tsx`; chip counts the selected project's *ready*
+  docs (neutral chip + add-documents CTA when the project has none);
+  suggestions derive from real document titles (`buildSuggestions`); dev
+  projects lead with a live status card (stage, RAG, next milestone,
+  overdue/risk counts from `GET /projects/portfolio`, silent on 404);
+  project banner shows only during a conversation. Design constraint:
+  chat retrieval is vault-only, so Groundwork structured facts render as
+  UI, never as suggested chat prompts.
+
 ## 7. Read first in a new session
 
 1. This file.

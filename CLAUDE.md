@@ -79,6 +79,12 @@ relevant app's commands pass locally.
 
 ## Working conventions
 
+- UI design system: **Hearth** (`docs/concept-01-hearth-warm-approachable.html`
+  + `docs/hearth-tailwind-implementation-kit.html`) — fixed terracotta chrome,
+  Fraunces display / Plus Jakarta Sans UI, `grounded` green scoped to trust
+  states. Tenant `brand.accent` colours **exports only** (slides, health-card
+  PDFs), never app chrome — see `docs/groundwork/ASSUMPTIONS.md` #17. Legacy
+  token names alias the Hearth palette in `apps/web/app/globals.css`.
 - Tenant scoping: every new API route runs inside the tenant RLS context
   (`app/tenant.py`); never query tenant tables without it.
 - Frontend API access goes through `apps/web/lib/api.ts`; shared response types
