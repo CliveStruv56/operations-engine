@@ -136,9 +136,13 @@ Expected at handoff: **API 139 passed**, worker 31 passed, web clean.
 2. **Staging rollout needs:** run migration 0007, set `EXA_API_KEY` in the
    Railway env, flip `features.web_search` for the pilot tenant, verify R2
    (not MinIO) presign flows for logo/template/slides.
-3. **Spec DoD still open (unchanged from review):** `/app/usage` page; Stripe
-   billing (deliberately deferred); theming DoD "second tenant unaffected"
-   check ideally verified with two real tenants.
+3. **Spec DoD still open:** Stripe billing (deliberately deferred); theming
+   DoD "second tenant unaffected" check ideally verified with two real
+   tenants. ~~`/app/usage` page~~ — built 1 Aug (commit 0c98c89: month
+   picker, totals, per-model/member tables, £ at `NEXT_PUBLIC_GBP_PER_USD`).
+   NEXT-009 error handling also landed 1 Aug (commit fd7743a: `app/error.tsx`
+   + `app/loading.tsx`, `useGwLoad`/`LoadError` retry banners in all project
+   room tabs, workspace/vault loaders surface failures).
 4. **Deferred by decision:** image-creation mode (no image model behind the
    LiteLLM gateway).
 5. **Follow-up ideas (not commitments):** invite-email delivery (Resend),
