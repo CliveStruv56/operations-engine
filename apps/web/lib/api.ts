@@ -45,6 +45,8 @@ export type SseHandlers = {
   onDelta: (content: string) => void;
   onDone: (message: Record<string, unknown>) => void;
   onError: (code: string, message: string) => void;
+  /** Called when the caller aborts the stream (Stop button). */
+  onAbort?: () => void;
 };
 
 /** POST that consumes the API's SSE chat stream (delta / done / error events). */
@@ -52,35 +54,44 @@ export async function apiStream(
   path: string,
   body: unknown,
   tenantId: string,
-  handlers: SseHandlers
+  handlers: SseHandlers,
+  signal?: AbortSignal
 ): Promise<void> {
   const init: RequestInit = { method: "POST", body: JSON.stringify(body) };
   const headers = await buildHeaders(init, tenantId);
-  const resp = await fetch(`${API_URL}/api/v1${path}`, { ...init, headers });
-  if (!resp.ok || !resp.body) {
-    const err = (await resp.json().catch(() => null))?.error ?? {};
-    handlers.onError(err.code ?? "unknown", err.message ?? "Request failed");
-    return;
-  }
-  const reader = resp.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buffer += decoder.decode(value, { stream: true });
-    let sep;
-    while ((sep = buffer.indexOf("\n\n")) !== -1) {
-      const frame = buffer.slice(0, sep);
-      buffer = buffer.slice(sep + 2);
-      const event = frame.match(/^event: (.+)$/m)?.[1];
-      const data = frame.match(/^data: (.+)$/m)?.[1];
-      if (!event || !data) continue;
-      const payload = JSON.parse(data);
-      if (event === "delta") handlers.onDelta(payload.content);
-      else if (event === "done") handlers.onDone(payload);
-      else if (event === "error")
-        handlers.onError(payload.error?.code ?? "unknown", payload.error?.message ?? "Stream failed");
+  try {
+    const resp = await fetch(`${API_URL}/api/v1${path}`, { ...init, headers, signal });
+    if (!resp.ok || !resp.body) {
+      const err = (await resp.json().catch(() => null))?.error ?? {};
+      handlers.onError(err.code ?? "unknown", err.message ?? "Request failed");
+      return;
     }
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let sep;
+      while ((sep = buffer.indexOf("\n\n")) !== -1) {
+        const frame = buffer.slice(0, sep);
+        buffer = buffer.slice(sep + 2);
+        const event = frame.match(/^event: (.+)$/m)?.[1];
+        const data = frame.match(/^data: (.+)$/m)?.[1];
+        if (!event || !data) continue;
+        const payload = JSON.parse(data);
+        if (event === "delta") handlers.onDelta(payload.content);
+        else if (event === "done") handlers.onDone(payload);
+        else if (event === "error")
+          handlers.onError(payload.error?.code ?? "unknown", payload.error?.message ?? "Stream failed");
+      }
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      handlers.onAbort?.();
+      return;
+    }
+    throw err;
   }
 }

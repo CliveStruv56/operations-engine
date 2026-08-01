@@ -4,7 +4,15 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
-import { useWorkspace } from "./workspace";
+import {
+  ChatIcon,
+  HomeIcon,
+  PulseIcon,
+  SearchIcon,
+  TargetIcon,
+  VaultIcon,
+} from "@/components/icons";
+import { useWorkspace, type Conversation } from "./workspace";
 
 function href(params: { view?: "vault"; project?: string | null; c?: string }) {
   const q = new URLSearchParams();
@@ -15,9 +23,23 @@ function href(params: { view?: "vault"; project?: string | null; c?: string }) {
   return s ? `/app?${s}` : "/app";
 }
 
-const itemBase = "block w-full rounded-sm border-l-2 px-3 py-1.5 text-left text-sm";
-const itemActive = "border-accent bg-accent-soft font-medium text-accent";
-const itemRest = "border-transparent text-ink hover:bg-accent-soft/50 hover:text-ink";
+const item =
+  "group relative flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13.5px] font-semibold";
+const itemRest = "text-subtle hover:bg-ink/[.045]";
+const itemActive =
+  "bg-card text-ink shadow-card before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded before:bg-accent before:content-['']";
+const navLabel =
+  "flex items-baseline px-3 pb-1.5 pt-4 text-[10.5px] font-bold uppercase tracking-[.1em] text-faint";
+
+/** Bucket a conversation into a Recent group by its updated_at date. */
+function groupOf(c: Conversation): string {
+  const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round((day(new Date()) - day(new Date(c.updated_at))) / 86_400_000);
+  if (diff <= 0) return "Today";
+  if (diff === 1) return "Yesterday";
+  if (diff < 7) return "This week";
+  return "Earlier";
+}
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ws = useWorkspace();
@@ -45,6 +67,17 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const recentChats = (
     projectId ? ws.conversations.filter((c) => c.project_id === projectId) : ws.conversations
   ).slice(0, 30);
+  const chatGroups = ["Today", "Yesterday", "This week", "Earlier"]
+    .map((label) => ({ label, chats: recentChats.filter((c) => groupOf(c) === label) }))
+    .filter((g) => g.chats.length > 0);
+
+  // Time-dependent by design: trial countdown and chat date groups may be a
+  // render stale at worst — they refresh on any navigation.
+  // eslint-disable-next-line react-hooks/purity
+  const now = Date.now();
+  const trialDaysLeft = tenant.trial_ends_at
+    ? Math.max(0, Math.ceil((new Date(tenant.trial_ends_at).getTime() - now) / 86_400_000))
+    : null;
 
   async function createProject(e: React.FormEvent) {
     e.preventDefault();
@@ -83,50 +116,70 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         />
       )}
       <aside
-        className={`${open ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-64 shrink-0 flex-col border-r border-line bg-paper md:static md:z-auto md:flex md:w-60`}
+        className={`${open ? "flex" : "hidden"} fixed inset-y-0 left-0 z-40 w-[268px] shrink-0 flex-col border-r border-edge bg-sidebar md:static md:z-auto md:flex`}
       >
-        <div className="border-b border-line px-5 py-4">
-          <p className="data text-ink-faint uppercase">Operations Engine</p>
+        <div className="flex items-center gap-2.5 px-5 pt-[18px] pb-4">
           {tenant.logo_url ? (
             // Presigned storage URL — next/image can't optimise it.
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={tenant.logo_url}
               alt={tenant.name}
-              className="mt-1.5 max-h-10 w-auto max-w-full"
+              className="max-h-9 w-auto max-w-[160px]"
             />
           ) : (
-            <h1 className="mt-1 truncate text-base font-semibold tracking-tight">{tenant.name}</h1>
+            <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-accent font-display text-lg font-semibold text-white">
+              {tenant.name.slice(0, 1).toUpperCase()}
+            </span>
           )}
+          <span className="min-w-0">
+            <span className="block truncate text-[15.5px] font-extrabold tracking-tight">
+              {tenant.name}
+            </span>
+            <span className="block text-[10.5px] font-bold uppercase tracking-[.09em] text-faint">
+              Operations Engine
+            </span>
+          </span>
         </div>
 
-        <nav className="min-h-0 flex-1 overflow-y-auto p-3" onClick={onClose}>
+        <div className="px-3.5">
+          <button
+            onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
+            className="mb-2 flex w-full items-center gap-2 rounded-[10px] border border-edge bg-card px-3 py-2 text-[13px] text-faint hover:border-edge-strong"
+          >
+            <SearchIcon className="h-3.5 w-3.5" />
+            Search chats &amp; documents
+            <kbd className="ml-auto rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold text-faint">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3" onClick={onClose}>
           <Link
             href={href({ project: projectId })}
-            className={`${itemBase} mb-1 py-2 ${onWorkspace && view === "chat" ? itemActive : itemRest}`}
+            className={`${item} mb-0.5 ${onWorkspace && view === "chat" ? itemActive : itemRest}`}
           >
+            <ChatIcon />
             Chat
-            <span className="mt-0.5 block text-xs font-normal text-ink-muted">
-              Ask about your documents
-            </span>
           </Link>
           <Link
             href={href({ view: "vault", project: projectId })}
-            className={`${itemBase} mb-1 py-2 ${onWorkspace && view === "vault" ? itemActive : itemRest}`}
+            className={`${item} ${onWorkspace && view === "vault" ? itemActive : itemRest}`}
           >
+            <VaultIcon />
             Vault
-            <span className="mt-0.5 block text-xs font-normal text-ink-muted">
-              The documents behind the answers
-            </span>
           </Link>
 
           {tenant.features?.projects === true && (
             <>
-              <div className="mt-5 mb-1 flex items-baseline justify-between px-3">
-                <p className="data text-ink-muted uppercase">Development projects</p>
+              <div className={navLabel}>
+                Development projects
                 <Link
                   href="/app/projects"
-                  className={`data uppercase ${onDevPages ? "text-accent" : "text-ink-faint hover:text-accent"}`}
+                  className={`ml-auto text-[10.5px] font-bold ${
+                    onDevPages ? "text-accent-deep" : "text-faint hover:text-accent-deep"
+                  }`}
                 >
                   All ↗
                 </Link>
@@ -134,7 +187,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               {devProjects.length === 0 && (
                 <Link
                   href="/app/projects"
-                  className="block px-3 py-1 text-xs text-ink-faint hover:text-ink"
+                  className="block px-3 py-1 text-xs font-medium text-faint hover:text-ink"
                 >
                   Stage-gated schemes, gates &amp; funding →
                 </Link>
@@ -143,17 +196,18 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 <div key={p.id} className="group relative">
                   <Link
                     href={href({ view: view === "vault" ? "vault" : undefined, project: p.id })}
-                    className={`${itemBase} mb-0.5 pr-9 ${
+                    className={`${item} mb-0.5 pr-9 ${
                       onWorkspace && projectId === p.id ? itemActive : itemRest
                     }`}
                   >
+                    <PulseIcon />
                     <span className="block truncate">{p.name}</span>
                   </Link>
                   <Link
                     href={`/app/projects/${p.id}`}
                     title="Open project room"
                     aria-label={`Open ${p.name} project room`}
-                    className="data absolute top-1/2 right-2 -translate-y-1/2 rounded-sm px-1 text-ink-faint uppercase hover:text-accent"
+                    className="absolute top-1/2 right-2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-md text-faint hover:bg-card hover:text-accent-deep"
                   >
                     ↗
                   </Link>
@@ -162,26 +216,41 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             </>
           )}
 
-          <p className="data mt-5 mb-1 px-3 text-ink-muted uppercase">Projects</p>
+          <div className={navLabel}>
+            Projects
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setAddingProject(true);
+              }}
+              className="ml-auto text-[10.5px] font-bold text-accent-deep hover:underline"
+            >
+              + New
+            </button>
+          </div>
           <Link
             href={href({ view: view === "vault" ? "vault" : undefined })}
-            className={`${itemBase} mb-0.5 ${onWorkspace && projectId === null ? itemActive : itemRest}`}
+            className={`${item} mb-0.5 ${onWorkspace && projectId === null ? itemActive : itemRest}`}
           >
+            <TargetIcon />
             Everything
           </Link>
           {coreProjects.map((p) => (
             <Link
               key={p.id}
               href={href({ view: view === "vault" ? "vault" : undefined, project: p.id })}
-              className={`${itemBase} mb-0.5 flex items-baseline justify-between gap-2 ${
+              className={`${item} mb-0.5 ${
                 onWorkspace && projectId === p.id ? itemActive : itemRest
               }`}
             >
+              <HomeIcon />
               <span className="truncate">{p.name}</span>
-              <span className="data shrink-0 text-ink-faint">{p.document_count}</span>
+              <span className="ml-auto text-[11.5px] font-semibold text-faint">
+                {p.document_count}
+              </span>
             </Link>
           ))}
-          {addingProject ? (
+          {addingProject && (
             <form
               onSubmit={createProject}
               className="mt-1 px-3"
@@ -194,103 +263,129 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 onChange={(e) => setProjectName(e.target.value)}
                 onBlur={() => !projectName && setAddingProject(false)}
                 placeholder="Project name"
-                className="w-full rounded-sm border border-line bg-surface px-2 py-1 text-sm"
+                className="w-full rounded-[10px] border border-edge bg-card px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
               />
             </form>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setAddingProject(true);
-              }}
-              className="mt-1 block w-full px-3 py-1 text-left text-xs text-ink-muted hover:text-accent"
-            >
-              + New project
-            </button>
           )}
 
-          <div className="mt-5 mb-1 flex items-baseline justify-between px-3">
-            <p className="data text-ink-muted uppercase">Recent chats</p>
-            <Link
-              href={href({ project: projectId })}
-              className="data text-ink-faint uppercase hover:text-accent"
-              title="Start a new conversation"
-            >
-              + New
-            </Link>
-          </div>
-          {recentChats.length === 0 && (
-            <p className="px-3 py-1 text-xs text-ink-faint">No conversations yet</p>
+          {chatGroups.length === 0 && (
+            <>
+              <div className={navLabel}>Recent</div>
+              <p className="px-3 py-1 text-xs font-medium text-faint">No conversations yet</p>
+            </>
           )}
-          {recentChats.map((c) => (
-            <div key={c.id} className="group relative">
-              {confirmDeleteId === c.id ? (
-                <div
-                  className="mb-0.5 flex items-center justify-between gap-2 rounded-sm border-l-2 border-danger bg-danger-soft px-3 py-1.5"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <span className="truncate text-xs text-danger">Delete chat?</span>
-                  <span className="flex shrink-0 gap-2">
-                    <button
-                      onClick={() => deleteConversation(c.id)}
-                      disabled={deleting}
-                      className="text-xs font-medium text-danger underline disabled:opacity-50"
-                    >
-                      Delete
-                    </button>
-                    <button
-                      onClick={() => setConfirmDeleteId(null)}
-                      className="text-xs text-ink-muted underline"
-                    >
-                      Keep
-                    </button>
-                  </span>
-                </div>
-              ) : (
-                <>
+          {chatGroups.map((g) => (
+            <div key={g.label}>
+              <div className={navLabel}>
+                Recent — {g.label}
+                {g.label === chatGroups[0].label && (
                   <Link
-                    href={href({ project: projectId, c: c.id })}
-                    className={`${itemBase} mb-0.5 pr-8 ${
-                      onWorkspace && view === "chat" && convId === c.id ? itemActive : itemRest
-                    }`}
+                    href={href({ project: projectId })}
+                    className="ml-auto text-[10.5px] font-bold text-accent-deep hover:underline"
+                    title="Start a new conversation"
                   >
-                    <span className="block truncate">{c.title ?? "Untitled"}</span>
+                    + New
                   </Link>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setConfirmDeleteId(c.id);
-                    }}
-                    title="Delete conversation"
-                    aria-label={`Delete conversation ${c.title ?? "Untitled"}`}
-                    className="absolute top-1/2 right-2 -translate-y-1/2 rounded-sm px-1 text-ink-faint opacity-0 group-hover:opacity-100 hover:text-danger focus-visible:opacity-100"
-                  >
-                    ✕
-                  </button>
-                </>
-              )}
+                )}
+              </div>
+              {g.chats.map((c) => (
+                <div key={c.id} className="group relative">
+                  {confirmDeleteId === c.id ? (
+                    <div
+                      className="mb-0.5 flex items-center justify-between gap-2 rounded-[10px] bg-danger-soft px-3 py-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <span className="truncate text-xs font-semibold text-danger">
+                        Delete chat?
+                      </span>
+                      <span className="flex shrink-0 gap-2">
+                        <button
+                          onClick={() => deleteConversation(c.id)}
+                          disabled={deleting}
+                          className="text-xs font-bold text-danger underline disabled:opacity-50"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(null)}
+                          className="text-xs font-semibold text-subtle underline"
+                        >
+                          Keep
+                        </button>
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <Link
+                        href={href({ project: projectId, c: c.id })}
+                        className={`${item} mb-0.5 pr-8 ${
+                          onWorkspace && view === "chat" && convId === c.id
+                            ? itemActive
+                            : itemRest
+                        }`}
+                      >
+                        <ChatIcon className="h-3.5 w-3.5" />
+                        <span className="block truncate font-medium">
+                          {c.title ?? "Untitled"}
+                        </span>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setConfirmDeleteId(c.id);
+                        }}
+                        title="Delete conversation"
+                        aria-label={`Delete conversation ${c.title ?? "Untitled"}`}
+                        className="absolute top-1/2 right-2 hidden h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-md border border-edge bg-card text-subtle group-hover:grid hover:text-danger focus-visible:grid"
+                      >
+                        ✕
+                      </button>
+                    </>
+                  )}
+                </div>
+              ))}
             </div>
           ))}
         </nav>
 
-        <div className="space-y-2 border-t border-line px-5 py-4">
-          <p className="data text-ink-muted uppercase">
-            {tenant.plan} · {tenant.seats} seats · {tenant.role}
-          </p>
-          {tenant.trial_ends_at && (
-            <p className="data text-warn">
-              Trial ends {new Date(tenant.trial_ends_at).toLocaleDateString("en-GB")}
-            </p>
-          )}
-          <p className="truncate text-xs text-ink-muted">{ws.email}</p>
-          <div className="flex items-center gap-3">
+        {trialDaysLeft !== null && (
+          <div className="mx-3.5 mb-2 rounded-xl border border-edge bg-card p-3.5">
+            <div className="flex justify-between text-[12.5px] font-bold">
+              Trial — {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left
+              <span className="text-accent-deep">{tenant.seats} seats</span>
+            </div>
+            <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-sidebar">
+              <div
+                className="h-full rounded-full bg-accent"
+                style={{ width: `${Math.min(100, Math.round((trialDaysLeft / 14) * 100))}%` }}
+              />
+            </div>
+            <div className="mt-2 flex items-center justify-between text-[11.5px] font-semibold text-faint">
+              Ends {new Date(tenant.trial_ends_at!).toLocaleDateString("en-GB")}
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-edge px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-[13px] font-bold text-[#F8EFE2]">
+              {(ws.email ?? "?").slice(0, 1).toUpperCase()}
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[13px] font-bold capitalize">{tenant.role}</span>
+              <span className="block truncate text-[11px] font-semibold text-faint">
+                {ws.email}
+              </span>
+            </span>
+          </div>
+          <div className="mt-2.5 flex items-center gap-3">
             <Link
               href="/app/usage"
               onClick={onClose}
-              className={`text-xs underline ${
+              className={`text-xs font-semibold ${
                 pathname.startsWith("/app/usage")
-                  ? "text-accent"
-                  : "text-ink-muted hover:text-ink"
+                  ? "text-accent-deep"
+                  : "text-subtle hover:text-ink"
               }`}
             >
               Usage
@@ -299,10 +394,10 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               <Link
                 href="/app/settings"
                 onClick={onClose}
-                className={`text-xs underline ${
+                className={`text-xs font-semibold ${
                   pathname.startsWith("/app/settings")
-                    ? "text-accent"
-                    : "text-ink-muted hover:text-ink"
+                    ? "text-accent-deep"
+                    : "text-subtle hover:text-ink"
                 }`}
               >
                 Settings
@@ -310,7 +405,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             )}
             <button
               onClick={ws.logout}
-              className="text-xs text-ink-muted underline hover:text-ink"
+              className="ml-auto text-xs font-semibold text-subtle hover:text-ink"
             >
               Sign out
             </button>

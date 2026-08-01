@@ -86,7 +86,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   // only in the logo area and exported artefacts (slides, health cards).
   return (
     <div className="flex h-screen flex-col md:flex-row">
-      <header className="flex shrink-0 items-center gap-3 border-b border-line bg-paper px-4 py-2.5 md:hidden">
+      <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-sidebar px-4 py-2.5 md:hidden">
         <button
           onClick={() => setNavOpen(true)}
           aria-label="Open navigation"
@@ -97,7 +97,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <span className="truncate text-sm font-semibold">{ws.tenant.name}</span>
       </header>
       <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-surface">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-canvas">
         {ws.error && (
           <p className="border-b border-line bg-danger-soft px-6 py-2 text-sm text-danger">
             {ws.error}

@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { api, apiStream } from "@/lib/api";
 import { openPresigned } from "@/lib/groundwork";
 import { PulsingDots, Spinner } from "@/components/activity";
+import {
+  ArrowUpIcon,
+  CopyIcon,
+  DocIcon,
+  GlobeIcon,
+  PenIcon,
+  StopIcon,
+} from "@/components/icons";
 import { useWorkspace } from "./workspace";
 
 type Citation = {
@@ -19,6 +27,31 @@ type Citation = {
   source_type?: string;
 };
 
+type Message = {
+  id: string;
+  role: "user" | "assistant" | "system";
+  content: string;
+  citations: Citation[];
+  model: string | null;
+  cost_usd: number | null;
+};
+
+const MODES: { key: string; label: string }[] = [
+  { key: "chat", label: "Chat" },
+  { key: "analyse", label: "Analyse" },
+  { key: "report", label: "Report" },
+  { key: "financial", label: "Financial" },
+  { key: "slides", label: "Slide deck" },
+  { key: "research", label: "Research" },
+];
+
+const SUGGESTIONS: { text: string; mode?: string; icon: "doc" | "pen" }[] = [
+  { text: "Summarise our health and safety procedures", icon: "doc" },
+  { text: "What are our standard payment terms?", icon: "doc" },
+  { text: "Draft a letter quoting for a new client", icon: "pen" },
+  { text: "Give me a one-page status report", mode: "report", icon: "pen" },
+];
+
 // Matches the "## Slide N — title" shape the slides task prompt enforces.
 function isSlideDeck(content: string): boolean {
   return /^##\s*slide\s*\d/im.test(content);
@@ -32,14 +65,166 @@ function domainOf(url: string | null | undefined): string | null {
     return null;
   }
 }
-type Message = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  citations: Citation[];
-  model: string | null;
-  cost_usd: number | null;
-};
+
+function greeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning.";
+  if (h < 18) return "Good afternoon.";
+  return "Good evening.";
+}
+
+/** Render answer text with [n] citation markers as inline cite buttons. */
+function withCitations(
+  content: string,
+  citations: Citation[],
+  onCite: (n: number) => void
+): React.ReactNode {
+  if (citations.length === 0) return content;
+  const nums = new Set(citations.map((c) => c.n));
+  return content.split(/(\[\d+\])/g).map((part, i) => {
+    const m = /^\[(\d+)\]$/.exec(part);
+    if (m && nums.has(Number(m[1]))) {
+      return (
+        <button
+          key={i}
+          onClick={() => onCite(Number(m[1]))}
+          className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-accent-deep hover:bg-accent hover:text-white"
+          aria-label={`Source ${m[1]}`}
+        >
+          {m[1]}
+        </button>
+      );
+    }
+    return part;
+  });
+}
+
+function SourceCard({ c }: { c: Citation }) {
+  const web = c.source_type === "web";
+  return (
+    <div id={`src-${c.chunk_id}`} className="rounded-[11px] border border-edge bg-canvas p-3">
+      <div className="flex items-center gap-2 text-xs font-bold">
+        <span className="mr-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 text-[10.5px] font-extrabold text-accent-deep">
+          {c.n}
+        </span>
+        {web ? (
+          <GlobeIcon className="h-3 w-3 text-accent-deep" />
+        ) : (
+          <DocIcon className="h-3 w-3 text-accent-deep" />
+        )}
+        <span className="min-w-0 truncate">{c.title}</span>
+        <em className="ml-auto shrink-0 text-[11px] font-semibold not-italic text-faint">
+          {web
+            ? domainOf(c.url)
+            : c.page_start != null
+              ? `p. ${c.page_start}${
+                  c.page_end != null && c.page_end !== c.page_start ? `–${c.page_end}` : ""
+                }`
+              : ""}
+        </em>
+      </div>
+      <p className="mt-1.5 line-clamp-4 text-[11.5px] leading-relaxed text-subtle italic">
+        &ldquo;{c.snippet}&rdquo;
+      </p>
+      {web && c.url && (
+        <a
+          href={c.url}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-1.5 block truncate text-[11px] font-bold text-accent-deep hover:underline"
+        >
+          Open source ↗
+        </a>
+      )}
+    </div>
+  );
+}
+
+function AssistantMessage({
+  m,
+  scope,
+  onExport,
+  exporting,
+}: {
+  m: Message;
+  scope: string | undefined;
+  onExport: () => void;
+  exporting: boolean;
+}) {
+  const [showAllSources, setShowAllSources] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const cites = m.citations ?? [];
+  const docCount = new Set(
+    cites.filter((c) => c.source_type !== "web").map((c) => c.document_id)
+  ).size;
+  const webCount = new Set(cites.filter((c) => c.source_type === "web").map((c) => c.url)).size;
+  const visible = showAllSources ? cites : cites.slice(0, 3);
+
+  function copy() {
+    navigator.clipboard?.writeText(m.content).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
+  return (
+    <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
+      {cites.length > 0 && (
+        <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[13px] py-1.5 text-[11.5px] font-bold text-grounded">
+          <i className="h-1.5 w-1.5 rounded-full bg-grounded" />
+          {docCount > 0 &&
+            `Grounded in ${docCount} of your document${docCount === 1 ? "" : "s"}`}
+          {docCount > 0 && webCount > 0 && " · "}
+          {webCount > 0 && `${webCount} web source${webCount === 1 ? "" : "s"}`}
+        </span>
+      )}
+      <div className="text-[14.5px] leading-[1.7] whitespace-pre-wrap text-ink">
+        {withCitations(m.content, cites, () => setShowAllSources(true))}
+      </div>
+      {cites.length > 0 && (
+        <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {visible.map((c) => (
+            <SourceCard key={c.chunk_id} c={c} />
+          ))}
+        </div>
+      )}
+      <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-edge pt-3">
+        <button
+          onClick={copy}
+          aria-label="Copy answer"
+          title="Copy answer"
+          className="grid h-7 w-7 place-items-center rounded-lg border border-edge text-subtle hover:bg-sidebar hover:text-ink"
+        >
+          {copied ? <span className="text-[10px] font-bold">✓</span> : <CopyIcon className="h-3.5 w-3.5" />}
+        </button>
+        {cites.length > 3 && (
+          <button
+            onClick={() => setShowAllSources((v) => !v)}
+            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white"
+          >
+            {showAllSources ? "Show fewer sources" : `Show all ${cites.length} sources`}
+          </button>
+        )}
+        {isSlideDeck(m.content) && !m.id.startsWith("local-") && (
+          <button
+            onClick={onExport}
+            disabled={exporting}
+            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
+          >
+            {exporting ? "Building deck…" : "Download .pptx"}
+          </button>
+        )}
+        {m.model && (
+          <span className="ml-auto text-[11px] font-semibold text-faint">
+            {m.model}
+            {scope === "project" && " · from project documents"}
+            {scope === "vault" && " · from the whole vault"}
+          </span>
+        )}
+      </div>
+    </article>
+  );
+}
 
 export default function ChatPanel({
   activeProjectId,
@@ -63,10 +248,12 @@ export default function ChatPanel({
   const modeKey = activeConversationId ?? "new";
   const mode = modes[modeKey] ?? "chat";
   const webSearchEnabled = ws.tenant!.features?.web_search === true;
-  const [evidence, setEvidence] = useState<Citation | null>(null);
+  const [docCount, setDocCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
   // Set when this panel just created the conversation itself: the URL update
   // that follows must not refetch (and clobber) the in-flight local state.
   const justCreatedRef = useRef<string | null>(null);
@@ -75,18 +262,23 @@ export default function ChatPanel({
     if (!activeConversationId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([]);
-      setEvidence(null);
       return;
     }
     if (justCreatedRef.current === activeConversationId) {
       justCreatedRef.current = null;
       return;
     }
-    setEvidence(null);
     api<Message[]>(`/conversations/${activeConversationId}/messages`, {}, tenantId)
       .then(setMessages)
       .catch((e) => setError(String(e)));
   }, [activeConversationId, tenantId]);
+
+  // Vault size for the hero chip — best-effort, hero renders without it too.
+  useEffect(() => {
+    api<unknown[]>("/documents", {}, tenantId)
+      .then((docs) => setDocCount(docs.length))
+      .catch(() => setDocCount(null));
+  }, [tenantId]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -117,12 +309,17 @@ export default function ChatPanel({
     }
   }
 
-  async function send(e: React.FormEvent) {
-    e.preventDefault();
+  function stopStreaming() {
+    abortRef.current?.abort();
+  }
+
+  async function send(e?: React.FormEvent) {
+    e?.preventDefault();
     const content = draft.trim();
     if (!content || streamText !== null) return;
     setError(null);
     setDraft("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
 
     let convId = activeConversationId;
     try {
@@ -161,6 +358,8 @@ export default function ChatPanel({
       },
     ]);
     setStreamText("");
+    const ctrl = new AbortController();
+    abortRef.current = ctrl;
 
     await apiStream(
       `/conversations/${convId}/messages`,
@@ -180,189 +379,235 @@ export default function ChatPanel({
           setStreamText(null);
           setError(msg);
         },
-      }
+        onAbort: () => {
+          // The server may still have persisted the reply — converge on its state.
+          setStreamText(null);
+          if (convId) {
+            api<Message[]>(`/conversations/${convId}/messages`, {}, tenantId)
+              .then(setMessages)
+              .catch(() => {});
+          }
+        },
+      },
+      ctrl.signal
     );
+    abortRef.current = null;
   }
 
+  function pickSuggestion(s: (typeof SUGGESTIONS)[number]) {
+    setDraft(s.text);
+    if (s.mode) setModes((st) => ({ ...st, [modeKey]: s.mode! }));
+    inputRef.current?.focus();
+  }
+
+  const empty = messages.length === 0 && streamText === null;
+  const availableModes = MODES.filter((m) => m.key !== "research" || webSearchEnabled);
+
   return (
-    <section className="flex min-h-0 flex-1">
-      <div className="flex min-w-0 flex-1 flex-col">
-        {activeProject && (
-          <p className="border-b border-line bg-paper px-6 py-1.5">
-            <span className="data text-ink-muted uppercase">
-              Project: {activeProject.name} — answers prefer this project&apos;s documents
-            </span>
-          </p>
-        )}
-        {softCap && (
-          <p className="border-b border-line bg-warn-soft px-6 py-2 text-sm text-warn">
-            This workspace has used its monthly budget — replies use the economy model until it
-            resets.
-          </p>
-        )}
-        <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5">
-          {messages.length === 0 && streamText === null && (
-            <div className="flex h-full items-center justify-center">
-              <p className="max-w-sm text-center text-sm text-ink-faint">
-                Ask about anything in your vault — policies, prices, procedures — or draft
-                something new.
+    <section className="flex min-h-0 flex-1 flex-col bg-canvas">
+      {activeProject && (
+        <p className="border-b border-edge bg-sidebar px-6 py-1.5 text-xs font-bold text-subtle">
+          Project: {activeProject.name} — answers prefer this project&apos;s documents
+        </p>
+      )}
+      {softCap && (
+        <p className="border-b border-edge bg-warn-soft px-6 py-2 text-sm font-semibold text-warn">
+          This workspace has used its monthly budget — replies use the economy model until it
+          resets.
+        </p>
+      )}
+
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+        <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col">
+          {empty ? (
+            <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
+              <span className="inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[15px] py-[7px] text-xs font-bold text-grounded">
+                <i className="h-[7px] w-[7px] rounded-full bg-grounded" />
+                {docCount !== null
+                  ? `Vault connected — ${docCount} document${docCount === 1 ? "" : "s"} indexed`
+                  : "Vault connected"}
+              </span>
+              <h2 className="mt-5 font-display text-[34px] leading-tight font-medium tracking-[-0.01em] sm:text-[42px]">
+                {greeting()}
+              </h2>
+              <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-subtle">
+                Ask anything about your business — policies, prices, procedures — or draft
+                something new. Answers come with their sources attached.
+              </p>
+              <div className="mt-7 grid w-full max-w-[620px] grid-cols-1 gap-3 sm:grid-cols-2">
+                {SUGGESTIONS.map((s) => (
+                  <button
+                    key={s.text}
+                    onClick={() => pickSuggestion(s)}
+                    className="relative flex items-center gap-3 rounded-[14px] border border-edge bg-card px-4 py-3.5 text-left text-[13.5px] font-semibold text-ink shadow-card hover:border-edge-strong"
+                  >
+                    <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] bg-accent-tint text-accent-deep">
+                      {s.icon === "pen" ? (
+                        <PenIcon className="h-[15px] w-[15px]" />
+                      ) : (
+                        <DocIcon className="h-[15px] w-[15px]" />
+                      )}
+                    </span>
+                    {s.text}
+                    {s.mode && (
+                      <span className="absolute -top-[9px] right-3 rounded-full border border-edge-strong bg-accent-tint px-2 py-[3px] text-[10px] font-extrabold text-accent-deep">
+                        → {MODES.find((m) => m.key === s.mode)?.label}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-4 text-xs font-semibold text-faint">
+                Answers cite your documents — verify anything critical.
               </p>
             </div>
-          )}
-          {messages.map((m) => (
-            <div key={m.id} className={m.role === "user" ? "text-right" : ""}>
-              <div
-                className={`inline-block max-w-[85%] rounded-md px-4 py-2.5 text-left text-sm whitespace-pre-wrap ${
-                  m.role === "user"
-                    ? "bg-ink text-surface"
-                    : "border border-line bg-paper"
-                }`}
-              >
-                {m.content}
-              </div>
-              {m.role === "assistant" && m.citations?.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  {m.citations.map((c) => (
-                    <button
-                      key={c.chunk_id}
-                      onClick={() => setEvidence(c)}
-                      className="stamp bg-accent-soft text-accent hover:opacity-80"
-                      title={c.title}
-                    >
-                      {c.n} · {c.title.length > 32 ? c.title.slice(0, 32) + "…" : c.title}
-                      {c.source_type === "web"
-                        ? domainOf(c.url) && ` · ${domainOf(c.url)}`
-                        : c.page_start != null && ` · p.${c.page_start}`}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {m.role === "assistant" && isSlideDeck(m.content) && !m.id.startsWith("local-") && (
-                <div className="mt-1.5">
-                  <button
-                    onClick={() => exportSlides(m.id)}
-                    disabled={exportingId !== null}
-                    className="stamp bg-accent-soft text-accent hover:opacity-80 disabled:opacity-50"
-                  >
-                    {exportingId === m.id ? "building deck…" : "download .pptx"}
-                  </button>
-                </div>
-              )}
-              {m.role === "assistant" && m.model && (
-                <p className="data mt-1 text-ink-faint uppercase">
-                  {m.model}
-                  {scopes[m.id] === "project" && " · from project documents"}
-                  {scopes[m.id] === "vault" && " · from the whole vault"}
-                </p>
-              )}
-            </div>
-          ))}
-          {streamText !== null && (
-            <div>
-              <div className="inline-block max-w-[85%] rounded-md border border-line bg-paper px-4 py-2.5 text-sm whitespace-pre-wrap">
-                {streamText ? (
-                  <>
-                    {streamText}
-                    <PulsingDots className="ml-1.5" />
-                  </>
+          ) : (
+            <div className="space-y-4">
+              {messages.map((m) =>
+                m.role === "user" ? (
+                  <div key={m.id} className="flex justify-end">
+                    <div className="max-w-[85%] rounded-2xl rounded-br-[4px] bg-accent-tint px-[18px] py-[13px] text-[14.5px] font-semibold whitespace-pre-wrap sm:max-w-[420px]">
+                      {m.content}
+                    </div>
+                  </div>
                 ) : (
-                  <PulsingDots className="py-1" />
-                )}
-              </div>
+                  <AssistantMessage
+                    key={m.id}
+                    m={m}
+                    scope={scopes[m.id]}
+                    onExport={() => exportSlides(m.id)}
+                    exporting={exportingId === m.id}
+                  />
+                )
+              )}
+              {streamText !== null && (
+                <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
+                  {streamText ? (
+                    <div className="text-[14.5px] leading-[1.7] whitespace-pre-wrap text-ink">
+                      {streamText}
+                      <PulsingDots className="ml-1.5" />
+                    </div>
+                  ) : (
+                    <PulsingDots className="py-1" />
+                  )}
+                </article>
+              )}
             </div>
           )}
         </div>
-        {error && (
-          <p className="border-t border-line bg-danger-soft px-6 py-2 text-sm text-danger">
-            {error}
-          </p>
-        )}
-        <form onSubmit={send} className="flex items-center gap-2 border-t border-line p-4">
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder={useVault ? "Ask about your documents…" : "Ask anything…"}
-            className="min-w-0 flex-1 rounded-sm border border-line bg-surface px-3 py-2 text-sm"
-          />
-          <select
-            value={mode}
-            onChange={(e) => setModes((s) => ({ ...s, [modeKey]: e.target.value }))}
-            aria-label="Task type"
-            title="What kind of response you want — also picks the model"
-            className={`stamp shrink-0 cursor-pointer bg-surface ${
-              mode === "chat" ? "text-ink-muted" : "bg-accent-soft text-accent"
-            }`}
-          >
-            <option value="chat">Chat</option>
-            <option value="analyse">Analyse</option>
-            <option value="report">Report</option>
-            <option value="financial">Financial</option>
-            <option value="slides">Slide deck</option>
-            {webSearchEnabled && <option value="research">Research</option>}
-          </select>
-          <button
-            type="button"
-            onClick={() => setUseVault((v) => !v)}
-            aria-pressed={useVault}
-            title={
-              useVault
-                ? "Answers use your vault and cite documents"
-                : "Vault off — answers come from the model alone"
-            }
-            className={`stamp shrink-0 ${
-              useVault ? "bg-accent-soft text-accent" : "text-ink-faint"
-            }`}
-          >
-            vault {useVault ? "on" : "off"}
-          </button>
-          <button
-            type="submit"
-            disabled={streamText !== null}
-            className="rounded-sm bg-accent px-5 py-2 text-sm font-medium text-accent-ink hover:opacity-90 disabled:opacity-50"
-          >
-            {streamText !== null ? <Spinner /> : "Send"}
-          </button>
-        </form>
       </div>
 
-      {evidence && (
-        <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[90vw] shrink-0 flex-col border-l border-line bg-paper shadow-lg md:static md:z-auto md:max-w-none md:shadow-none">
-          <header className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
-            <div className="min-w-0">
-              <p className="data text-ink-faint uppercase">Source {evidence.n}</p>
-              <h3 className="mt-0.5 truncate text-sm font-semibold">{evidence.title}</h3>
-              {evidence.page_start != null && (
-                <p className="data mt-0.5 text-ink-muted">
-                  Page {evidence.page_start}
-                  {evidence.page_end != null && evidence.page_end !== evidence.page_start
-                    ? `–${evidence.page_end}`
-                    : ""}
-                </p>
-              )}
-              {evidence.url && (
-                <a
-                  href={evidence.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="data mt-0.5 block truncate text-accent underline"
-                >
-                  Open source ↗ {domainOf(evidence.url)}
-                </a>
-              )}
-            </div>
-            <button
-              onClick={() => setEvidence(null)}
-              className="shrink-0 text-ink-muted hover:text-ink"
-              aria-label="Close source panel"
-            >
-              ✕
-            </button>
-          </header>
-          <div className="min-h-0 flex-1 overflow-y-auto p-4">
-            <p className="text-sm whitespace-pre-wrap text-ink-muted">{evidence.snippet}</p>
-          </div>
-        </aside>
+      {error && (
+        <p
+          role="alert"
+          className="border-t border-edge bg-danger-soft px-6 py-2 text-sm font-semibold text-danger"
+        >
+          {error}
+        </p>
       )}
+
+      <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
+        <form
+          onSubmit={send}
+          className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge-strong bg-card p-3 shadow-hearth"
+        >
+          <div
+            role="radiogroup"
+            aria-label="Mode"
+            className="flex gap-1.5 overflow-x-auto px-0.5 pb-2.5 [scrollbar-width:none]"
+          >
+            {availableModes.map((m) => (
+              <button
+                key={m.key}
+                type="button"
+                role="radio"
+                aria-checked={mode === m.key}
+                onClick={() => setModes((s) => ({ ...s, [modeKey]: m.key }))}
+                className={`shrink-0 rounded-full px-[13px] py-1.5 text-xs font-bold whitespace-nowrap transition ${
+                  mode === m.key
+                    ? "bg-accent text-white"
+                    : "text-subtle hover:bg-sidebar"
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-end gap-2.5">
+            <textarea
+              ref={inputRef}
+              rows={1}
+              value={draft}
+              onChange={(e) => {
+                setDraft(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+              placeholder={
+                mode === "research"
+                  ? "Research a question across the web…"
+                  : useVault
+                    ? "Ask about your documents — or draft something new…"
+                    : "Ask anything…"
+              }
+              className="max-h-[200px] w-full resize-none bg-transparent px-0.5 py-2 text-base leading-normal text-ink placeholder:text-faint focus:outline-none sm:text-[15px]"
+            />
+            {streamText !== null ? (
+              <button
+                type="button"
+                onClick={stopStreaming}
+                className="inline-flex flex-none items-center gap-2 rounded-xl bg-ink px-[18px] py-[9px] text-[13.5px] font-bold text-white hover:opacity-90"
+              >
+                <StopIcon className="h-3.5 w-3.5" />
+                Stop
+              </button>
+            ) : (
+              <button
+                type="submit"
+                disabled={!draft.trim()}
+                className="inline-flex flex-none items-center gap-2 rounded-xl bg-accent px-[18px] py-[9px] text-[13.5px] font-bold text-white transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-edge disabled:text-faint"
+              >
+                Send
+                <ArrowUpIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <div className="mt-2.5 flex items-center gap-2.5 border-t border-edge px-1 pt-[11px]">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={useVault}
+              aria-label="Vault"
+              onClick={() => setUseVault((v) => !v)}
+              className={`relative h-[18px] w-8 flex-none rounded-full transition after:absolute after:top-0.5 after:left-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition after:content-[''] ${
+                useVault ? "bg-grounded after:translate-x-[14px]" : "bg-edge-strong"
+              }`}
+            />
+            <span className="text-xs font-semibold text-subtle">
+              {useVault
+                ? "Vault on — answers cite your documents"
+                : "Vault off — answers come from the model alone"}
+            </span>
+            <span className="ml-auto hidden text-[11.5px] font-semibold text-faint sm:block">
+              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold">
+                ↵
+              </kbd>{" "}
+              Send ·{" "}
+              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold">
+                ⇧↵
+              </kbd>{" "}
+              New line
+            </span>
+            {streamText !== null && <Spinner className="ml-2 text-accent sm:ml-0" />}
+          </div>
+        </form>
+      </div>
     </section>
   );
 }
