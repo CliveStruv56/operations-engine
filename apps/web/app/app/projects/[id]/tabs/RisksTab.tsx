@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Risk, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, input } from "./ui";
 
 export function RisksTab({ id }: { id: string }) {
@@ -10,14 +11,7 @@ export function RisksTab({ id }: { id: string }) {
   const [likelihood, setLikelihood] = useState(3);
   const [impact, setImpact] = useState(3);
 
-  const refresh = useCallback(
-    () => gw<Risk[]>(`/projects/${id}/risks`).then(setRisks).catch(() => {}),
-    [id]
-  );
-  useEffect(() => {
-
-    refresh();
-  }, [refresh]);
+  const { failed, refresh } = useGwLoad<Risk[]>(`/projects/${id}/risks`, setRisks);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -36,6 +30,7 @@ export function RisksTab({ id }: { id: string }) {
 
   return (
     <div>
+      <LoadError failed={failed} onRetry={refresh} />
       <table className="w-full rounded-md border border-line bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">

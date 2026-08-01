@@ -2,29 +2,34 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Funding, Programme, fmtDate, fmtMoney, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, btnGhost, input } from "./ui";
 
 export function FundingTab({ id }: { id: string }) {
   const [stack, setStack] = useState<Funding[]>([]);
   const [browse, setBrowse] = useState(false);
   const [programmes, setProgrammes] = useState<Programme[]>([]);
+  const [progFailed, setProgFailed] = useState(false);
   const [nation, setNation] = useState("");
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const refresh = useCallback(
-    () => gw<Funding[]>(`/projects/${id}/funding`).then(setStack).catch(() => {}),
-    [id]
-  );
-  useEffect(() => {
+  const { failed, refresh } = useGwLoad<Funding[]>(`/projects/${id}/funding`, setStack);
 
-    refresh();
-  }, [refresh]);
-  useEffect(() => {
-    if (!browse) return;
+  const loadProgrammes = useCallback(() => {
     const q = nation ? `?nation=${nation}` : "";
-
-    gw<Programme[]>(`/projects/funding-programmes${q}`).then(setProgrammes).catch(() => {});
-  }, [browse, nation]);
+    return gw<Programme[]>(`/projects/funding-programmes${q}`)
+      .then((rows) => {
+        setProgrammes(rows);
+        setProgFailed(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load funding programmes", err);
+        setProgFailed(true);
+      });
+  }, [nation]);
+  useEffect(() => {
+    if (browse) loadProgrammes();
+  }, [browse, loadProgrammes]);
 
   async function addFromCatalogue(p: Programme) {
     await gw(`/projects/${id}/funding`, {
@@ -42,6 +47,7 @@ export function FundingTab({ id }: { id: string }) {
   return (
     <div className="flex gap-4">
       <div className="min-w-0 flex-1">
+        <LoadError failed={failed} onRetry={refresh} />
         <div className="mb-3 flex justify-between">
           <p className="text-sm text-ink-muted">The funding stack for this project.</p>
           <button onClick={() => setBrowse(!browse)} className={btn}>
@@ -130,6 +136,14 @@ export function FundingTab({ id }: { id: string }) {
             <option value="scotland">Scotland</option>
             <option value="wales">Wales</option>
           </select>
+          {progFailed && (
+            <p role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-sm bg-danger-soft px-2 py-1.5 text-xs text-danger">
+              Programme catalogue failed to load.
+              <button onClick={loadProgrammes} className="shrink-0 underline">
+                Retry
+              </button>
+            </p>
+          )}
           <ul className="max-h-130 space-y-2 overflow-y-auto">
             {programmes.map((p) => (
               <li key={p.key} className="rounded-sm border border-line p-2 text-sm">

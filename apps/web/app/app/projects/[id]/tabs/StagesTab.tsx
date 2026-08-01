@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Stage, fmtDate, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, input } from "./ui";
 
 export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => void }) {
@@ -10,14 +11,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
   const [exceptions, setExceptions] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const refresh = useCallback(
-    () => gw<Stage[]>(`/projects/${id}/stages`).then(setStages).catch(() => {}),
-    [id]
-  );
-  useEffect(() => {
-
-    refresh();
-  }, [refresh]);
+  const { failed, refresh } = useGwLoad<Stage[]>(`/projects/${id}/stages`, setStages);
 
   async function toggle(stage: Stage, itemId: string) {
     try {
@@ -53,6 +47,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
 
   return (
     <div className="space-y-3">
+      <LoadError failed={failed} onRetry={refresh} className="mb-0" />
       {error && <p className="rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
       {stages.map((s) => {
         const outstanding = s.gate.filter((g) => !g.done).length;

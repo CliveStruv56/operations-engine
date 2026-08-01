@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Budget, BudgetLine, fmtMoney, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, btnGhost, input } from "./ui";
 
 const CATEGORIES = ["land", "construction", "externals", "abnormals", "fees", "statutory", "contingency", "finance", "other"];
@@ -10,12 +11,9 @@ export function BudgetTab({ id }: { id: string }) {
   const [lines, setLines] = useState<BudgetLine[]>([]);
   const [dirty, setDirty] = useState(false);
 
-  useEffect(() => {
-
-    gw<Budget>(`/projects/${id}/budget`)
-      .then((b) => setLines(b.lines))
-      .catch(() => {});
-  }, [id]);
+  const { failed, refresh } = useGwLoad<Budget>(`/projects/${id}/budget`, (b) =>
+    setLines(b.lines)
+  );
 
   const update = (i: number, patch: Partial<BudgetLine>) => {
     setLines((ls) => ls.map((l, j) => (j === i ? { ...l, ...patch } : l)));
@@ -32,6 +30,7 @@ export function BudgetTab({ id }: { id: string }) {
 
   return (
     <div>
+      <LoadError failed={failed} onRetry={refresh} />
       <table className="w-full rounded-md border border-line bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">

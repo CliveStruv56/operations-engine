@@ -1,21 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Condition, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, input } from "./ui";
 
 export function ConditionsTab({ id }: { id: string }) {
   const [conditions, setConditions] = useState<Condition[]>([]);
   const [form, setForm] = useState({ application_ref: "", number: "", description: "", pre: false });
 
-  const refresh = useCallback(
-    () => gw<Condition[]>(`/projects/${id}/conditions`).then(setConditions).catch(() => {}),
-    [id]
-  );
-  useEffect(() => {
-
-    refresh();
-  }, [refresh]);
+  const { failed, refresh } = useGwLoad<Condition[]>(`/projects/${id}/conditions`, setConditions);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -42,6 +36,7 @@ export function ConditionsTab({ id }: { id: string }) {
 
   return (
     <div>
+      <LoadError failed={failed} onRetry={refresh} />
       <table className="w-full rounded-md border border-line bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">

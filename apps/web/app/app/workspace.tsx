@@ -77,19 +77,23 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // A failing list must not take down the workspace, but it should be visible:
+  // log it and surface a non-fatal banner instead of leaving the sidebar blank.
   const loadProjects = useCallback(async (tenantId: string) => {
     try {
       setProjects(await api<Project[]>("/projects", {}, tenantId));
-    } catch {
-      /* project list failing must not take down the workspace */
+    } catch (err) {
+      console.error("Failed to load projects", err);
+      setError("Couldn't load your projects — refresh to try again.");
     }
   }, []);
 
   const loadConversations = useCallback(async (tenantId: string) => {
     try {
       setConversations(await api<Conversation[]>("/conversations", {}, tenantId));
-    } catch {
-      /* conversation list failing must not take down the workspace */
+    } catch (err) {
+      console.error("Failed to load conversations", err);
+      setError("Couldn't load your conversations — refresh to try again.");
     }
   }, []);
 

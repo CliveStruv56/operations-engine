@@ -10,13 +10,13 @@ import {
   fmtDate,
   fmtMoney,
   getDraftJob,
-  gw,
   openPresigned,
   submitHealthCard,
 } from "@/lib/groundwork";
 import { Spinner } from "@/components/activity";
 import { RagDots } from "../../page";
 import { DraftModal } from "./DraftModal";
+import { LoadError, useGwLoad } from "./load";
 import { btn } from "./ui";
 
 export function OverviewTab({ id }: { id: string }) {
@@ -56,18 +56,16 @@ export function OverviewTab({ id }: { id: string }) {
     }
   }
 
-  useEffect(() => {
-
-    gw<Task[]>(`/projects/${id}/tasks?status=todo`).then(setTasks).catch(() => {});
-    gw<Funding[]>(`/projects/${id}/funding`).then(setFunding).catch(() => {});
-    gw<Risk[]>(`/projects/${id}/risks`).then(setRisks).catch(() => {});
-    gw<ActivityEntry[]>(`/projects/${id}/activity`)
-      .then(setActivity)
-      .catch(() => {});
-    gw<{ id: string; rag: Detail["rag"] }[]>("/projects/portfolio")
-      .then((rows) => setPortfolio(rows.find((r) => r.id === id)?.rag ?? null))
-      .catch(() => {});
-  }, [id]);
+  const loads = [
+    useGwLoad<Task[]>(`/projects/${id}/tasks?status=todo`, setTasks),
+    useGwLoad<Funding[]>(`/projects/${id}/funding`, setFunding),
+    useGwLoad<Risk[]>(`/projects/${id}/risks`, setRisks),
+    useGwLoad<ActivityEntry[]>(`/projects/${id}/activity`, setActivity),
+    useGwLoad<{ id: string; rag: Detail["rag"] }[]>("/projects/portfolio", (rows) =>
+      setPortfolio(rows.find((r) => r.id === id)?.rag ?? null)
+    ),
+  ];
+  const loadFailed = loads.some((l) => l.failed);
 
   const milestones = tasks
     .filter((t) => t.is_milestone && t.due_date)
@@ -79,6 +77,11 @@ export function OverviewTab({ id }: { id: string }) {
 
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      <LoadError
+        failed={loadFailed}
+        onRetry={() => loads.forEach((l) => l.refresh())}
+        className="mb-0 lg:col-span-2"
+      />
       <section className="rounded-md border border-line bg-surface p-4">
         <h3 className="data mb-2 text-ink-muted uppercase">Health</h3>
         {portfolio ? <RagDots rag={portfolio} /> : <p className="data text-ink-faint">…</p>}

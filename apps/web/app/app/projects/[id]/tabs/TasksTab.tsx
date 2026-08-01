@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { STAGE_LABEL, STAGES, Task, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, input } from "./ui";
 
 export function TasksTab({ id }: { id: string }) {
@@ -15,17 +16,11 @@ export function TasksTab({ id }: { id: string }) {
   const [newDue, setNewDue] = useState("");
   const [newMilestone, setNewMilestone] = useState(false);
 
-  const refresh = useCallback(() => {
-    const q = new URLSearchParams();
-    if (stage) q.set("stage_key", stage);
-    if (status) q.set("status", status);
-    if (overdue) q.set("overdue", "true");
-    return gw<Task[]>(`/projects/${id}/tasks?${q}`).then(setTasks).catch(() => {});
-  }, [id, stage, status, overdue]);
-  useEffect(() => {
-
-    refresh();
-  }, [refresh]);
+  const q = new URLSearchParams();
+  if (stage) q.set("stage_key", stage);
+  if (status) q.set("status", status);
+  if (overdue) q.set("overdue", "true");
+  const { failed, refresh } = useGwLoad<Task[]>(`/projects/${id}/tasks?${q}`, setTasks);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -60,6 +55,7 @@ export function TasksTab({ id }: { id: string }) {
 
   return (
     <div>
+      <LoadError failed={failed} onRetry={refresh} />
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <select value={stage} onChange={(e) => setStage(e.target.value)} className={input}>
           <option value="">All stages</option>

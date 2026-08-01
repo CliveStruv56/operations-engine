@@ -1,21 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { Stakeholder, fmtDate, gw } from "@/lib/groundwork";
+import { LoadError, useGwLoad } from "./load";
 import { btn, input } from "./ui";
 
 export function StakeholdersTab({ id }: { id: string }) {
   const [people, setPeople] = useState<Stakeholder[]>([]);
   const [form, setForm] = useState({ name: "", org: "", role: "community", email: "" });
 
-  const refresh = useCallback(
-    () => gw<Stakeholder[]>(`/projects/${id}/stakeholders`).then(setPeople).catch(() => {}),
-    [id]
-  );
-  useEffect(() => {
-
-    refresh();
-  }, [refresh]);
+  const { failed, refresh } = useGwLoad<Stakeholder[]>(`/projects/${id}/stakeholders`, setPeople);
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
@@ -34,6 +28,7 @@ export function StakeholdersTab({ id }: { id: string }) {
 
   return (
     <div>
+      <LoadError failed={failed} onRetry={refresh} />
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {people.map((p) => (
           <div key={p.id} className="rounded-md border border-line bg-surface p-3 text-sm">

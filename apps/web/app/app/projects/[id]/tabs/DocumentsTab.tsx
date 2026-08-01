@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import {
   DownloadTicket,
   DraftKind,
@@ -11,6 +11,7 @@ import {
   openPresigned,
 } from "@/lib/groundwork";
 import { DraftModal } from "./DraftModal";
+import { LoadError, useGwLoad } from "./load";
 import { btnGhost, input } from "./ui";
 
 const DRAFT_KINDS: DraftKind[] = ["monthly_report", "feasibility_study", "funding_bid"];
@@ -20,14 +21,7 @@ export function DocumentsTab({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null);
   const [draftKind, setDraftKind] = useState<DraftKind | null>(null);
 
-  const refresh = useCallback(
-    () => gw<RegistryDoc[]>(`/projects/${id}/documents`).then(setDocs).catch(() => {}),
-    [id]
-  );
-  useEffect(() => {
-
-    refresh();
-  }, [refresh]);
+  const { failed, refresh } = useGwLoad<RegistryDoc[]>(`/projects/${id}/documents`, setDocs);
 
   async function setStatus(d: RegistryDoc, status: string) {
     await gw(`/projects/${id}/documents/${d.id}`, {
@@ -72,6 +66,7 @@ export function DocumentsTab({ id }: { id: string }) {
 
   return (
     <div>
+      <LoadError failed={failed} onRetry={refresh} />
       {error && <p className="mb-2 rounded-sm bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
       <table className="w-full rounded-md border border-line bg-surface text-sm">
         <thead>

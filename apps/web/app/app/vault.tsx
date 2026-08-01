@@ -134,7 +134,7 @@ export default function VaultPanel({
       }
     }
     setBusy(null);
-    await refresh().catch(() => {});
+    await refresh().catch((e) => setError(String(e)));
   }
 
   async function remove(doc: Doc) {
