@@ -14,6 +14,7 @@ from app.ratelimit import rate_limiter
 from app.routers import (
     conversations,
     documents,
+    global_search,
     groundwork,
     groundwork_drafts,
     groundwork_room,
@@ -78,6 +79,7 @@ def create_app() -> FastAPI:
         slides.router,
         documents.router,
         usage.router,
+        global_search.router,
     ):
         app.include_router(router, prefix="/api/v1")
     return app

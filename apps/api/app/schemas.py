@@ -285,6 +285,11 @@ class UsageBucket(BaseModel):
     requests: int
 
 
+class SearchResultsOut(BaseModel):
+    conversations: list[ConversationOut]
+    documents: list[DocumentOut]
+
+
 class UsageSummaryOut(BaseModel):
     month: str
     tokens_in: int

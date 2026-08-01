@@ -1,0 +1,46 @@
+"""Workspace search (⌘K palette): title match over the caller's conversations
+and the tenant's documents. Runs under the tenant RLS context; conversations
+are additionally personal (same rule as GET /conversations)."""
+
+import asyncpg
+from fastapi import APIRouter, Depends, Query
+
+from app.schemas import SearchResultsOut
+from app.tenant import TenantContext, get_conn, require_role
+
+router = APIRouter(tags=["search"])
+
+_LIKE_SPECIALS = str.maketrans({"%": r"\%", "_": r"\_", "\\": "\\\\"})
+
+
+@router.get("/search", response_model=SearchResultsOut)
+async def workspace_search(
+    q: str = Query(min_length=1, max_length=200),
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    pattern = f"%{q.strip().translate(_LIKE_SPECIALS)}%"
+    conversations = await conn.fetch(
+        """
+        select id, title, project_id, created_at, updated_at
+        from conversations
+        where user_id = $1 and title ilike $2
+        order by updated_at desc limit 10
+        """,
+        ctx.user_id,
+        pattern,
+    )
+    documents = await conn.fetch(
+        """
+        select id, title, mime, project_id, is_primary, summary, status, error,
+               created_by, created_at, updated_at
+        from documents
+        where title ilike $1
+        order by updated_at desc limit 10
+        """,
+        pattern,
+    )
+    return {
+        "conversations": [dict(r) for r in conversations],
+        "documents": [dict(r) for r in documents],
+    }

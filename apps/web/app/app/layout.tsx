@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import CommandPalette from "./command-palette";
 import Sidebar from "./sidebar";
 import { useWorkspace, WorkspaceProvider } from "./workspace";
 
@@ -97,6 +98,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <span className="truncate text-sm font-semibold">{ws.tenant.name}</span>
       </header>
       <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
+      <CommandPalette />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-canvas">
         {ws.error && (
           <p className="border-b border-line bg-danger-soft px-6 py-2 text-sm text-danger">
