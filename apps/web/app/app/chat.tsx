@@ -10,9 +10,9 @@ import {
   CopyIcon,
   DocIcon,
   GlobeIcon,
-  PenIcon,
   StopIcon,
 } from "@/components/icons";
+import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
 import { useWorkspace } from "./workspace";
 
 type Citation = {
@@ -45,13 +45,6 @@ const MODES: { key: string; label: string }[] = [
   { key: "research", label: "Research" },
 ];
 
-const SUGGESTIONS: { text: string; mode?: string; icon: "doc" | "pen" }[] = [
-  { text: "Summarise our health and safety procedures", icon: "doc" },
-  { text: "What are our standard payment terms?", icon: "doc" },
-  { text: "Draft a letter quoting for a new client", icon: "pen" },
-  { text: "Give me a one-page status report", mode: "report", icon: "pen" },
-];
-
 // Matches the "## Slide N — title" shape the slides task prompt enforces.
 function isSlideDeck(content: string): boolean {
   return /^##\s*slide\s*\d/im.test(content);
@@ -64,13 +57,6 @@ function domainOf(url: string | null | undefined): string | null {
   } catch {
     return null;
   }
-}
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning.";
-  if (h < 18) return "Good afternoon.";
-  return "Good evening.";
 }
 
 /** Render answer text with [n] citation markers as inline cite buttons. */
@@ -248,7 +234,8 @@ export default function ChatPanel({
   const modeKey = activeConversationId ?? "new";
   const mode = modes[modeKey] ?? "chat";
   const webSearchEnabled = ws.tenant!.features?.web_search === true;
-  const [docCount, setDocCount] = useState<number | null>(null);
+  const devProjectsEnabled = ws.tenant!.features?.projects === true;
+  const [docs, setDocs] = useState<DocMeta[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -273,11 +260,12 @@ export default function ChatPanel({
       .catch((e) => setError(String(e)));
   }, [activeConversationId, tenantId]);
 
-  // Vault size for the hero chip — best-effort, hero renders without it too.
+  // Document metadata for the hero (context chip + title-derived suggestions)
+  // — best-effort, the hero renders without it too.
   useEffect(() => {
-    api<unknown[]>("/documents", {}, tenantId)
-      .then((docs) => setDocCount(docs.length))
-      .catch(() => setDocCount(null));
+    api<DocMeta[]>("/documents", {}, tenantId)
+      .then(setDocs)
+      .catch(() => setDocs(null));
   }, [tenantId]);
 
   useEffect(() => {
@@ -394,7 +382,7 @@ export default function ChatPanel({
     abortRef.current = null;
   }
 
-  function pickSuggestion(s: (typeof SUGGESTIONS)[number]) {
+  function pickSuggestion(s: Suggestion) {
     setDraft(s.text);
     if (s.mode) setModes((st) => ({ ...st, [modeKey]: s.mode! }));
     inputRef.current?.focus();
@@ -405,7 +393,9 @@ export default function ChatPanel({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col bg-canvas">
-      {activeProject && (
+      {/* The empty-state hero carries the project context; the banner only
+          needs to keep the scope visible once a conversation is underway. */}
+      {activeProject && !empty && (
         <p className="border-b border-edge bg-sidebar px-6 py-1.5 text-xs font-bold text-subtle">
           Project: {activeProject.name} — answers prefer this project&apos;s documents
         </p>
@@ -420,47 +410,12 @@ export default function ChatPanel({
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col">
           {empty ? (
-            <div className="flex flex-1 flex-col items-center justify-center py-8 text-center">
-              <span className="inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[15px] py-[7px] text-xs font-bold text-grounded">
-                <i className="h-[7px] w-[7px] rounded-full bg-grounded" />
-                {docCount !== null
-                  ? `Vault connected — ${docCount} document${docCount === 1 ? "" : "s"} indexed`
-                  : "Vault connected"}
-              </span>
-              <h2 className="mt-5 font-display text-[34px] leading-tight font-medium tracking-[-0.01em] sm:text-[42px]">
-                {greeting()}
-              </h2>
-              <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-subtle">
-                Ask anything about your business — policies, prices, procedures — or draft
-                something new. Answers come with their sources attached.
-              </p>
-              <div className="mt-7 grid w-full max-w-[620px] grid-cols-1 gap-3 sm:grid-cols-2">
-                {SUGGESTIONS.map((s) => (
-                  <button
-                    key={s.text}
-                    onClick={() => pickSuggestion(s)}
-                    className="relative flex items-center gap-3 rounded-[14px] border border-edge bg-card px-4 py-3.5 text-left text-[13.5px] font-semibold text-ink shadow-card hover:border-edge-strong"
-                  >
-                    <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] bg-accent-tint text-accent-deep">
-                      {s.icon === "pen" ? (
-                        <PenIcon className="h-[15px] w-[15px]" />
-                      ) : (
-                        <DocIcon className="h-[15px] w-[15px]" />
-                      )}
-                    </span>
-                    {s.text}
-                    {s.mode && (
-                      <span className="absolute -top-[9px] right-3 rounded-full border border-edge-strong bg-accent-tint px-2 py-[3px] text-[10px] font-extrabold text-accent-deep">
-                        → {MODES.find((m) => m.key === s.mode)?.label}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              <p className="mt-4 text-xs font-semibold text-faint">
-                Answers cite your documents — verify anything critical.
-              </p>
-            </div>
+            <EmptyHero
+              activeProject={activeProject}
+              docs={docs}
+              devProjectsEnabled={devProjectsEnabled}
+              onPick={pickSuggestion}
+            />
           ) : (
             <div className="space-y-4">
               {messages.map((m) =>
