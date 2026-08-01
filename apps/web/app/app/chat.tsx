@@ -12,6 +12,7 @@ import {
   GlobeIcon,
   StopIcon,
 } from "@/components/icons";
+import { AnswerMarkdown } from "@/components/markdown";
 import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
 import { useWorkspace } from "./workspace";
 
@@ -59,30 +60,27 @@ function domainOf(url: string | null | undefined): string | null {
   }
 }
 
-/** Render answer text with [n] citation markers as inline cite buttons. */
-function withCitations(
-  content: string,
+/** Cite renderer for AnswerMarkdown: [n] markers that match a real citation
+ * become buttons; anything else stays literal text. */
+function citeButton(
   citations: Citation[],
   onCite: (n: number) => void
-): React.ReactNode {
-  if (citations.length === 0) return content;
+): (n: number) => React.ReactNode {
   const nums = new Set(citations.map((c) => c.n));
-  return content.split(/(\[\d+\])/g).map((part, i) => {
-    const m = /^\[(\d+)\]$/.exec(part);
-    if (m && nums.has(Number(m[1]))) {
-      return (
-        <button
-          key={i}
-          onClick={() => onCite(Number(m[1]))}
-          className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-accent-deep hover:bg-accent hover:text-white"
-          aria-label={`Source ${m[1]}`}
-        >
-          {m[1]}
-        </button>
-      );
-    }
-    return part;
-  });
+  // Returns nodes, not a component — the display-name rule misfires here.
+  // eslint-disable-next-line react/display-name
+  return (n) =>
+    nums.has(n) ? (
+      <button
+        onClick={() => onCite(n)}
+        className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-accent-deep hover:bg-accent hover:text-white"
+        aria-label={`Source ${n}`}
+      >
+        {n}
+      </button>
+    ) : (
+      `[${n}]`
+    );
 }
 
 function SourceCard({ c }: { c: Citation }) {
@@ -163,9 +161,10 @@ function AssistantMessage({
           {webCount > 0 && `${webCount} web source${webCount === 1 ? "" : "s"}`}
         </span>
       )}
-      <div className="text-[14.5px] leading-[1.7] whitespace-pre-wrap text-ink">
-        {withCitations(m.content, cites, () => setShowAllSources(true))}
-      </div>
+      <AnswerMarkdown
+        content={m.content}
+        cite={cites.length > 0 ? citeButton(cites, () => setShowAllSources(true)) : undefined}
+      />
       {cites.length > 0 && (
         <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((c) => (
@@ -437,10 +436,10 @@ export default function ChatPanel({
               {streamText !== null && (
                 <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
                   {streamText ? (
-                    <div className="text-[14.5px] leading-[1.7] whitespace-pre-wrap text-ink">
-                      {streamText}
-                      <PulsingDots className="ml-1.5" />
-                    </div>
+                    <>
+                      <AnswerMarkdown content={streamText} />
+                      <PulsingDots className="mt-1.5" />
+                    </>
                   ) : (
                     <PulsingDots className="py-1" />
                   )}

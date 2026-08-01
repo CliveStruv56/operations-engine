@@ -122,6 +122,93 @@ body {
   }
 }
 
+/* Assistant-answer markdown (components/markdown.tsx). Hearth voice:
+   quiet headings, tight vertical rhythm, canvas-inset code and tables. */
+.md-answer > :first-child {
+  margin-top: 0;
+}
+.md-answer p,
+.md-answer ul,
+.md-answer ol,
+.md-answer table,
+.md-answer pre,
+.md-answer blockquote {
+  margin: 0.65em 0;
+}
+.md-answer h3,
+.md-answer h4 {
+  margin: 1.1em 0 0.35em;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+}
+.md-answer h3 {
+  font-size: 1.05em;
+}
+.md-answer ul {
+  list-style: disc;
+  padding-left: 1.4em;
+}
+.md-answer ol {
+  list-style: decimal;
+  padding-left: 1.4em;
+}
+.md-answer li {
+  margin: 0.2em 0;
+}
+.md-answer li > ul,
+.md-answer li > ol {
+  margin: 0.2em 0;
+}
+.md-answer a {
+  color: var(--accent-deep);
+  text-decoration: underline;
+}
+.md-answer code {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.85em;
+  background: var(--canvas);
+  border: 1px solid var(--edge);
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+}
+.md-answer pre {
+  background: var(--canvas);
+  border: 1px solid var(--edge);
+  border-radius: 10px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+}
+.md-answer pre code {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+.md-answer blockquote {
+  border-left: 3px solid var(--edge-strong);
+  padding-left: 0.9em;
+  color: var(--subtle);
+}
+.md-answer table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95em;
+}
+.md-answer th,
+.md-answer td {
+  border: 1px solid var(--edge);
+  padding: 0.35em 0.6em;
+  text-align: left;
+}
+.md-answer th {
+  background: var(--canvas);
+  font-weight: 700;
+}
+.md-answer hr {
+  border: 0;
+  border-top: 1px solid var(--edge);
+  margin: 1em 0;
+}
+
 .stamp {
   font-size: 0.625rem;
   font-weight: 800;
