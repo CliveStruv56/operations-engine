@@ -290,7 +290,7 @@ export default function ChatPanel({
       </div>
 
       {evidence && (
-        <aside className="flex w-80 shrink-0 flex-col border-l border-line bg-paper">
+        <aside className="fixed inset-y-0 right-0 z-40 flex w-80 max-w-[90vw] shrink-0 flex-col border-l border-line bg-paper shadow-lg md:static md:z-auto md:max-w-none md:shadow-none">
           <header className="flex items-start justify-between gap-2 border-b border-line px-4 py-3">
             <div className="min-w-0">
               <p className="data text-ink-faint uppercase">Source {evidence.n}</p>
