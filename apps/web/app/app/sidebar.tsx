@@ -284,6 +284,17 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           )}
           <p className="truncate text-xs text-ink-muted">{ws.email}</p>
           <div className="flex items-center gap-3">
+            <Link
+              href="/app/usage"
+              onClick={onClose}
+              className={`text-xs underline ${
+                pathname.startsWith("/app/usage")
+                  ? "text-accent"
+                  : "text-ink-muted hover:text-ink"
+              }`}
+            >
+              Usage
+            </Link>
             {(tenant.role === "admin" || tenant.role === "owner") && (
               <Link
                 href="/app/settings"
