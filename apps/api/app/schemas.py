@@ -121,6 +121,9 @@ class Citation(BaseModel):
     page_start: int | None
     page_end: int | None
     snippet: str
+    # Web-search citations; defaults keep pre-existing rows valid.
+    url: str | None = None
+    source_type: str = "vault"
 
 
 class MessageOut(BaseModel):

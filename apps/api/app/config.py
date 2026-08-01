@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
     litellm_key_encryption_key: str = ""
 
+    # Exa web search (research task mode). Empty key = search disabled:
+    # research messages return 503, matching the gateway/storage convention.
+    exa_api_key: str = ""
+
     chat_rate_limit_per_min: int = 60
     upload_rate_limit_per_hour: int = 20
 

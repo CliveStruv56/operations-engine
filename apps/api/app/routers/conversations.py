@@ -21,11 +21,12 @@ from app.audit import write_audit
 from app.db import db
 from app.errors import ApiError
 from app.litellm import StreamResult, estimate_cost_usd, litellm_client
-from app.prompts import NO_COVERAGE_PROMPT, SYSTEM_PROMPT, TASK_PROMPTS, VAULT_PROMPT
+from app.prompts import NO_COVERAGE_PROMPT, SYSTEM_PROMPT, TASK_PROMPTS, VAULT_PROMPT, WEB_PROMPT
 from app.ratelimit import rate_limiter
 from app.retrieval import PRIMARY_WEIGHT, PROJECT_WEIGHT, RetrievedChunk, Scope, retrieve
 from app.routing import estimate_tokens, select_route
 from app.schemas import ConversationCreate, ConversationOut, MessageCreate, MessageOut
+from app.search import WebSource, exa_search
 from app.secrets import decrypt_llm_key
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -48,16 +49,28 @@ def _excerpt_block(chunks: list[RetrievedChunk]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def _resolve_citations(text: str, chunks: list[RetrievedChunk]) -> tuple[str, list[dict]]:
+def _web_block(sources: list[WebSource]) -> str:
+    return "\n\n---\n\n".join(
+        f'[c:{s.chunk_id}] (from "{s.title}", {s.url})\n{s.content}' for s in sources
+    )
+
+
+def _resolve_citations(
+    text: str,
+    chunks: list[RetrievedChunk],
+    web_sources: list[WebSource] | None = None,
+) -> tuple[str, list[dict]]:
     """Replace [c:<id>] markers with [n] in first-appearance order; markers
     pointing outside the retrieved set are hallucinations and are dropped.
     Only ids we ourselves supplied can resolve — a fabricated or cross-tenant
-    id can never surface as a citation."""
-    by_id = {str(c.chunk_id): c for c in chunks}
+    id can never surface as a citation. Web sources join the pool under
+    freshly minted ids and carry url/source_type in the payload."""
+    by_id: dict[str, RetrievedChunk | WebSource] = {str(c.chunk_id): c for c in chunks}
+    by_id.update({str(w.chunk_id): w for w in web_sources or []})
     order: dict[str, int] = {}
     citations: list[dict] = []
 
-    def _lookup(cid: str) -> tuple[str, RetrievedChunk] | None:
+    def _lookup(cid: str) -> tuple[str, RetrievedChunk | WebSource] | None:
         chunk = by_id.get(cid)
         if chunk is not None:
             return cid, chunk
@@ -73,17 +86,34 @@ def _resolve_citations(text: str, chunks: list[RetrievedChunk]) -> tuple[str, li
         cid, chunk = found
         if cid not in order:
             order[cid] = len(order) + 1
-            citations.append(
-                {
-                    "n": order[cid],
-                    "chunk_id": cid,
-                    "document_id": str(chunk.document_id),
-                    "title": chunk.title,
-                    "page_start": chunk.page_start,
-                    "page_end": chunk.page_end,
-                    "snippet": chunk.content[:SNIPPET_CHARS],
-                }
-            )
+            if isinstance(chunk, WebSource):
+                citations.append(
+                    {
+                        "n": order[cid],
+                        "chunk_id": cid,
+                        "document_id": cid,  # synthetic — web results have no document
+                        "title": chunk.title,
+                        "page_start": None,
+                        "page_end": None,
+                        "snippet": chunk.content[:SNIPPET_CHARS],
+                        "url": chunk.url,
+                        "source_type": "web",
+                    }
+                )
+            else:
+                citations.append(
+                    {
+                        "n": order[cid],
+                        "chunk_id": cid,
+                        "document_id": str(chunk.document_id),
+                        "title": chunk.title,
+                        "page_start": chunk.page_start,
+                        "page_end": chunk.page_end,
+                        "snippet": chunk.content[:SNIPPET_CHARS],
+                        "url": None,
+                        "source_type": "vault",
+                    }
+                )
         return f"[{order[cid]}]"
 
     return CITATION_RE.sub(_sub, text), citations
@@ -207,9 +237,17 @@ async def post_message(
                 )
             }
         tenant = await conn.fetchrow(
-            "select litellm_key_encrypted, soft_budget_usd from tenants where id = $1",
+            "select litellm_key_encrypted, soft_budget_usd, features from tenants where id = $1",
             ctx.tenant_id,
         )
+        if body.task_kind == "research":
+            # Same gate shape as the Groundwork module: research prompts go
+            # to a third-party search API, so it is opt-in per tenant.
+            features = json.loads(tenant["features"])
+            if features.get("web_search") is not True:
+                raise ApiError(
+                    400, "feature_disabled", "Web search is not enabled for this workspace"
+                )
         month_spend = await conn.fetchval(
             """
             select coalesce(sum(cost_usd), 0) from usage_events
@@ -262,6 +300,12 @@ async def post_message(
         async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
             chunks = await retrieve(conn, embedding, body.content, scope=scope)
 
+    # Research mode: web search runs between tenant transactions, like the
+    # embedding call — network never holds a DB connection.
+    web_sources: list[WebSource] = []
+    if body.task_kind == "research":
+        web_sources = await exa_search(body.content)
+
     soft_cap_hit = float(month_spend) >= float(tenant["soft_budget_usd"])
     system = SYSTEM_PROMPT
     if body.task_kind in TASK_PROMPTS:
@@ -271,6 +315,8 @@ async def post_message(
             system += "\n\n" + VAULT_PROMPT.format(excerpts=_excerpt_block(chunks))
         else:
             system += "\n\n" + NO_COVERAGE_PROMPT
+    if web_sources:
+        system += "\n\n" + WEB_PROMPT.format(results=_web_block(web_sources))
     llm_messages = [{"role": "system", "content": system}]
     llm_messages += [{"role": r["role"], "content": r["content"]} for r in history]
     llm_messages.append({"role": "user", "content": body.content})
@@ -289,7 +335,7 @@ async def post_message(
             yield _sse("error", {"error": {"code": "llm_error", "message": "Stream failed"}})
             return
 
-        content, citations = _resolve_citations(result.text, chunks)
+        content, citations = _resolve_citations(result.text, chunks, web_sources)
         cost = estimate_cost_usd(alias, result.tokens_in, result.tokens_out)
         embed_cost = estimate_cost_usd("embedder", embed_tokens, 0)
         # Tx 2: persist the assistant message + usage after the stream is done.
@@ -333,6 +379,16 @@ async def post_message(
                     ctx.user_id,
                     embed_tokens,
                     embed_cost,
+                )
+            if body.task_kind == "research":
+                # Per-search metering (no token counts; Exa bills per call).
+                await conn.execute(
+                    """
+                    insert into usage_events (tenant_id, user_id, kind, model)
+                    values ($1, $2, 'search', 'exa')
+                    """,
+                    ctx.tenant_id,
+                    ctx.user_id,
                 )
             await conn.execute(
                 "update conversations set updated_at = now() where id = $1",

@@ -14,7 +14,18 @@ type Citation = {
   page_start: number | null;
   page_end: number | null;
   snippet: string;
+  url?: string | null;
+  source_type?: string;
 };
+
+function domainOf(url: string | null | undefined): string | null {
+  if (!url) return null;
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return null;
+  }
+}
 type Message = {
   id: string;
   role: "user" | "assistant" | "system";
@@ -194,7 +205,9 @@ export default function ChatPanel({
                       title={c.title}
                     >
                       {c.n} · {c.title.length > 32 ? c.title.slice(0, 32) + "…" : c.title}
-                      {c.page_start != null && ` · p.${c.page_start}`}
+                      {c.source_type === "web"
+                        ? domainOf(c.url) && ` · ${domainOf(c.url)}`
+                        : c.page_start != null && ` · p.${c.page_start}`}
                     </button>
                   ))}
                 </div>
@@ -289,6 +302,16 @@ export default function ChatPanel({
                     ? `–${evidence.page_end}`
                     : ""}
                 </p>
+              )}
+              {evidence.url && (
+                <a
+                  href={evidence.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="data mt-0.5 block truncate text-accent underline"
+                >
+                  Open source ↗ {domainOf(evidence.url)}
+                </a>
               )}
             </div>
             <button

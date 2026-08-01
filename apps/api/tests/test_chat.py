@@ -161,6 +161,95 @@ async def test_slides_kind_accepted_and_unknown_kind_rejected(client, fake_llm):
     assert resp.status_code == 422
 
 
+async def enable_web_search(tenant) -> None:
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            """update tenants set features = features || '{"web_search": true}' where id = $1""",
+            tenant.id,
+        )
+
+
+async def test_research_requires_feature_flag(client):
+    tenant = await seed_tenant(client, f"resgate-{uuid4().hex[:6]}")
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "latest CLH grants", "task_kind": "research"},
+        headers=auth(tenant.owner_id, tenant.id),
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "feature_disabled"
+
+
+async def test_research_without_exa_key_returns_503(client):
+    tenant = await seed_tenant(client, f"reskey-{uuid4().hex[:6]}")
+    await enable_llm_key(tenant)
+    await enable_web_search(tenant)
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "latest CLH grants", "task_kind": "research", "use_vault": False},
+        headers=auth(tenant.owner_id, tenant.id),
+    )
+    assert resp.status_code == 503
+    assert resp.json()["error"]["code"] == "search_unavailable"
+
+
+async def test_research_mode_yields_web_citations(client, monkeypatch):
+    from app.search import WebSource
+
+    tenant = await seed_tenant(client, f"resweb-{uuid4().hex[:6]}")
+    await enable_llm_key(tenant)
+    await enable_web_search(tenant)
+
+    source = WebSource(
+        chunk_id=uuid4(),
+        title="GOV.UK — CLH funding",
+        url="https://www.gov.uk/clh-funding",
+        content="The fund supports community led housing groups in England.",
+    )
+
+    async def fake_exa(query, num_results=6, **kwargs):
+        return [source]
+
+    monkeypatch.setattr("app.routers.conversations.exa_search", fake_exa)
+
+    async def fake_stream(virtual_key, alias, messages, result: StreamResult):
+        # The web block must be in the system prompt.
+        assert "web-results" in messages[0]["content"]
+        text = f"Funding exists [c:{source.chunk_id}] but not this [c:{'0' * 32}]."
+        result.text_parts.append(text)
+        yield text
+        result.model = "m"
+        result.tokens_in = 10
+        result.tokens_out = 5
+
+    monkeypatch.setattr(litellm_client, "stream_chat", fake_stream)
+
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "latest CLH grants", "task_kind": "research", "use_vault": False},
+        headers=auth(tenant.owner_id, tenant.id),
+    )
+    assert resp.status_code == 200
+    done = dict(parse_sse(resp.text))["done"]
+
+    # The real web source resolves with url/source_type; the fabricated
+    # marker drops.
+    assert done["content"] == "Funding exists [1] but not this ."
+    assert len(done["citations"]) == 1
+    citation = done["citations"][0]
+    assert citation["url"] == source.url
+    assert citation["source_type"] == "web"
+    assert citation["title"] == source.title
+
+    # Search call metered.
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        kinds = [
+            r["model"]
+            for r in await conn.fetch("select model from usage_events where kind = 'search'")
+        ]
+    assert kinds == ["exa"]
+
+
 async def test_gateway_down_returns_503_and_persists_nothing_extra(client):
     """No litellm key provisioned (gateway disabled): friendly 503, and the
     user message from the failed call is still recorded exactly once."""

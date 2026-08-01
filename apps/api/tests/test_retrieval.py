@@ -239,6 +239,8 @@ async def test_grounded_answer_carries_citation(client, citing_llm):
         "page_start": 1,
         "page_end": 1,
         "snippet": "Warranty lasts 24 months.",
+        "url": None,
+        "source_type": "vault",
     }
     # Persisted, not just streamed.
     async with db.tenant_tx(t.owner_id, t.id) as conn:
