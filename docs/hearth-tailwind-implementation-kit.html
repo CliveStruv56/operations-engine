@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hearth × Tailwind — Implementation Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#FAF7F2;--sidebar:#F4EDE3;--card:#FFFFFF;
+    --edge:#E8DECF;--edge-s:#D9CCB8;
+    --ink:#221C15;--subtle:#5C5347;--faint:#6F6355;
+    --accent:#B14E2E;--accent-deep:#98401F;--accent-tint:#F7E8E0;
+    --grounded:#33684B;--grounded-tint:#E5F0E7;
+    --danger:#9E2F1A;--danger-deep:#8A2814;
+    --board:#F1E9DB;--board-edge:#E3D7C3;--board-edge-s:#D4C4AA;
+    --ui:'Plus Jakarta Sans',system-ui,sans-serif;
+    --display:'Fraunces',Georgia,serif;
+    --mono:'JetBrains Mono',ui-monospace,monospace;
+    --shadow:0 1px 2px rgba(60,42,28,.05),0 10px 30px rgba(60,42,28,.08);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--ui);background:var(--board);color:var(--ink);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1180px;margin:0 auto;padding:0 5.5%}
+  .head{padding:52px 0 30px}
+  .kicker{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:14px}
+  .head h1{font-family:var(--display);font-weight:500;font-size:clamp(36px,4.8vw,52px);line-height:1.06;letter-spacing:-.01em}
+  .head .sub{margin-top:14px;font-size:16px;color:var(--subtle);max-width:66ch}
+  .head .sub b{color:var(--ink)}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:20px}
+  .chips span{background:var(--card);border:1px solid var(--board-edge);border-radius:99px;padding:7px 15px;font-size:12px;font-weight:700;color:var(--subtle)}
+  .chips span.g{background:var(--grounded-tint);color:var(--grounded);border-color:transparent}
+  /* sections */
+  .sec{margin-top:64px}
+  .sec-kick{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:10px}
+  .sec h2{font-family:var(--display);font-weight:500;font-size:clamp(26px,3.2vw,34px);letter-spacing:-.01em;line-height:1.12}
+  .sec .lede{margin-top:10px;color:var(--subtle);font-size:15px;max-width:68ch}
+  .sec .lede code{font-family:var(--mono);font-size:12.5px;background:var(--card);border:1px solid var(--board-edge);border-radius:5px;padding:1px 6px}
+  /* recipe rows */
+  .recipe{display:grid;grid-template-columns:minmax(300px,5fr) 7fr;gap:16px;margin-top:24px;align-items:stretch}
+  .pv{background:var(--canvas);border:1px solid var(--board-edge-s);border-radius:14px;padding:26px 24px;display:flex;flex-direction:column;gap:14px;justify-content:center}
+  .pv.side{background:var(--sidebar)}
+  .pv .pv-note{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  .codebox{background:#231C13;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;min-width:0}
+  .codebar{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid #3A3125}
+  .codebar .fn{font-family:var(--mono);font-size:11px;color:#A79880;letter-spacing:.04em;flex:1}
+  .copy{background:#3A3125;color:#F3E9DA;border:0;border-radius:7px;padding:6px 13px;font-family:var(--ui);font-size:11.5px;font-weight:700;cursor:pointer}
+  .copy:hover{background:#4A4030}
+  pre{padding:18px 20px;font-family:var(--mono);font-size:12px;line-height:1.75;color:#F3E9DA;overflow-x:auto;flex:1}
+  pre .c{color:#A79880}
+  pre .t{color:#E8B48C}
+  pre .a{color:#9FC49A}
+  /* preview widgets (hand-mirrored from the recipes) */
+  .rowflex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  .w-btn{display:inline-flex;align-items:center;gap:8px;border-radius:10px;padding:9px 18px;font-size:13.5px;font-weight:700;font-family:var(--ui);border:0;cursor:pointer;transition:all .15s}
+  .w-primary{background:var(--accent);color:#fff}.w-primary:hover{background:var(--accent-deep)}
+  .w-secondary{background:var(--card);color:var(--subtle);border:1px solid var(--edge-s)}.w-secondary:hover{color:var(--accent-deep);border-color:var(--accent)}
+  .w-danger{background:var(--danger);color:#fff}.w-danger:hover{background:var(--danger-deep)}
+  .w-disabled{background:var(--edge);color:var(--faint);cursor:not-allowed}
+  .w-ghost{display:grid;place-items:center;width:36px;height:36px;border-radius:10px;border:1px solid var(--edge);background:var(--card);color:var(--subtle);cursor:pointer}
+  .w-ghost:hover{background:var(--sidebar);color:var(--ink)}
+  .w-navlbl{display:flex;align-items:center;padding:0 12px 7px;font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+  .w-navlbl a{margin-left:auto;color:var(--accent-deep);text-decoration:none;font-size:10.5px}
+  .w-item{display:flex;align-items:center;gap:10px;padding:8.5px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--subtle);position:relative;cursor:pointer}
+  .w-item:hover{background:rgba(34,28,21,.045)}
+  .w-item.act{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(60,42,28,.06)}
+  .w-item.act::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+  .w-badge{margin-left:auto;font-size:11px;font-weight:700;background:var(--accent-tint);color:var(--accent-deep);border-radius:99px;padding:2px 8px}
+  .w-acts{margin-left:auto;display:flex;gap:2px}
+  .w-acts b{width:22px;height:22px;border-radius:6px;background:var(--card);border:1px solid var(--edge);display:grid;place-items:center;font-weight:400;font-size:10px;color:var(--subtle)}
+  .w-search{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--edge);border-radius:10px;padding:8px 12px;color:var(--faint);font-size:13px}
+  .w-kbd{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--sidebar);border:1px solid var(--edge);border-radius:5px;padding:2px 6px;color:var(--faint)}
+  .w-trial{background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:13px 14px}
+  .w-trial .r1{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700}
+  .w-trial .r1 span{color:var(--accent-deep)}
+  .w-trial .track{height:5px;border-radius:99px;background:var(--sidebar);margin:9px 0;overflow:hidden}
+  .w-trial .track i{display:block;height:100%;width:42%;background:var(--accent);border-radius:99px}
+  .w-trial .r2{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--faint);font-weight:600}
+  .w-up{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;font-family:var(--ui);cursor:pointer}
+  .w-compose{background:var(--card);border:1px solid var(--edge-s);border-radius:18px;box-shadow:var(--shadow);padding:12px 14px}
+  .w-modes{display:flex;gap:5px;flex-wrap:wrap;padding:2px 2px 10px}
+  .w-md{font-size:12px;font-weight:700;color:var(--subtle);border-radius:99px;padding:6px 13px;cursor:pointer;border:0;background:transparent;font-family:var(--ui)}
+  .w-md:hover{background:var(--sidebar)}
+  .w-md.on{background:var(--accent);color:#fff}
+  .w-irow{display:flex;align-items:flex-end;gap:10px}
+  .w-input{flex:1;font-size:15px;color:var(--faint);padding:8px 2px}
+  .w-crow{display:flex;align-items:center;gap:10px;padding:11px 4px 0;margin-top:10px;border-top:1px solid var(--edge)}
+  .w-switch{width:32px;height:18px;border-radius:99px;background:var(--grounded);position:relative;flex:none;border:0;cursor:pointer}
+  .w-switch::after{content:"";position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+  .w-vl{font-size:12px;color:var(--subtle);font-weight:600}
+  .w-hint{margin-left:auto;font-size:11.5px;color:var(--faint);font-weight:600}
+  .w-chip{display:inline-flex;align-items:center;gap:8px;background:var(--grounded-tint);color:var(--grounded);border-radius:99px;padding:7px 15px;font-size:12px;font-weight:700}
+  .w-chip i{width:7px;height:7px;border-radius:50%;background:var(--grounded)}
+  .w-cite{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;border-radius:5px;background:var(--accent-tint);color:var(--accent-deep);font-size:10.5px;font-weight:800;padding:0 4px;vertical-align:2px;margin:0 2px;cursor:pointer}
+  .w-cite:hover{background:var(--accent);color:#fff}
+  .w-sg{position:relative;display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--edge);border-radius:14px;padding:15px 17px;font-size:13.5px;font-weight:600;box-shadow:0 1px 2px rgba(60,42,28,.04);cursor:pointer}
+  .w-sg:hover{border-color:var(--edge-s)}
+  .w-ic{width:32px;height:32px;flex:none;border-radius:9px;background:var(--accent-tint);color:var(--accent-deep);display:grid;place-items:center;font-size:13px}
+  .w-tag{position:absolute;top:-9px;right:12px;background:var(--accent-tint);color:var(--accent-deep);border:1px solid var(--edge-s);font-size:10px;font-weight:800;border-radius:99px;padding:3px 9px}
+  .w-tt{display:inline-block;background:var(--ink);color:#F8F2E9;font-size:11.5px;font-weight:600;border-radius:8px;padding:6px 11px}
+  .w-ub{margin-left:auto;max-width:340px;background:var(--accent-tint);border-radius:16px 16px 4px 16px;padding:13px 18px;font-size:14.5px;font-weight:600}
+  .w-ac{background:var(--card);border:1px solid var(--edge);border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(60,42,28,.04)}
+  .w-gb{display:inline-flex;align-items:center;gap:8px;background:var(--grounded-tint);color:var(--grounded);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:700;margin-bottom:12px}
+  .w-gb i{width:6px;height:6px;border-radius:50%;background:var(--grounded)}
+  .w-ac p{font-size:14px;line-height:1.7}
+  .w-src{background:var(--canvas);border:1px solid var(--edge);border-radius:11px;padding:12px 13px;margin-top:12px}
+  .w-src .t{display:flex;font-size:12px;font-weight:700;gap:7px}
+  .w-src .t em{font-style:normal;margin-left:auto;color:var(--faint);font-weight:600;font-size:11px}
+  .w-src .x{margin-top:6px;font-size:11.5px;font-style:italic;color:var(--subtle);line-height:1.55}
+  /* contract list */
+  .contract{background:var(--card);border:1px solid var(--board-edge);border-radius:16px;padding:30px clamp(18px,4%,38px) 32px;margin-top:26px}
+  .contract ul{list-style:none}
+  .contract li{display:flex;gap:13px;padding:12px 0;border-bottom:1px solid var(--board-edge);font-size:14px;color:var(--subtle);line-height:1.6}
+  .contract li:last-child{border-bottom:0}
+  .contract li b{color:var(--ink)}
+  .contract li code{font-family:var(--mono);font-size:11.5px;background:var(--canvas);border:1px solid var(--edge);border-radius:5px;padding:1px 6px;white-space:nowrap}
+  .contract .no{flex:none;width:24px;height:24px;border-radius:8px;background:var(--accent-tint);color:var(--accent-deep);display:grid;place-items:center;font-size:11px;font-weight:800;margin-top:2px}
+  /* files */
+  .files{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+  .file{background:var(--card);border:1px solid var(--board-edge);border-radius:14px;padding:20px 20px 18px}
+  .file .fn2{font-family:var(--mono);font-size:12.5px;font-weight:500;color:var(--accent-deep)}
+  .file p{font-size:13px;color:var(--subtle);line-height:1.6;margin-top:8px}
+  .file .use{margin-top:10px;font-size:10.5px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--faint)}
+  footer{margin:70px 0 54px;padding-top:22px;border-top:1px solid var(--board-edge-s);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+  @media(max-width:920px){.recipe{grid-template-columns:1fr}.files{grid-template-columns:1fr}}
+</style>
+<style>
+.ha-img-placeholder{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:#f4f4f5;border:1px dashed #d4d4d8;border-radius:8px;color:#71717a;font-size:12px;font-family:system-ui,sans-serif;min-height:80px;padding:16px;box-sizing:border-box;animation:ha-img-pulse 1.5s ease-in-out infinite}
+.ha-img-placeholder.ha-failed{animation:none;opacity:.7}
+@keyframes ha-img-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@media(prefers-color-scheme:dark){.ha-img-placeholder{background:#27272a;border-color:#3f3f46;color:#a1a1aa}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="head">
+  <div class="kicker">Hearth — Implementation Kit · Tailwind CSS</div>
+  <h1>Terracotta · Serif · Comfortable · Cream, ready to ship</h1>
+  <p class="sub">Full component recipes for the locked combination: <b>theme tokens for Tailwind v4 and v3</b>, copy-paste class strings for every component with hover, focus, active and disabled states, and the accessibility contract that keeps the AA verification true in production. Three drop-in files are attached in the chat.</p>
+  <div class="chips">
+    <span class="g">● 83 colour pairings AA-verified — incl. new danger tokens</span>
+    <span>Tailwind v4 @theme + v3 config</span>
+    <span>Fraunces + Plus Jakarta Sans</span>
+  </div>
+</div>
+
+<!-- ============ 01 THEME ============ -->
+<section class="sec">
+  <div class="sec-kick">01 — Theme</div>
+  <h2>Tokens in, utilities out</h2>
+  <p class="lede">With the theme installed, the whole system speaks in semantic utilities: <code>bg-canvas</code>, <code>text-ink</code>, <code>text-subtle</code>, <code>text-faint</code>, <code>border-edge</code>, <code>bg-accent</code>, <code>text-accent-deep</code>, <code>bg-grounded-tint</code>. Rule one of the system: <b>faint is the lightest colour allowed for real text</b> — there is no legal grey below 4.5:1.</p>
+
+  <div class="recipe">
+    <div class="pv">
+      <span class="pv-note">Load the fonts first</span>
+      <div style="font-family:var(--display);font-size:30px;font-weight:500;letter-spacing:-.01em">Good afternoon.</div>
+      <div style="font-size:14px;color:var(--subtle)">Fraunces speaks only at display sizes. Plus Jakarta Sans does everything else — <span style="color:var(--faint)">including this faint meta text at 5.5:1.</span></div>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">index.html — fonts</span><button class="copy" data-code="c-fonts">Copy</button></div>
+      <pre id="c-fonts">&lt;link rel="preconnect" href="https://fonts.googleapis.com"&gt;
+&lt;link rel="preconnect" href="https://fonts.gstatic.com" crossorigin&gt;
+&lt;link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,<a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="7d0a1a15093d4453534c4949">[email&#160;protected]</a>,500;9..144,600&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"&gt;</pre>
+    </div>
+  </div>
+
+  <div class="recipe">
+    <div class="codebox">
+      <div class="codebar"><span class="fn">Tailwind v4 — hearth-v4.css (attached, excerpt)</span><button class="copy" data-code="c-v4">Copy</button></div>
+      <pre id="c-v4"><span class="c">/* import as your main stylesheet entry */</span>
+@import "tailwindcss";
+
+@theme {
+  --color-canvas:  <span class="t">#FAF7F2</span>;  --color-sidebar: <span class="t">#F4EDE3</span>;
+  --color-card:    <span class="t">#FFFFFF</span>;  --color-edge:    <span class="t">#E8DECF</span>;
+  --color-edge-strong: <span class="t">#D9CCB8</span>;
+  --color-ink:    <span class="t">#221C15</span>;   --color-subtle: <span class="t">#5C5347</span>;
+  --color-faint:  <span class="t">#6F6355</span>;   <span class="c">/* the floor for text */</span>
+  --color-accent:      <span class="t">#B14E2E</span>;
+  --color-accent-deep: <span class="t">#98401F</span>;
+  --color-accent-tint: <span class="t">#F7E8E0</span>;
+  --color-grounded:      <span class="t">#33684B</span>; <span class="c">/* trust states only */</span>
+  --color-grounded-tint: <span class="t">#E5F0E7</span>;
+  --color-danger: <span class="t">#9E2F1A</span>;  --color-danger-deep: <span class="t">#8A2814</span>;
+  --color-danger-tint: <span class="t">#F9E7E1</span>;
+  --font-ui:      "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --radius-btn: <span class="t">10px</span>; --radius-card: <span class="t">14px</span>; --radius-composer: <span class="t">18px</span>;
+  --shadow-card:   0 1px 2px rgba(60,42,28,.04);
+  --shadow-hearth: 0 1px 2px rgba(60,42,28,.05), 0 10px 30px rgba(60,42,28,.08);
+}</pre>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">Tailwind v3 — tailwind.config.js (attached, excerpt)</span><button class="copy" data-code="c-v3">Copy</button></div>
+      <pre id="c-v3">module.exports = {
+  theme: { extend: {
+    colors: {
+      canvas: <span class="t">'#FAF7F2'</span>, sidebar: <span class="t">'#F4EDE3'</span>, card: <span class="t">'#FFFFFF'</span>,
+      edge: { DEFAULT: <span class="t">'#E8DECF'</span>, strong: <span class="t">'#D9CCB8'</span> },
+      ink: <span class="t">'#221C15'</span>, subtle: <span class="t">'#5C5347'</span>, faint: <span class="t">'#6F6355'</span>,
+      accent: { DEFAULT: <span class="t">'#B14E2E'</span>, deep: <span class="t">'#98401F'</span>, tint: <span class="t">'#F7E8E0'</span> },
+      grounded: { DEFAULT: <span class="t">'#33684B'</span>, tint: <span class="t">'#E5F0E7'</span> },
+      danger: { DEFAULT: <span class="t">'#9E2F1A'</span>, deep: <span class="t">'#8A2814'</span>, tint: <span class="t">'#F9E7E1'</span> },
+    },
+    fontFamily: {
+      ui: [<span class="t">'"Plus Jakarta Sans"'</span>, 'system-ui', 'sans-serif'],
+      display: [<span class="t">'Fraunces'</span>, 'Georgia', 'serif'],
+    },
+    borderRadius: { btn: <span class="t">'10px'</span>, card: <span class="t">'14px'</span>, composer: <span class="t">'18px'</span> },
+    boxShadow: {
+      card: '0 1px 2px rgba(60,42,28,.04)',
+      hearth: '0 1px 2px rgba(60,42,28,.05), 0 10px 30px rgba(60,42,28,.08)',
+    },
+    maxWidth: { answer: <span class="t">'720px'</span> },
+  }},
+};</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02 BUTTONS ============ -->
+<section class="sec">
+  <div class="sec-kick">02 — Buttons</div>
+  <h2>Four buttons, every state</h2>
+  <p class="lede">Primary fills with accent and darkens to <code>accent-deep</code> on hover. Disabled drops to <code>bg-edge text-faint</code> (disabled elements are WCAG-exempt, but these stay legible anyway). Focus is always <code>focus-visible</code> — never plain <code>focus</code>.</p>
+  <div class="recipe">
+    <div class="pv">
+      <span class="pv-note">Rendered</span>
+      <div class="rowflex">
+        <button class="w-btn w-primary">Send <span style="font-size:11px">↑</span></button>
+        <button class="w-btn w-secondary">Export</button>
+        <button class="w-ghost">＋</button>
+        <button class="w-btn w-danger">Delete project</button>
+        <button class="w-btn w-disabled">Send</button>
+      </div>
+      <span class="pv-note" style="margin-top:6px">Hover the first four — disabled stays put</span>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">buttons.html</span><button class="copy" data-code="c-btn">Copy</button></div>
+      <pre id="c-btn"><span class="c">&lt;!-- primary --&gt;</span>
+&lt;button class="<span class="a">inline-flex items-center gap-2 rounded-btn bg-accent px-[18px]
+  py-[9px] font-ui text-[13.5px] font-bold text-white transition
+  hover:bg-accent-deep active:scale-[.99]
+  focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40
+  focus-visible:ring-offset-2 focus-visible:ring-offset-canvas
+  disabled:cursor-not-allowed disabled:bg-edge disabled:text-faint</span>"&gt;
+  Send
+&lt;/button&gt;
+
+<span class="c">&lt;!-- secondary --&gt;</span>
+&lt;button class="<span class="a">inline-flex items-center gap-2 rounded-btn border border-edge-strong
+  bg-card px-[18px] py-[9px] text-[13.5px] font-bold text-subtle transition
+  hover:border-accent hover:text-accent-deep</span>"&gt;Export&lt;/button&gt;
+
+<span class="c">&lt;!-- ghost icon (needs aria-label) --&gt;</span>
+&lt;button aria-label="Attach file" class="<span class="a">grid h-9 w-9 place-items-center
+  rounded-btn border border-edge bg-card text-subtle transition
+  hover:bg-sidebar hover:text-ink</span>"&gt;&lt;PaperclipIcon /&gt;&lt;/button&gt;
+
+<span class="c">&lt;!-- danger --&gt;</span>
+&lt;button class="<span class="a">inline-flex items-center gap-2 rounded-btn bg-danger px-[18px]
+  py-[9px] text-[13.5px] font-bold text-white transition hover:bg-danger-deep</span>"&gt;
+  Delete project
+&lt;/button&gt;</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 03 SIDEBAR ============ -->
+<section class="sec">
+  <div class="sec-kick">03 — Sidebar</div>
+  <h2>Nav items, labels, search, trial card</h2>
+  <p class="lede">Active items sit on <code>bg-card</code> with the terracotta spine drawn by a <code>before:</code> pseudo-element. Row actions hide until <code>group-hover</code>, so the list never reflows. The badge explains Vault better than a sentence ever did.</p>
+  <div class="recipe">
+    <div class="pv side">
+      <span class="pv-note">Rendered on bg-sidebar</span>
+      <div class="w-search">⌕&nbsp; Search chats &amp; documents<span class="w-kbd">⌘K</span></div>
+      <div>
+        <div class="w-item act" style="margin-left:14px">💬&nbsp; Chat</div>
+        <div class="w-item">🗄&nbsp; Vault<span class="w-badge">128 docs</span></div>
+        <div class="w-navlbl" style="padding-top:12px">Projects <a href="#" onclick="return false">+ New</a></div>
+        <div class="w-item">◎&nbsp; Everything<span style="margin-left:auto;font-size:11.5px;font-weight:600;color:var(--faint)">128</span></div>
+        <div class="w-item">⌂&nbsp; House Renovation<span class="w-acts"><b>⚲</b><b>✎</b></span></div>
+      </div>
+      <div class="w-trial">
+        <div class="r1">Trial — 12 days left<span>3 seats</span></div>
+        <div class="track"><i></i></div>
+        <div class="r2">Ends 13 Aug 2026<button class="w-up">Upgrade</button></div>
+      </div>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">sidebar.html</span><button class="copy" data-code="c-sb">Copy</button></div>
+      <pre id="c-sb"><span class="c">&lt;!-- container --&gt;</span>
+&lt;aside class="<span class="a">flex w-[268px] flex-none flex-col border-r border-edge
+  bg-sidebar px-3.5 pb-3.5 pt-[18px]</span>"&gt;
+
+<span class="c">&lt;!-- search --&gt;</span>
+&lt;label class="<span class="a">mx-1 mb-4 flex items-center gap-2 rounded-[10px] border
+  border-edge bg-card px-3 py-2 text-[13px] text-faint</span>"&gt;
+  &lt;SearchIcon class="h-3.5 w-3.5" /&gt;
+  &lt;input class="<span class="a">w-full bg-transparent text-ink placeholder:text-faint
+    focus:outline-none</span>" placeholder="Search chats &amp; documents" /&gt;
+  &lt;kbd class="<span class="a">rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5
+    text-[10.5px] font-bold text-faint</span>"&gt;⌘K&lt;/kbd&gt;
+&lt;/label&gt;
+
+<span class="c">&lt;!-- section label --&gt;</span>
+&lt;div class="<span class="a">flex items-center px-3 pb-[7px] pt-3.5 text-[10.5px] font-bold
+  uppercase tracking-[.1em] text-faint</span>"&gt;Projects
+  &lt;a href="#" class="<span class="a">ml-auto font-bold text-accent-deep</span>"&gt;+ New&lt;/a&gt;&lt;/div&gt;
+
+<span class="c">&lt;!-- nav item: default → add is-active classes when current --&gt;</span>
+&lt;a class="<span class="a">group relative flex cursor-pointer items-center gap-2.5
+  rounded-[10px] px-3 py-[8.5px] text-[13.5px] font-semibold text-subtle
+  hover:bg-ink/[.045]</span>"&gt;
+  &lt;VaultIcon class="h-4 w-4" /&gt; Vault
+  &lt;span class="<span class="a">ml-auto rounded-full bg-accent-tint px-2 py-0.5
+    text-[11px] font-bold text-accent-deep</span>"&gt;128 docs&lt;/span&gt;
+&lt;/a&gt;
+<span class="c">&lt;!-- active state adds: --&gt;</span>
+<span class="a">bg-card text-ink shadow-card before:absolute before:-left-3.5 before:top-2
+before:bottom-2 before:w-[3px] before:rounded before:bg-accent before:content-['']</span>
+
+<span class="c">&lt;!-- hover-revealed row actions (no layout reflow) --&gt;</span>
+&lt;span class="<span class="a">ml-auto hidden gap-0.5 group-hover:flex</span>"&gt;
+  &lt;button aria-label="Pin" class="<span class="a">grid h-[22px] w-[22px] place-items-center
+    rounded-md border border-edge bg-card text-subtle hover:text-ink</span>"&gt;…&lt;/button&gt;
+&lt;/span&gt;
+
+<span class="c">&lt;!-- trial card --&gt;</span>
+&lt;div class="<span class="a">mx-1 my-2.5 rounded-xl border border-edge bg-card p-3.5</span>"&gt;
+  &lt;div class="<span class="a">flex justify-between text-[12.5px] font-bold</span>"&gt;
+    Trial — 12 days left &lt;span class="<span class="a">text-accent-deep</span>"&gt;3 seats&lt;/span&gt;&lt;/div&gt;
+  &lt;div class="<span class="a">mt-2 h-[5px] overflow-hidden rounded-full bg-sidebar</span>"&gt;
+    &lt;div class="<span class="a">h-full w-[42%] rounded-full bg-accent</span>"&gt;&lt;/div&gt;&lt;/div&gt;
+  &lt;div class="<span class="a">mt-2 flex items-center justify-between text-[11.5px]
+    font-semibold text-faint</span>"&gt;Ends 13 Aug 2026
+    &lt;button class="<span class="a">rounded-lg bg-accent px-3 py-[5px] text-[11.5px]
+      font-bold text-white hover:bg-accent-deep</span>"&gt;Upgrade&lt;/button&gt;&lt;/div&gt;
+&lt;/div&gt;</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04 COMPOSER ============ -->
+<section class="sec">
+  <div class="sec-kick">04 — Composer</div>
+  <h2>The composer, assembled</h2>
+  <p class="lede">Mode pills are a real <code>radiogroup</code> — Tailwind's <code>aria-checked:</code> variant styles the active pill straight off the accessibility state, so the two can never drift apart. Same trick styles the vault switch off <code>role="switch"</code>.</p>
+  <div class="recipe">
+    <div class="pv">
+      <span class="pv-note">Rendered</span>
+      <div class="w-compose">
+        <div class="w-modes">
+          <button class="w-md on">Chat</button><button class="w-md">Analyse</button><button class="w-md">Report</button><button class="w-md">Financial</button><button class="w-md">Slide deck</button><button class="w-md">Research</button>
+        </div>
+        <div class="w-irow">
+          <button class="w-ghost">＋</button>
+          <div class="w-input">Ask about your documents — or draft something new…</div>
+          <button class="w-btn w-primary">Send</button>
+        </div>
+        <div class="w-crow">
+          <button class="w-switch" aria-checked="true"></button>
+          <span class="w-vl">Vault on — answers cite your documents</span>
+          <span class="w-hint">↵ Send · ⇧↵ New line</span>
+        </div>
+      </div>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">composer.html</span><button class="copy" data-code="c-comp">Copy</button></div>
+      <pre id="c-comp"><span class="c">&lt;!-- wrapper (the only shadow in the app) --&gt;</span>
+&lt;div class="<span class="a">w-full max-w-answer rounded-composer border border-edge-strong
+  bg-card p-3 shadow-hearth</span>"&gt;
+
+  <span class="c">&lt;!-- mode picker: a real radiogroup; aria drives the styling --&gt;</span>
+  &lt;div role="radiogroup" aria-label="Mode"
+       class="<span class="a">flex flex-wrap gap-1.5 px-0.5 pb-2.5</span>"&gt;
+    &lt;button role="radio" aria-checked="true"
+      class="<span class="a">cursor-pointer rounded-full px-[13px] py-1.5 text-xs font-bold
+      text-subtle transition hover:bg-sidebar
+      aria-checked:bg-accent aria-checked:text-white</span>"&gt;Chat&lt;/button&gt;
+    &lt;button role="radio" aria-checked="false" class="<span class="a">…same classes…</span>"&gt;Analyse&lt;/button&gt;
+    <span class="c">&lt;!-- …Report / Financial / Slide deck / Research --&gt;</span>
+  &lt;/div&gt;
+
+  <span class="c">&lt;!-- input row --&gt;</span>
+  &lt;div class="<span class="a">flex items-end gap-2.5</span>"&gt;
+    &lt;button aria-label="Attach" class="<span class="a">…ghost icon button…</span>"&gt;＋&lt;/button&gt;
+    &lt;textarea rows="1"
+      placeholder="Ask about your documents — or draft something new…"
+      class="<span class="a">max-h-[200px] w-full resize-none bg-transparent px-0.5 py-2
+      font-ui text-base leading-normal text-ink placeholder:text-faint
+      focus:outline-none sm:text-[15px]</span>"&gt;&lt;/textarea&gt;
+    &lt;button class="<span class="a">…primary button…</span>"&gt;Send&lt;/button&gt;
+  &lt;/div&gt;
+
+  <span class="c">&lt;!-- footer row --&gt;</span>
+  &lt;div class="<span class="a">mt-2.5 flex items-center gap-2.5 border-t border-edge px-1
+    pt-[11px]</span>"&gt;
+    &lt;button role="switch" aria-checked="true" aria-label="Vault"
+      class="<span class="a">relative h-[18px] w-8 flex-none rounded-full bg-edge-strong
+      transition after:absolute after:left-0.5 after:top-0.5 after:h-3.5
+      after:w-3.5 after:rounded-full after:bg-white after:transition
+      after:content-[''] aria-checked:bg-grounded
+      aria-checked:after:translate-x-[14px]</span>"&gt;&lt;/button&gt;
+    &lt;span class="<span class="a">text-xs font-semibold text-subtle</span>"&gt;
+      Vault on — answers cite your documents&lt;/span&gt;
+    &lt;span class="<span class="a">ml-auto text-[11.5px] font-semibold text-faint</span>"&gt;
+      &lt;kbd class="<span class="a">…kbd…</span>"&gt;↵&lt;/kbd&gt; Send · &lt;kbd&gt;⇧↵&lt;/kbd&gt; New line&lt;/span&gt;
+  &lt;/div&gt;
+&lt;/div&gt;
+
+<span class="c">/* JS contract: Enter sends (unless event.isComposing), Shift+Enter breaks;
+   auto-grow to the 200px cap (field-sizing: content + JS fallback);
+   Send swaps to Stop while streaming — Stop is NEVER disabled;
+   whitespace-only submits are rejected. */</span></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 05 CHIPS ============ -->
+<section class="sec">
+  <div class="sec-kick">05 — Chips, badges &amp; citations</div>
+  <h2>The trust hardware</h2>
+  <p class="lede"><code>grounded</code> classes appear on exactly three things: the vault status chip, the vault switch, and grounded badges. Citations use the accent family — they're navigation, not trust claims.</p>
+  <div class="recipe">
+    <div class="pv">
+      <span class="pv-note">Rendered</span>
+      <div class="rowflex"><span class="w-chip"><i></i>Vault connected — 128 documents indexed</span></div>
+      <div class="rowflex"><span class="w-gb" style="margin:0"><i></i>Grounded in 3 of your documents</span>&nbsp;<span style="font-size:14px">…at 1.5× the day rate<span class="w-cite">2</span></span></div>
+      <div class="w-sg" style="max-width:330px">
+        <span class="w-ic">◇</span>Which schemes pass Gate 2?
+        <span class="w-tag">→ Report</span>
+      </div>
+      <div class="rowflex"><span class="w-tt">Talk to your vault</span><span class="w-kbd" style="margin:0">⌘K</span></div>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">chips.html</span><button class="copy" data-code="c-chip">Copy</button></div>
+      <pre id="c-chip"><span class="c">&lt;!-- vault status chip (grounded = trust only) --&gt;</span>
+&lt;span class="<span class="a">inline-flex items-center gap-2 rounded-full bg-grounded-tint
+  px-[15px] py-[7px] text-xs font-bold text-grounded</span>"&gt;
+  &lt;i class="<span class="a">h-[7px] w-[7px] rounded-full bg-grounded</span>"&gt;&lt;/i&gt;
+  Vault connected — 128 documents indexed&lt;/span&gt;
+
+<span class="c">&lt;!-- grounded badge (tops every cited answer) --&gt;</span>
+&lt;span class="<span class="a">inline-flex items-center gap-2 rounded-full bg-grounded-tint
+  px-[13px] py-1.5 text-[11.5px] font-bold text-grounded</span>"&gt;
+  Grounded in 3 of your documents&lt;/span&gt;
+
+<span class="c">&lt;!-- inline citation marker --&gt;</span>
+&lt;button class="<span class="a">mx-0.5 inline-flex h-[17px] min-w-[17px] items-center
+  justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px]
+  font-extrabold text-accent-deep transition hover:bg-accent hover:text-white</span>"&gt;
+  2&lt;/button&gt;
+
+<span class="c">&lt;!-- suggestion card + mode tag (tint, not fill — accent budget) --&gt;</span>
+&lt;button class="<span class="a">relative flex cursor-pointer items-center gap-3 rounded-card
+  border border-edge bg-card px-[17px] py-[15px] text-[13.5px] font-semibold
+  text-ink shadow-card transition hover:border-edge-strong</span>"&gt;
+  &lt;span class="<span class="a">grid h-8 w-8 flex-none place-items-center rounded-[9px]
+    bg-accent-tint text-accent-deep</span>"&gt;&lt;GateIcon /&gt;&lt;/span&gt;
+  Which schemes pass Gate 2?
+  &lt;span class="<span class="a">absolute -top-[9px] right-3 rounded-full border
+    border-edge-strong bg-accent-tint px-2 py-[3px] text-[10px] font-extrabold
+    text-accent-deep</span>"&gt;→ Report&lt;/span&gt;
+&lt;/button&gt;
+
+<span class="c">&lt;!-- tooltip --&gt;</span>
+&lt;div role="tooltip" class="<span class="a">rounded-lg bg-ink px-[11px] py-1.5 text-[11.5px]
+  font-semibold text-[#F8F2E9]</span>"&gt;Talk to your vault&lt;/div&gt;</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 06 MESSAGES ============ -->
+<section class="sec">
+  <div class="sec-kick">06 — Messages &amp; sources</div>
+  <h2>The answer surface</h2>
+  <p class="lede">User bubbles are <code>accent-tint</code>; assistant answers are white cards capped at <code>max-w-answer</code> (720px). Source cards sit on <code>bg-canvas</code> inside the white card — the surface inversion that makes excerpts read as quoted material.</p>
+  <div class="recipe">
+    <div class="pv">
+      <span class="pv-note">Rendered</span>
+      <div style="display:flex"><div class="w-ub">What’s our overtime policy for site staff?</div></div>
+      <div class="w-ac">
+        <span class="w-gb"><i></i>Grounded in 3 of your documents</span>
+        <p>Requests go to the site supervisor at least 48 hours before the shift<span class="w-cite">1</span>, paid at 1.5× the standard day rate<span class="w-cite">2</span>.</p>
+        <div class="w-src">
+          <div class="t">📄 Employee Handbook.pdf<em>p. 12</em></div>
+          <div class="x">“Overtime requests must be submitted to the supervisor no less than 48 hours in advance…”</div>
+        </div>
+      </div>
+    </div>
+    <div class="codebox">
+      <div class="codebar"><span class="fn">messages.html</span><button class="copy" data-code="c-msg">Copy</button></div>
+      <pre id="c-msg"><span class="c">&lt;!-- user bubble --&gt;</span>
+&lt;div class="<span class="a">ml-auto max-w-[420px] rounded-2xl rounded-br-[4px]
+  bg-accent-tint px-[18px] py-[13px] text-[14.5px] font-semibold text-ink</span>"&gt;
+  What’s our overtime policy for site staff?&lt;/div&gt;
+
+<span class="c">&lt;!-- assistant answer card --&gt;</span>
+&lt;article class="<span class="a">max-w-answer rounded-2xl border border-edge bg-card
+  px-6 py-5 shadow-card</span>"&gt;
+  &lt;span class="<span class="a">…grounded badge…</span>"&gt;Grounded in 3 of your documents&lt;/span&gt;
+  &lt;p class="<span class="a">text-[14.5px] leading-[1.7] text-ink</span>"&gt;
+    …48 hours before the shift&lt;button class="<span class="a">…cite…</span>"&gt;1&lt;/button&gt;, paid at
+    1.5× the standard day rate&lt;button class="<span class="a">…cite…</span>"&gt;2&lt;/button&gt;.&lt;/p&gt;
+
+  <span class="c">&lt;!-- source card (exact passage, visible in-situ) --&gt;</span>
+  &lt;div class="<span class="a">mt-3 rounded-[11px] border border-edge bg-canvas p-3</span>"&gt;
+    &lt;div class="<span class="a">flex items-center gap-2 text-xs font-bold</span>"&gt;
+      &lt;DocIcon class="<span class="a">h-3 w-3 text-accent-deep</span>" /&gt; Employee Handbook.pdf
+      &lt;em class="<span class="a">ml-auto text-[11px] font-semibold not-italic text-faint</span>"&gt;
+        p. 12&lt;/em&gt;&lt;/div&gt;
+    &lt;p class="<span class="a">mt-1.5 text-[11.5px] italic leading-relaxed text-subtle</span>"&gt;
+      “Overtime requests must be submitted…”&lt;/p&gt;
+  &lt;/div&gt;
+
+  <span class="c">&lt;!-- follow-up verification chip --&gt;</span>
+  &lt;button class="<span class="a">mt-3 rounded-full bg-accent-tint px-[13px] py-1.5
+    text-xs font-bold text-accent-deep hover:bg-accent hover:text-white</span>"&gt;
+    Show source passages&lt;/button&gt;
+&lt;/article&gt;</pre>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 07 CONTRACT ============ -->
+<section class="sec">
+  <div class="sec-kick">07 — The contract</div>
+  <h2>Ten rules that keep the AA badge honest</h2>
+  <div class="contract">
+    <ul>
+      <li><span class="no">1</span><span><b>Text floor.</b> <code>text-faint</code> (#6F6355, 5.5:1) is the lightest legal colour for any real text, placeholders included. <code>edge</code> colours are borders, never text.</span></li>
+      <li><span class="no">2</span><span><b>Accent budget.</b> Max three filled-accent elements per view — brand mark, active mode, Send. Everything else uses <code>accent-tint</code> + <code>text-accent-deep</code>.</span></li>
+      <li><span class="no">3</span><span><b>Grounded is scoped.</b> <code>grounded</code> classes touch only trust states: vault chip, vault switch, grounded badges. Never decoration, never generic success.</span></li>
+      <li><span class="no">4</span><span><b>Serif discipline.</b> <code>font-display</code> only at 22px and above (greeting, section titles). Nav, buttons and labels are always <code>font-ui</code>.</span></li>
+      <li><span class="no">5</span><span><b>Focus is focus-visible.</b> Every interactive element: <code>focus-visible:ring-2 ring-accent/40 ring-offset-2</code> with the offset colour matching its surface (<code>ring-offset-canvas</code> / <code>-sidebar</code> / <code>-card</code>).</span></li>
+      <li><span class="no">6</span><span><b>ARIA drives styling.</b> Mode picker is <code>role="radiogroup"</code> with <code>aria-checked:</code> variants; vault toggle is <code>role="switch"</code>. State and style can't drift apart. Add arrow-key handling to the radiogroup.</span></li>
+      <li><span class="no">7</span><span><b>Composer input holds 16px on mobile.</b> <code>text-base sm:text-[15px]</code> — anything under 16px makes iOS Safari zoom on focus.</span></li>
+      <li><span class="no">8</span><span><b>Send ↔ Stop.</b> Send disables on empty/whitespace; during streaming it becomes Stop, and Stop is never disabled. Don't auto-scroll during streaming — pin the viewport to the top of the new message.</span></li>
+      <li><span class="no">9</span><span><b>Mode overflow.</b> Below <code>xl</code>, render four pills + a "More ▾" menu. The row never wraps to a second line.</span></li>
+      <li><span class="no">10</span><span><b>One shadow.</b> <code>shadow-hearth</code> belongs to the composer alone; cards get <code>shadow-card</code> or nothing. Depth comes from white-on-cream surfaces, not stacked shadows.</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ 08 FILES ============ -->
+<section class="sec">
+  <div class="sec-kick">08 — The files</div>
+  <h2>Three files, attached in the chat</h2>
+  <div class="files">
+    <div class="file">
+      <div class="fn2">hearth-v4.css</div>
+      <p>Tailwind v4 CSS-first theme: <b>@theme</b> tokens, base layer (body, selection, global focus ring). Import it as your stylesheet entry.</p>
+      <div class="use">Use if — Tailwind v4 (new projects)</div>
+    </div>
+    <div class="file">
+      <div class="fn2">tailwind.config.js</div>
+      <p>The identical tokens as a v3 <b>theme.extend</b> config, with the usage rules documented inline. Type-scale helpers included.</p>
+      <div class="use">Use if — Tailwind v3</div>
+    </div>
+    <div class="file">
+      <div class="fn2">hearth-components.css</div>
+      <p>Optional <b>@layer components</b> file: <code style="font-family:var(--mono);font-size:11px">.btn-primary</code>, <code style="font-family:var(--mono);font-size:11px">.nav-item</code>, <code style="font-family:var(--mono);font-size:11px">.composer</code>… — every recipe on this page as one semantic class. Works with v3 and v4.</p>
+      <div class="use">Use if — you prefer semantic classes over utility strings</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>Struvers · Hearth implementation kit — Tailwind CSS</span>
+  <span>Terracotta · Serif · Comfortable · Cream — 83 pairings AA-verified</span>
+</footer>
+
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+document.querySelectorAll('.copy').forEach(function(b){
+  b.addEventListener('click',function(){
+    var el=document.getElementById(b.dataset.code);if(!el)return;
+    var t=el.textContent;
+    function ok(){b.textContent='Copied ✓';setTimeout(function(){b.textContent='Copy'},1500)}
+    function fb(){var r=document.createRange();r.selectNodeContents(el);var s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent='Press ⌘C';setTimeout(function(){b.textContent='Copy'},2000)}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(ok,fb)}else{fb()}
+  });
+});
+</script>
+<script>
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && window.parent !== window) {
+    window.parent.postMessage({ type: 'close-fullscreen' }, '*');
+  }
+});
+</script>
+<!-- broken-img-handler -->
+<script>
+(function(){
+  if(window.__brokenImgHandler)return;
+  window.__brokenImgHandler=true;
+  var MAX=5,DELAYS=[2000,4000,8000,16000,32000];
+  document.addEventListener('error',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG')return;
+    var liveSrc=img.getAttribute('src');
+    var src=img.dataset.haOriginalSrc||liveSrc;
+    if(!src)return;
+    if(img.dataset.haOriginalSrc&&liveSrc&&liveSrc!==img.dataset.haOriginalSrc&&liveSrc.indexOf('_r=')<0){src=liveSrc;img.dataset.haOriginalSrc=src;img.dataset.haRetryCount='0'}
+    else if(!img.dataset.haOriginalSrc){img.dataset.haOriginalSrc=src}
+    var attempt=parseInt(img.dataset.haRetryCount||'0',10);
+    if(img.dataset.haPhId){var old=document.getElementById(img.dataset.haPhId);if(old)old.remove()}
+    var ph=document.createElement('div');
+    ph.className='ha-img-placeholder'+(attempt>=MAX?' ha-failed':'');
+    ph.id='ha-ph-'+Math.random().toString(36).slice(2,9);
+    var w=img.getAttribute('width');var h=img.getAttribute('height');
+    if(w)ph.style.width=w+(isNaN(Number(w))?'':'px');
+    else if(img.style.width)ph.style.width=img.style.width;
+    else if(img.width>1)ph.style.width=img.width+'px';
+    if(h)ph.style.height=h+(isNaN(Number(h))?'':'px');
+    else if(img.style.height)ph.style.height=img.style.height;
+    else if(img.height>1)ph.style.height=img.height+'px';
+    ph.textContent=attempt>=MAX?'Image unavailable':'Loading image\u2026';
+    img.dataset.haPhId=ph.id;
+    if(img.dataset.haOrigDisplay==null)img.dataset.haOrigDisplay=img.style.display||'';
+    img.style.display='none';
+    img.insertAdjacentElement('afterend',ph);
+    if(attempt<MAX){
+      img.dataset.haRetryCount=String(attempt+1);
+      setTimeout(function(){
+        if(!img.isConnected)return;
+        if(img.dataset.haOriginalSrc!==src)return;
+        if(img.complete&&img.naturalWidth>0)return;
+        var curSrc=img.getAttribute('src');
+        if(curSrc&&curSrc.indexOf(src)!==0)return;
+        var fresh=src+(src.indexOf('?')>=0?'&':'?')+'_r='+(attempt+1)+'_'+Date.now();
+        img.src=fresh;
+      },DELAYS[attempt]);
+    }
+  },true);
+  document.addEventListener('load',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG')return;
+    if(img.dataset.haPhId){
+      var ph=document.getElementById(img.dataset.haPhId);
+      if(ph)ph.remove();
+      delete img.dataset.haPhId;
+      img.style.display=img.dataset.haOrigDisplay||'';
+      delete img.dataset.haOrigDisplay;
+      delete img.dataset.haOriginalSrc;
+      delete img.dataset.haRetryCount;
+    }
+  },true);
+})();
+</script>
+</body>
+</html>

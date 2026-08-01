@@ -149,6 +149,21 @@ Expected at handoff: **API 139 passed**, worker 31 passed, web clean.
    surface `slide_count`/filename in the pptx button toast, multi-series
    charts, per-tenant template preview in Settings.
 
+## 6b. Hearth UI overhaul (1 Aug 2026, after this handoff was written)
+
+Commits `636080f..f379af6`: the whole web app moved to the **Hearth** design
+system (`docs/concept-01-hearth-warm-approachable.html` +
+`docs/hearth-tailwind-implementation-kit.html`). Key decisions (user-chosen):
+fixed terracotta chrome — tenant accent only on exports (ASSUMPTIONS #17);
+whole-app sweep in one pass; new features: empty-state hero + starter
+prompts, ⌘K search (`GET /api/v1/search` + command palette, 5 tests),
+date-grouped chat list; inline source cards **replace** the evidence panel.
+Chat pin/rename deliberately not built. Composer is now a mode-pill
+radiogroup with vault switch, auto-growing textarea and a working Stop
+(aborts the SSE fetch, then re-fetches messages to converge). Manual visual
+QA of the Hearth screens is still outstanding (same blocker: needs a
+logged-in browser session).
+
 ## 7. Read first in a new session
 
 1. This file.

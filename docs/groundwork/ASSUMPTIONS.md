@@ -112,3 +112,18 @@ and every divergence is recorded here.
     email claim for the settings members list — the app DB cannot reach
     Supabase's `auth.users`. Written at bootstrap/invite-accept, self-healed
     on tenant resolution; nullable end-to-end.
+17. **Hearth UI system: chrome is no longer tenant-themed** (1 Aug 2026,
+    diverges from core spec §7 "brand: logo + colours → CSS variables" and
+    the original Slice 5 white-label hook). The app chrome now uses the
+    fixed Hearth palette (`docs/concept-01-hearth-warm-approachable.html`;
+    terracotta #B14E2E on cream, Fraunces + Plus Jakarta Sans, sage green
+    scoped to grounded/trust states). The tenant `brand.accent` colour is
+    applied only to exported artefacts (slide decks, health-card PDFs) and
+    the tenant logo still shows in the sidebar. Rationale: Hearth's
+    AA-verified pairings hold only for its own palette; user decision on
+    1 Aug 2026 chose "Hearth for platform, accent only in content" over
+    per-tenant chrome tinting. Legacy token names (`paper`, `surface`,
+    `line`, `ink-muted`, `ink-faint`, `accent-soft`) alias the Hearth
+    palette in `globals.css`. The evidence side panel was replaced by
+    inline source-passage cards in answers; chat pin/rename was
+    deliberately not built.

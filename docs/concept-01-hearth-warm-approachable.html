@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concept 01 — Hearth · Warm &amp; Approachable</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ====== HEARTH DESIGN TOKENS (all pairs WCAG AA verified) ====== */
+  :root{
+    --canvas:#FAF7F2;        /* main chat canvas */
+    --sidebar:#F4EDE3;       /* sidebar surface */
+    --card:#FFFFFF;          /* cards, composer */
+    --border:#E8DECF;        /* hairlines */
+    --border-strong:#D9CCB8; /* input borders, emphasis */
+    --ink:#221C15;           /* primary text — 15.8:1 on canvas */
+    --text-2:#5C5347;        /* secondary — 7.1:1 on canvas */
+    --text-3:#6F6355;        /* tertiary/placeholder — 5.5:1 on canvas */
+    --accent:#B14E2E;        /* terracotta fill — white text 5.3:1 */
+    --accent-deep:#98401F;   /* terracotta as text — 6.4:1 on canvas */
+    --accent-tint:#F7E8E0;   /* terracotta wash */
+    --green:#33684B;         /* grounded/trust — 6.1:1 on canvas */
+    --green-tint:#E5F0E7;    /* grounded wash */
+    --shadow:0 1px 2px rgba(60,42,28,.05),0 10px 30px rgba(60,42,28,.08);
+    --ui:'Plus Jakarta Sans',system-ui,sans-serif;
+    --display:'Fraunces',Georgia,serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:var(--ui);background:#F1E9DB;color:var(--ink);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .page{max-width:1180px;margin:0 auto;padding:0 5.5%}
+  /* ====== concept header ====== */
+  .concept-head{padding:54px 0 34px;display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+  .kicker{font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:14px}
+  .concept-head h1{font-family:var(--display);font-weight:500;font-size:clamp(40px,5.4vw,60px);line-height:1.02;letter-spacing:-.01em}
+  .concept-head .sub{margin-top:14px;font-size:16.5px;color:var(--text-2);max-width:56ch}
+  .spec-chips{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+  .spec-chips span{background:var(--card);border:1px solid var(--border);border-radius:99px;padding:7px 15px;font-size:12px;font-weight:600;color:var(--text-2);white-space:nowrap}
+  .spec-chips i{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:7px;vertical-align:-1px}
+  /* ====== mock frame ====== */
+  .frame{border-radius:16px;overflow:hidden;box-shadow:var(--shadow);border:1px solid var(--border-strong);background:var(--card)}
+  .frame-bar{display:flex;align-items:center;gap:14px;background:#EBE2D3;padding:11px 18px;border-bottom:1px solid var(--border-strong)}
+  .frame-bar .dots{display:flex;gap:6px}
+  .frame-bar .dots i{width:10px;height:10px;border-radius:50%;background:#D4C7B2}
+  .frame-bar .url{flex:1;max-width:340px;margin:0 auto;background:#F7F1E7;border-radius:99px;padding:5px 16px;font-size:11.5px;color:var(--text-3);text-align:center;font-weight:600}
+  .mock-scroll{overflow-x:auto;background:var(--canvas)}
+  .mock{display:flex;min-width:1120px;height:780px}
+  /* ====== sidebar ====== */
+  .sb{width:268px;flex:none;background:var(--sidebar);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:18px 14px 14px}
+  .brand{display:flex;align-items:center;gap:11px;padding:2px 8px 16px}
+  .brand .mark{width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;font-family:var(--display);font-size:19px;font-weight:600;display:flex;align-items:center;justify-content:center}
+  .brand .nm{font-size:15.5px;font-weight:800;letter-spacing:-.01em}
+  .brand .tag{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--text-3);margin-top:1px}
+  .search{display:flex;align-items:center;gap:9px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px 12px;margin:0 4px 16px;color:var(--text-3);font-size:13px}
+  .search .kbd{margin-left:auto;font-size:10.5px;font-weight:700;background:var(--sidebar);border:1px solid var(--border);border-radius:5px;padding:2px 6px;color:var(--text-3)}
+  .navlbl{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);padding:14px 12px 7px;display:flex;align-items:center}
+  .navlbl .r{margin-left:auto;color:var(--accent-deep);letter-spacing:.02em;font-size:10.5px}
+  .item{display:flex;align-items:center;gap:10px;padding:8.5px 12px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--text-2);cursor:default;position:relative}
+  .item svg{flex:none;opacity:.85}
+  .item.active{background:var(--card);color:var(--ink);box-shadow:0 1px 2px rgba(60,42,28,.06)}
+  .item.active::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;border-radius:3px;background:var(--accent)}
+  .item .badge{margin-left:auto;font-size:11px;font-weight:700;background:var(--accent-tint);color:var(--accent-deep);border-radius:99px;padding:2px 8px}
+  .item .count{margin-left:auto;font-size:11.5px;font-weight:600;color:var(--text-3)}
+  .item .acts{margin-left:auto;display:flex;gap:2px}
+  .item .acts b{width:22px;height:22px;border-radius:6px;background:var(--card);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-weight:400}
+  .item.hovered{background:#EFE6D8}
+  .newp{color:var(--accent-deep);font-weight:700}
+  .sb .grow{flex:1}
+  .trial{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px 14px;margin:10px 4px 10px}
+  .trial .t1{display:flex;justify-content:space-between;font-size:12.5px;font-weight:700}
+  .trial .t1 span{color:var(--accent-deep)}
+  .trial .bar{height:5px;border-radius:99px;background:var(--sidebar);margin:9px 0 9px;overflow:hidden}
+  .trial .bar i{display:block;height:100%;width:42%;background:var(--accent);border-radius:99px}
+  .trial .t2{display:flex;justify-content:space-between;align-items:center;font-size:11.5px;color:var(--text-3);font-weight:600}
+  .trial .up{background:var(--accent);color:#fff;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700}
+  .user{display:flex;align-items:center;gap:10px;padding:8px 8px 4px}
+  .user .av{width:32px;height:32px;border-radius:50%;background:var(--ink);color:#F8EFE2;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .user .un{font-size:13px;font-weight:700}
+  .user .us{font-size:11px;color:var(--text-3);font-weight:600}
+  .user svg{margin-left:auto;color:var(--text-3)}
+  /* ====== main ====== */
+  .main{flex:1;display:flex;flex-direction:column;background:var(--canvas)}
+  .topbar{display:flex;align-items:center;gap:14px;padding:14px 28px;border-bottom:1px solid var(--border)}
+  .topbar .proj{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700}
+  .topbar .sep{width:1px;height:18px;background:var(--border-strong)}
+  .topbar .docs{font-size:12.5px;color:var(--text-3);font-weight:600}
+  .topbar .tools{margin-left:auto;display:flex;gap:6px;position:relative}
+  .tbtn{width:34px;height:34px;border-radius:10px;border:1px solid transparent;display:flex;align-items:center;justify-content:center;color:var(--text-2)}
+  .tbtn:hover{background:var(--sidebar)}
+  .tbtn.tip{border-color:var(--border);background:var(--card)}
+  .tooltip{position:absolute;top:42px;right:0;background:var(--ink);color:#F8F2E9;font-size:11.5px;font-weight:600;border-radius:8px;padding:6px 11px;white-space:nowrap}
+  .tooltip::before{content:"";position:absolute;top:-4px;right:14px;width:8px;height:8px;background:var(--ink);transform:rotate(45deg)}
+  .hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px 40px 10px}
+  .vault-chip{display:inline-flex;align-items:center;gap:8px;background:var(--green-tint);color:var(--green);border-radius:99px;padding:7px 15px;font-size:12px;font-weight:700}
+  .vault-chip i{width:7px;height:7px;border-radius:50%;background:var(--green)}
+  .hero h2{font-family:var(--display);font-weight:500;font-size:42px;letter-spacing:-.01em;margin:22px 0 10px;text-align:center}
+  .hero .sub{font-size:15.5px;color:var(--text-2);text-align:center;max-width:52ch;line-height:1.6}
+  .sugg{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:30px 0 18px;width:100%;max-width:620px}
+  .sg{position:relative;display:flex;align-items:center;gap:13px;background:var(--card);border:1px solid var(--border);border-radius:14px;padding:15px 17px;font-size:13.5px;font-weight:600;color:var(--ink);box-shadow:0 1px 2px rgba(60,42,28,.04);cursor:default}
+  .sg:hover{border-color:var(--border-strong)}
+  .sg .ic{flex:none;width:32px;height:32px;border-radius:9px;background:var(--accent-tint);color:var(--accent-deep);display:flex;align-items:center;justify-content:center}
+  .sg .mode{position:absolute;top:-9px;right:12px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;letter-spacing:.04em;border-radius:99px;padding:3px 9px}
+  .fine{font-size:12px;color:var(--text-3);font-weight:600}
+  /* ====== composer ====== */
+  .compose-wrap{padding:14px 40px 26px;display:flex;justify-content:center}
+  .compose{width:100%;max-width:720px;background:var(--card);border:1px solid var(--border-strong);border-radius:18px;box-shadow:var(--shadow);padding:12px 14px 12px}
+  .modes{display:flex;gap:5px;flex-wrap:wrap;padding:2px 2px 10px}
+  .md{font-size:12px;font-weight:700;color:var(--text-2);border-radius:99px;padding:6px 13px;border:1px solid transparent;cursor:default}
+  .md:hover{background:var(--sidebar)}
+  .md.on{background:var(--accent);color:#fff}
+  .irow{display:flex;align-items:flex-end;gap:10px}
+  .ghost{width:36px;height:36px;flex:none;border-radius:10px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2);background:var(--card)}
+  .input{flex:1;font-size:15px;color:var(--text-3);padding:8px 2px;line-height:1.5}
+  .send{flex:none;display:flex;align-items:center;gap:8px;background:var(--accent);color:#fff;border-radius:12px;padding:9px 18px;font-size:13.5px;font-weight:700}
+  .crow{display:flex;align-items:center;gap:10px;padding:11px 4px 0;margin-top:10px;border-top:1px solid var(--border)}
+  .switch{width:32px;height:18px;border-radius:99px;background:var(--green);position:relative;flex:none}
+  .switch::after{content:"";position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff}
+  .crow .vl{font-size:12px;color:var(--text-2);font-weight:600}
+  .crow .hint{margin-left:auto;font-size:11.5px;color:var(--text-3);font-weight:600}
+  .crow .hint b{font-weight:700;background:var(--sidebar);border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:10.5px}
+  /* ====== sections below mock ====== */
+  .sec{margin-top:74px}
+  .sec-kick{font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:12px}
+  .sec h2{font-family:var(--display);font-weight:500;font-size:clamp(28px,3.4vw,38px);letter-spacing:-.01em;line-height:1.1}
+  .sec .lede{margin-top:12px;color:var(--text-2);font-size:15.5px;max-width:64ch}
+  .why{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:32px}
+  .wcard{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px 22px 20px}
+  .wcard .n{font-family:var(--display);font-size:15px;color:var(--accent-deep);font-weight:600}
+  .wcard h3{font-size:15.5px;font-weight:700;margin:10px 0 8px;letter-spacing:-.005em}
+  .wcard p{font-size:13.5px;color:var(--text-2);line-height:1.6}
+  .wcard p b{color:var(--ink)}
+  /* ====== answer preview ====== */
+  .answer-stage{margin-top:32px;background:var(--canvas);border:1px solid var(--border-strong);border-radius:16px;padding:34px clamp(18px,5%,54px) 38px}
+  .msg-u{display:flex;justify-content:flex-end;margin-bottom:18px}
+  .msg-u .b{background:var(--accent-tint);border-radius:16px 16px 4px 16px;padding:13px 18px;font-size:14.5px;font-weight:600;max-width:420px}
+  .msg-a{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px 24px 18px;box-shadow:0 1px 2px rgba(60,42,28,.04)}
+  .gbadge{display:inline-flex;align-items:center;gap:8px;background:var(--green-tint);color:var(--green);border-radius:99px;padding:6px 13px;font-size:11.5px;font-weight:700;margin-bottom:14px}
+  .gbadge i{width:6px;height:6px;border-radius:50%;background:var(--green)}
+  .msg-a p{font-size:14.5px;line-height:1.7;color:var(--ink);max-width:70ch}
+  .msg-a ul{margin:10px 0 4px 20px}
+  .msg-a li{font-size:14px;line-height:1.7;color:var(--ink);margin-bottom:4px}
+  .cite{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;border-radius:5px;background:var(--accent-tint);color:var(--accent-deep);font-size:10.5px;font-weight:800;vertical-align:2px;margin:0 2px;padding:0 4px}
+  .srcs{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
+  .src{background:var(--canvas);border:1px solid var(--border);border-radius:11px;padding:12px 13px}
+  .src .t{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700}
+  .src .t em{font-style:normal;margin-left:auto;color:var(--text-3);font-weight:600;font-size:11px}
+  .src .x{margin-top:7px;font-size:11.5px;line-height:1.55;color:var(--text-2);font-style:italic}
+  .arow{display:flex;align-items:center;gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+  .arow .ib{width:28px;height:28px;border-radius:8px;border:1px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-2)}
+  .arow .chipb{font-size:12px;font-weight:700;color:var(--accent-deep);background:var(--accent-tint);border-radius:99px;padding:6px 13px;margin-left:6px}
+  /* ====== style guide ====== */
+  .sgd{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:34px clamp(18px,4%,42px) 38px;margin-top:32px}
+  .sgd h3{font-family:var(--display);font-weight:500;font-size:22px;margin:34px 0 6px}
+  .sgd h3:first-child{margin-top:0}
+  .sgd .note{font-size:13px;color:var(--text-3);font-weight:600;margin-bottom:16px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--text-3);padding:0 16px 9px 0;border-bottom:2px solid var(--ink)}
+  td{padding:11px 16px 11px 0;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text-2)}
+  td b{color:var(--ink);font-weight:700}
+  .sw{display:inline-block;width:30px;height:30px;border-radius:8px;border:1px solid rgba(34,28,21,.14);vertical-align:middle}
+  .hx{font-size:12.5px;font-weight:700;color:var(--ink);letter-spacing:.02em}
+  .ok{display:inline-block;background:var(--green-tint);color:var(--green);font-size:10.5px;font-weight:800;border-radius:99px;padding:3px 9px;letter-spacing:.03em}
+  .tspec{font-weight:700;color:var(--ink)}
+  .fr{font-family:var(--display)}
+  .pillrow{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .pillrow span{background:var(--canvas);border:1px solid var(--border);border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;color:var(--text-2)}
+  pre{background:#231C13;color:#F3E9DA;border-radius:12px;padding:22px 24px;font-size:12.5px;line-height:1.75;overflow-x:auto;margin-top:14px;font-family:ui-monospace,'SF Mono',Menlo,monospace}
+  pre .c{color:#A79880}
+  pre .v{color:#F0A987}
+  footer{margin:70px 0 54px;padding-top:22px;border-top:1px solid var(--border-strong);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-3)}
+  @media(max-width:900px){.why,.srcs{grid-template-columns:1fr}.sugg{grid-template-columns:1fr}.spec-chips{align-items:flex-start}}
+</style>
+<style>
+.ha-img-placeholder{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;background:#f4f4f5;border:1px dashed #d4d4d8;border-radius:8px;color:#71717a;font-size:12px;font-family:system-ui,sans-serif;min-height:80px;padding:16px;box-sizing:border-box;animation:ha-img-pulse 1.5s ease-in-out infinite}
+.ha-img-placeholder.ha-failed{animation:none;opacity:.7}
+@keyframes ha-img-pulse{0%,100%{opacity:1}50%{opacity:.5}}
+@media(prefers-color-scheme:dark){.ha-img-placeholder{background:#27272a;border-color:#3f3f46;color:#a1a1aa}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="concept-head">
+  <div>
+    <div class="kicker">Concept 01 / 03 — Warm &amp; Approachable</div>
+    <h1>Hearth</h1>
+    <p class="sub">The trusted advisor. White cards on a warm cream canvas, one terracotta accent, and a serif voice reserved for the moments that greet you. Built for owner-operators who want help, not homework.</p>
+  </div>
+  <div class="spec-chips">
+    <span><i style="background:#B14E2E"></i>Terracotta #B14E2E on cream #FAF7F2</span>
+    <span>Fraunces · display &nbsp;+&nbsp; Plus Jakarta Sans · UI</span>
+    <span><i style="background:#33684B"></i>Sage #33684B scoped to “grounded” states</span>
+  </div>
+</div>
+
+<!-- ================= APP MOCKUP ================= -->
+<div class="frame">
+  <div class="frame-bar"><span class="dots"><i></i><i></i><i></i></span><span class="url">app.struvers.com</span></div>
+  <div class="mock-scroll"><div class="mock">
+
+    <!-- sidebar -->
+    <aside class="sb">
+      <div class="brand">
+        <div class="mark">S</div>
+        <div><div class="nm">Struvers</div><div class="tag">Operations Engine</div></div>
+      </div>
+      <div class="search">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        Search chats &amp; documents<span class="kbd">⌘K</span>
+      </div>
+      <div class="item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/></svg>
+        Chat
+      </div>
+      <div class="item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v13H4z"/><path d="M8 7V4h8v3"/><path d="M9.5 12h5"/></svg>
+        Vault<span class="badge">128 docs</span>
+      </div>
+      <div class="navlbl">Workspace</div>
+      <div class="item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>
+        Development projects
+        <span class="count">↗</span>
+      </div>
+      <div class="navlbl">Projects <span class="r">+ New</span></div>
+      <div class="item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.5"/></svg>
+        Everything<span class="count">128</span>
+      </div>
+      <div class="item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/></svg>
+        House Renovation<span class="count">0</span>
+      </div>
+      <div class="navlbl">Recent — Today</div>
+      <div class="item hovered">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/></svg>
+        Current state of gate reviews
+        <span class="acts"><b><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 17v5"/><path d="M9 3h6l1 7 2 2H6l2-2 1-7Z"/></svg></b><b><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 3 4 4L8 20l-5 1 1-5L17 3Z"/></svg></b></span>
+      </div>
+      <div class="item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/></svg>Key messages — client pack</div>
+      <div class="item"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a8 8 0 0 1-8 8H5l-2 2V12a8 8 0 0 1 8-8h2a8 8 0 0 1 8 8Z"/></svg>The 7 agents in the pipeline</div>
+      <div class="sb grow"></div>
+      <div class="trial">
+        <div class="t1">Trial — 12 days left<span>3 seats</span></div>
+        <div class="bar"><i></i></div>
+        <div class="t2">Ends 13 Aug 2026<span class="up">Upgrade</span></div>
+      </div>
+      <div class="user">
+        <div class="av">N</div>
+        <div><div class="un">Workspace owner</div><div class="us"><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="204e49434b60504c4154464f524d19110e434f4d">[email&#160;protected]</a></div></div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1.2l2-1.5-2-3.5-2.4 1a7 7 0 0 0-2-1.2L14 3h-4l-.5 2.6a7 7 0 0 0-2 1.2l-2.4-1-2 3.5 2 1.5A7 7 0 0 0 5 12c0 .4 0 .8.1 1.2l-2 1.5 2 3.5 2.4-1a7 7 0 0 0 2 1.2L10 21h4l.5-2.6a7 7 0 0 0 2-1.2l2.4 1 2-3.5-2-1.5c.1-.4.1-.8.1-1.2Z"/></svg>
+      </div>
+    </aside>
+
+    <!-- main -->
+    <div class="main">
+      <div class="topbar">
+        <span class="proj">Everything
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m6 9 6 6 6-6"/></svg>
+        </span>
+        <span class="sep"></span>
+        <span class="docs">128 documents in vault</span>
+        <div class="tools">
+          <span class="tbtn tip"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span>
+          <span class="tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7h16v-7"/><path d="M12 3v12"/><path d="m7 8 5-5 5 5"/></svg></span>
+          <span class="tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2Z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/></svg></span>
+          <span class="tbtn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 5 .3c0 1.7-2.5 2.2-2.5 3.7"/><circle cx="12" cy="17" r=".5"/></svg></span>
+          <span class="tooltip">Talk to your vault</span>
+        </div>
+      </div>
+
+      <div class="hero">
+        <span class="vault-chip"><i></i>Vault connected — 128 documents indexed</span>
+        <h2>Good afternoon.</h2>
+        <p class="sub">Ask anything about your business — policies, prices, procedures — or draft something new. Answers come with their sources attached.</p>
+        <div class="sugg">
+          <div class="sg"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></span>Summarise our safety procedures</div>
+          <div class="sg"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 6H9.5a2.5 2.5 0 0 0 0 5h5a2.5 2.5 0 0 1 0 5H6"/></svg></span>What’s our day rate for surveys?</div>
+          <div class="sg"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m17 3 4 4L8 20l-5 1 1-5L17 3Z"/></svg></span>Draft a client quote letter</div>
+          <div class="sg"><span class="ic"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 3 12l9 9 9-9-9-9Z"/><path d="M12 8v8"/></svg></span>Which schemes pass Gate 2?<span class="mode">→ Report</span></div>
+        </div>
+        <span class="fine">Answers cite your documents — verify anything critical.</span>
+      </div>
+
+      <div class="compose-wrap">
+        <div class="compose">
+          <div class="modes">
+            <span class="md on">Chat</span><span class="md">Analyse</span><span class="md">Report</span><span class="md">Financial</span><span class="md">Slide deck</span><span class="md">Research</span>
+          </div>
+          <div class="irow">
+            <span class="ghost"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
+            <div class="input">Ask about your documents — or draft something new…</div>
+            <span class="ghost"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg></span>
+            <span class="send">Send<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></span>
+          </div>
+          <div class="crow">
+            <span class="switch"></span><span class="vl">Vault on — answers cite your documents</span>
+            <span class="hint"><b>↵</b> Send &nbsp; <b>⇧↵</b> New line</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div></div>
+</div>
+
+<!-- ================= WHY ================= -->
+<section class="sec">
+  <div class="sec-kick">Design rationale</div>
+  <h2>What changed, and the evidence behind it</h2>
+  <div class="why">
+    <div class="wcard"><div class="n">01</div><h3>A greeting, not a void</h3><p>The empty state becomes onboarding: a vault status chip, a serif welcome, and <b>four starter prompts drawn from your documents</b> — the pattern NN/g and the Shape of AI library document as the fix for blank-canvas abandonment. One chip is tagged with the mode it triggers, so modes get discovered by doing.</p></div>
+    <div class="wcard"><div class="n">02</div><h3>Modes you can see</h3><p>The six modes leave the native dropdown and become a <b>segmented pill row on the composer</b> — Perplexity’s pattern. The active mode is filled terracotta; switching it re-labels the placeholder text, so the input always says what it will do.</p></div>
+    <div class="wcard"><div class="n">03</div><h3>Trust has its own colour</h3><p>Sage green appears <b>only</b> on grounded states — the vault chip, the vault toggle, citation badges. Borrowed from Intercom’s scoped Fin orange: one glance separates “from your documents” from ordinary chrome.</p></div>
+    <div class="wcard"><div class="n">04</div><h3>Two voices, one system</h3><p>Fraunces speaks only in greetings and section titles — the warm moment. Everything functional is Plus Jakarta Sans on a <b>12 / 14 / 16 scale</b>, and every grey has been verified ≥ 4.5:1 on every surface it touches. The mono small-caps are retired.</p></div>
+    <div class="wcard"><div class="n">05</div><h3>A sidebar with a spine</h3><p>Search first (⌘K). Nav descriptions dropped — the <b>“128 docs” badge explains Vault</b> better than a sentence. Chats group under “Today” with hover-revealed pin/rename. The trial gets a proper card with a progress bar; the footer no longer overlaps itself.</p></div>
+    <div class="wcard"><div class="n">06</div><h3>Depth from surfaces, not shadows</h3><p>Notion’s move: <b>white cards floating on warm cream</b> create hierarchy with almost no shadow. The single soft shadow is spent where focus belongs — the composer. The orphaned icon rail is now a labelled top bar with tooltips.</p></div>
+  </div>
+</section>
+
+<!-- ================= ANSWER PREVIEW ================= -->
+<section class="sec">
+  <div class="sec-kick">The trust moment</div>
+  <h2>How an answer looks</h2>
+  <p class="lede">The citation UI is where a document assistant earns its keep — inline markers, a grounded badge, and the exact passage visible without leaving the chat.</p>
+  <div class="answer-stage">
+    <div class="msg-u"><div class="b">What’s our overtime policy for site staff?</div></div>
+    <div class="msg-a">
+      <span class="gbadge"><i></i>Grounded in 3 of your documents</span>
+      <p>Site staff can work paid overtime, but it must be <b>approved in advance</b>. Requests go to the site supervisor at least 48 hours before the shift<span class="cite">1</span>, and overtime is paid at 1.5× the standard day rate<span class="cite">2</span>. Two limits apply:</p>
+      <ul>
+        <li>No more than 8 overtime hours per person per week without director sign-off<span class="cite">2</span></li>
+        <li>Weekend work on live sites always requires a safety briefing first<span class="cite">3</span></li>
+      </ul>
+      <div class="srcs">
+        <div class="src"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#98401F" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg>Employee Handbook.pdf<em>p. 12</em></div><div class="x">“Overtime requests must be submitted to the supervisor no less than 48 hours in advance…”</div></div>
+        <div class="src"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#98401F" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg>Pay &amp; Benefits 2026.docx<em>p. 2</em></div><div class="x">“Approved overtime is remunerated at 1.5× the standard day rate, capped at 8 hours weekly…”</div></div>
+        <div class="src"><div class="t"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#98401F" stroke-width="2"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5"/></svg>Site Ops Manual.pdf<em>p. 4</em></div><div class="x">“Weekend works on live sites require a recorded safety briefing prior to commencement…”</div></div>
+      </div>
+      <div class="arow">
+        <span class="ib"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg></span>
+        <span class="ib"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 10v12"/><path d="M15 5.9 14 10h6a2 2 0 0 1 2 2l-2.4 7.8a2 2 0 0 1-2 1.2H7V10l4.5-7a2.4 2.4 0 0 1 3.5 2.9Z"/></svg></span>
+        <span class="ib"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" transform="rotate(180)"><path d="M7 10v12"/><path d="M15 5.9 14 10h6a2 2 0 0 1 2 2l-2.4 7.8a2 2 0 0 1-2 1.2H7V10l4.5-7a2.4 2.4 0 0 1 3.5 2.9Z"/></svg></span>
+        <span class="chipb">Show source passages</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= STYLE GUIDE ================= -->
+<section class="sec">
+  <div class="sec-kick">Style guide — exact tokens</div>
+  <h2>Hearth, by the numbers</h2>
+  <div class="sgd">
+
+    <h3 class="fr">Colour</h3>
+    <div class="note">Every text pairing below was programmatically verified against WCAG 2.2 AA (4.5:1 normal text, 3:1 large text / UI components).</div>
+    <table>
+      <tr><th></th><th>Token</th><th>Hex</th><th>Usage</th><th>Contrast</th></tr>
+      <tr><td><span class="sw" style="background:#FAF7F2"></span></td><td><b>canvas</b></td><td class="hx">#FAF7F2</td><td>Main chat canvas</td><td>—</td></tr>
+      <tr><td><span class="sw" style="background:#F4EDE3"></span></td><td><b>sidebar</b></td><td class="hx">#F4EDE3</td><td>Sidebar surface</td><td>—</td></tr>
+      <tr><td><span class="sw" style="background:#FFFFFF"></span></td><td><b>card</b></td><td class="hx">#FFFFFF</td><td>Cards, composer, answer bubbles</td><td>—</td></tr>
+      <tr><td><span class="sw" style="background:#E8DECF"></span></td><td><b>border</b></td><td class="hx">#E8DECF</td><td>Hairlines · <span class="hx">#D9CCB8</span> for inputs</td><td>—</td></tr>
+      <tr><td><span class="sw" style="background:#221C15"></span></td><td><b>ink</b></td><td class="hx">#221C15</td><td>Primary text, warm near-black</td><td><span class="ok">15.8:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#5C5347"></span></td><td><b>text-2</b></td><td class="hx">#5C5347</td><td>Secondary text, nav items</td><td><span class="ok">7.1:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#6F6355"></span></td><td><b>text-3</b></td><td class="hx">#6F6355</td><td>Labels, placeholders, meta</td><td><span class="ok">5.5:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#B14E2E"></span></td><td><b>accent</b></td><td class="hx">#B14E2E</td><td>Buttons, active mode, brand mark</td><td><span class="ok">white text 5.3:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#98401F"></span></td><td><b>accent-deep</b></td><td class="hx">#98401F</td><td>Terracotta as text/links/citations</td><td><span class="ok">6.4:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#F7E8E0"></span></td><td><b>accent-tint</b></td><td class="hx">#F7E8E0</td><td>User bubbles, chip icons, mode tags</td><td><span class="ok">ink 14.1:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#33684B"></span></td><td><b>grounded</b></td><td class="hx">#33684B</td><td>Trust states only — vault, citations</td><td><span class="ok">6.1:1 ✓</span></td></tr>
+      <tr><td><span class="sw" style="background:#E5F0E7"></span></td><td><b>grounded-tint</b></td><td class="hx">#E5F0E7</td><td>Grounded badge/chip backgrounds</td><td><span class="ok">green 5.6:1 ✓</span></td></tr>
+    </table>
+
+    <h3 class="fr">Type scale</h3>
+    <div class="note">Fraunces appears only at display sizes; all functional UI is Plus Jakarta Sans on a 12 / 14 / 16 chrome scale.</div>
+    <table>
+      <tr><th>Role</th><th>Font</th><th>Size / Line</th><th>Weight</th><th>Tracking</th></tr>
+      <tr><td><b>Greeting / display</b></td><td class="fr">Fraunces</td><td class="tspec">42px / 1.15 &nbsp;(2.625rem)</td><td>500</td><td>−0.01em</td></tr>
+      <tr><td><b>Section heading</b></td><td class="fr">Fraunces</td><td class="tspec">22px / 1.25 &nbsp;(1.375rem)</td><td>500</td><td>0</td></tr>
+      <tr><td><b>Content / answers</b></td><td>Plus Jakarta Sans</td><td class="tspec">15–16px / 1.6–1.7</td><td>400–500</td><td>0</td></tr>
+      <tr><td><b>UI text, nav</b></td><td>Plus Jakarta Sans</td><td class="tspec">13.5–14px / 1.5</td><td>600</td><td>0</td></tr>
+      <tr><td><b>Meta, hints, badges</b></td><td>Plus Jakarta Sans</td><td class="tspec">12px / 1.45</td><td>600–700</td><td>0</td></tr>
+      <tr><td><b>Section labels</b></td><td>Plus Jakarta Sans</td><td class="tspec">10.5–11px / 1.2 · UPPERCASE</td><td>700</td><td>+0.10em</td></tr>
+      <tr><td><b>Composer input</b></td><td>Plus Jakarta Sans</td><td class="tspec">15px / 1.5 · 16px on mobile</td><td>400</td><td>0</td></tr>
+    </table>
+
+    <h3 class="fr">Space, radius &amp; elevation</h3>
+    <div class="pillrow">
+      <span>Spacing base 4px — 4 · 8 · 12 · 16 · 24 · 32 · 48</span>
+      <span>Radius — cards 14px · buttons 10px · composer 18px · chips 999px</span>
+      <span>Shadow — 0 1px 2px rgba(60,42,28,.05), 0 10px 30px rgba(60,42,28,.08) · composer only</span>
+      <span>Sidebar 268px · content column max 720px</span>
+    </div>
+
+    <h3 class="fr">Drop-in tokens</h3>
+<pre><span class="c">/* Hearth — Struvers warm concept. All text tokens AA-verified. */</span>
+:root {
+  --canvas: <span class="v">#FAF7F2</span>;   --sidebar: <span class="v">#F4EDE3</span>;  --card: <span class="v">#FFFFFF</span>;
+  --border: <span class="v">#E8DECF</span>;   --border-strong: <span class="v">#D9CCB8</span>;
+  --ink: <span class="v">#221C15</span>;      --text-2: <span class="v">#5C5347</span>;   --text-3: <span class="v">#6F6355</span>;
+  --accent: <span class="v">#B14E2E</span>;   --accent-deep: <span class="v">#98401F</span>; --accent-tint: <span class="v">#F7E8E0</span>;
+  --grounded: <span class="v">#33684B</span>; --grounded-tint: <span class="v">#E5F0E7</span>;
+  --font-ui: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-display: 'Fraunces', Georgia, serif;
+  --radius-card: 14px; --radius-btn: 10px; --radius-composer: 18px;
+}</pre>
+
+  </div>
+</section>
+
+<footer>
+  <span>Struvers design exploration — Concept 01 / 03 · Hearth</span>
+  <span>Companions: Clearline (02) · Voltage (03)</span>
+</footer>
+
+</div>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && window.parent !== window) {
+    window.parent.postMessage({ type: 'close-fullscreen' }, '*');
+  }
+});
+</script>
+<!-- broken-img-handler -->
+<script>
+(function(){
+  if(window.__brokenImgHandler)return;
+  window.__brokenImgHandler=true;
+  var MAX=5,DELAYS=[2000,4000,8000,16000,32000];
+  document.addEventListener('error',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG')return;
+    var liveSrc=img.getAttribute('src');
+    var src=img.dataset.haOriginalSrc||liveSrc;
+    if(!src)return;
+    if(img.dataset.haOriginalSrc&&liveSrc&&liveSrc!==img.dataset.haOriginalSrc&&liveSrc.indexOf('_r=')<0){src=liveSrc;img.dataset.haOriginalSrc=src;img.dataset.haRetryCount='0'}
+    else if(!img.dataset.haOriginalSrc){img.dataset.haOriginalSrc=src}
+    var attempt=parseInt(img.dataset.haRetryCount||'0',10);
+    if(img.dataset.haPhId){var old=document.getElementById(img.dataset.haPhId);if(old)old.remove()}
+    var ph=document.createElement('div');
+    ph.className='ha-img-placeholder'+(attempt>=MAX?' ha-failed':'');
+    ph.id='ha-ph-'+Math.random().toString(36).slice(2,9);
+    var w=img.getAttribute('width');var h=img.getAttribute('height');
+    if(w)ph.style.width=w+(isNaN(Number(w))?'':'px');
+    else if(img.style.width)ph.style.width=img.style.width;
+    else if(img.width>1)ph.style.width=img.width+'px';
+    if(h)ph.style.height=h+(isNaN(Number(h))?'':'px');
+    else if(img.style.height)ph.style.height=img.style.height;
+    else if(img.height>1)ph.style.height=img.height+'px';
+    ph.textContent=attempt>=MAX?'Image unavailable':'Loading image\u2026';
+    img.dataset.haPhId=ph.id;
+    if(img.dataset.haOrigDisplay==null)img.dataset.haOrigDisplay=img.style.display||'';
+    img.style.display='none';
+    img.insertAdjacentElement('afterend',ph);
+    if(attempt<MAX){
+      img.dataset.haRetryCount=String(attempt+1);
+      setTimeout(function(){
+        if(!img.isConnected)return;
+        if(img.dataset.haOriginalSrc!==src)return;
+        if(img.complete&&img.naturalWidth>0)return;
+        var curSrc=img.getAttribute('src');
+        if(curSrc&&curSrc.indexOf(src)!==0)return;
+        var fresh=src+(src.indexOf('?')>=0?'&':'?')+'_r='+(attempt+1)+'_'+Date.now();
+        img.src=fresh;
+      },DELAYS[attempt]);
+    }
+  },true);
+  document.addEventListener('load',function(e){
+    var img=e.target;
+    if(!img||img.tagName!=='IMG')return;
+    if(img.dataset.haPhId){
+      var ph=document.getElementById(img.dataset.haPhId);
+      if(ph)ph.remove();
+      delete img.dataset.haPhId;
+      img.style.display=img.dataset.haOrigDisplay||'';
+      delete img.dataset.haOrigDisplay;
+      delete img.dataset.haOriginalSrc;
+      delete img.dataset.haRetryCount;
+    }
+  },true);
+})();
+</script>
+</body>
+</html>
