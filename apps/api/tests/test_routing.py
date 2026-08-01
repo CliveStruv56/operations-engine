@@ -17,6 +17,11 @@ def test_financial_routes_to_reasoner():
     assert select_route("financial", 1_000) == "reasoner"
 
 
+def test_slides_and_research_route_to_drafter():
+    assert select_route("slides", 1_000) == "drafter"
+    assert select_route("research", 1_000) == "drafter"
+
+
 def test_large_context_routes_to_longdoc_regardless_of_kind():
     assert select_route(None, 100_001) == "longdoc"
     assert select_route("financial", 250_000) == "longdoc"

@@ -1,6 +1,7 @@
 """Model routing — pure function per spec §4.
 
-default workhorse · analyse/report → drafter · financial → reasoner ·
+default workhorse · analyse/report/slides/research → drafter ·
+financial → reasoner ·
 >100K context tokens → longdoc · soft budget cap → pinned to workhorse
 (except contexts too large for it, which still need longdoc — which is
 also the cheapest chat alias per token).
@@ -12,6 +13,8 @@ _KIND_ALIASES = {
     "analyse": "drafter",
     "report": "drafter",
     "financial": "reasoner",
+    "slides": "drafter",
+    "research": "drafter",
 }
 
 

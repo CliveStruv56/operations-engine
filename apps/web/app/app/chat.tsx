@@ -41,6 +41,11 @@ export default function ChatPanel({
   const [streamText, setStreamText] = useState<string | null>(null);
   const [softCap, setSoftCap] = useState(false);
   const [useVault, setUseVault] = useState(true);
+  // Task mode is sticky per conversation ("new" = the not-yet-created one).
+  const [modes, setModes] = useState<Record<string, string>>({});
+  const modeKey = activeConversationId ?? "new";
+  const mode = modes[modeKey] ?? "chat";
+  const webSearchEnabled = ws.tenant!.features?.web_search === true;
   const [evidence, setEvidence] = useState<Citation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -99,6 +104,7 @@ export default function ChatPanel({
         );
         convId = created.id;
         justCreatedRef.current = convId;
+        setModes((s) => ({ ...s, [created.id]: s["new"] ?? "chat" }));
         router.replace(convHref(convId));
         ws.refreshConversations();
       }
@@ -120,21 +126,26 @@ export default function ChatPanel({
     ]);
     setStreamText("");
 
-    await apiStream(`/conversations/${convId}/messages`, { content, use_vault: useVault }, tenantId, {
-      onDelta: (delta) => setStreamText((t) => (t ?? "") + delta),
-      onDone: (message) => {
-        setSoftCap(Boolean(message.soft_cap));
-        setStreamText(null);
-        const done = message as unknown as Message & { scope_used?: string | null };
-        setMessages((m) => [...m, done]);
-        if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
-        ws.refreshConversations();
-      },
-      onError: (_code, msg) => {
-        setStreamText(null);
-        setError(msg);
-      },
-    });
+    await apiStream(
+      `/conversations/${convId}/messages`,
+      { content, use_vault: useVault, task_kind: mode },
+      tenantId,
+      {
+        onDelta: (delta) => setStreamText((t) => (t ?? "") + delta),
+        onDone: (message) => {
+          setSoftCap(Boolean(message.soft_cap));
+          setStreamText(null);
+          const done = message as unknown as Message & { scope_used?: string | null };
+          setMessages((m) => [...m, done]);
+          if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
+          ws.refreshConversations();
+        },
+        onError: (_code, msg) => {
+          setStreamText(null);
+          setError(msg);
+        },
+      }
+    );
   }
 
   return (
@@ -224,6 +235,22 @@ export default function ChatPanel({
             placeholder={useVault ? "Ask about your documents…" : "Ask anything…"}
             className="min-w-0 flex-1 rounded-sm border border-line bg-surface px-3 py-2 text-sm"
           />
+          <select
+            value={mode}
+            onChange={(e) => setModes((s) => ({ ...s, [modeKey]: e.target.value }))}
+            aria-label="Task type"
+            title="What kind of response you want — also picks the model"
+            className={`stamp shrink-0 cursor-pointer bg-surface ${
+              mode === "chat" ? "text-ink-muted" : "bg-accent-soft text-accent"
+            }`}
+          >
+            <option value="chat">Chat</option>
+            <option value="analyse">Analyse</option>
+            <option value="report">Report</option>
+            <option value="financial">Financial</option>
+            <option value="slides">Slide deck</option>
+            {webSearchEnabled && <option value="research">Research</option>}
+          </select>
           <button
             type="button"
             onClick={() => setUseVault((v) => !v)}

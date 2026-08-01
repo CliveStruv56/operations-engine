@@ -140,6 +140,27 @@ async def test_task_kind_routes_when_under_cap(client, fake_llm):
     assert fake_llm == ["reasoner"]
 
 
+async def test_slides_kind_accepted_and_unknown_kind_rejected(client, fake_llm):
+    tenant = await seed_tenant(client, f"kinds-{uuid4().hex[:6]}")
+    await enable_llm_key(tenant)
+    headers = auth(tenant.owner_id, tenant.id)
+
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "Deck about onboarding", "task_kind": "slides", "use_vault": False},
+        headers=headers,
+    )
+    assert resp.status_code == 200
+    assert fake_llm == ["drafter"]
+
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "Draw me a logo", "task_kind": "images"},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+
 async def test_gateway_down_returns_503_and_persists_nothing_extra(client):
     """No litellm key provisioned (gateway disabled): friendly 503, and the
     user message from the failed call is still recorded exactly once."""

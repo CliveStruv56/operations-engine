@@ -73,3 +73,31 @@ and every divergence is recorded here.
     client) — keep them in step. The worker's DB-touching drafts modules stay
     asyncpg+pydantic-only so the **API** test suite imports and exercises
     them against its migrated database (worker CI has no Postgres).
+
+## Recorded during UI overhaul (1 Aug 2026)
+
+14. **Task modes diverge from spec §10.** The composer exposes `task_kind`
+    (chat/analyse/report/financial) plus two additions the Phase-1 spec parks
+    as P2 non-goals, added at founder request:
+    - **`slides`** — routes to `drafter` with a structured-outline system
+      prompt (`app/prompts.py`). Text outline only; no PPTX generation yet.
+    - **`research`** — Exa web search injected as pseudo-vault excerpts with
+      the core citation format (item 4 unchanged), so web sources ride the
+      existing evidence-panel pipeline with a `url`/`source_type` extension
+      on the citation payload. Gated per tenant via
+      `tenants.features->>'web_search'` (default **off**): research prompts
+      leave the trust boundary to Exa, whose retention terms are a per-tenant
+      data-processing decision. `EXA_API_KEY` unset ⇒ 503, matching the
+      LiteLLM/storage disabled-service convention. Search calls are metered
+      as `usage_events.kind='search'` (migration 0007 widens the CHECK).
+    - **Image creation is deferred** — no image model behind the LiteLLM
+      gateway.
+15. **Development projects presentation.** The sidebar now lists Groundwork
+    projects under their own "Development projects" heading and excludes them
+    from the core "Projects" list (`GET /projects` gained `is_development`
+    via a `proj_projects` left join). Item 1's substance is unchanged: they
+    remain core `projects` rows and still scope chat/vault.
+16. **Member emails.** `memberships.email` (migration 0007) caches the JWT
+    email claim for the settings members list — the app DB cannot reach
+    Supabase's `auth.users`. Written at bootstrap/invite-accept, self-healed
+    on tenant resolution; nullable end-to-end.

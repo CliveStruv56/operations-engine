@@ -107,7 +107,9 @@ class ConversationOut(BaseModel):
 
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=200_000)
-    task_kind: str | None = Field(default=None, pattern="^(chat|analyse|report|financial)$")
+    task_kind: str | None = Field(
+        default=None, pattern="^(chat|analyse|report|financial|slides|research)$"
+    )
     use_vault: bool = True
 
 
