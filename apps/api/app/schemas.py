@@ -1,8 +1,11 @@
+import re
 from datetime import date, datetime
 from typing import Any
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+
+_HEX_COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
 class TenantCreate(BaseModel):
@@ -12,6 +15,20 @@ class TenantCreate(BaseModel):
 class TenantPatch(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     brand: dict[str, Any] | None = None
+
+    @field_validator("brand")
+    @classmethod
+    def _validate_brand(cls, v: dict[str, Any] | None) -> dict[str, Any] | None:
+        # brand feeds CSS variables verbatim — keep garbage out.
+        if v is None:
+            return v
+        accent = v.get("accent")
+        if accent is not None and not _HEX_COLOUR.match(str(accent)):
+            raise ValueError("brand.accent must be a #rrggbb hex colour")
+        logo_key = v.get("logo_key")
+        if logo_key is not None and not isinstance(logo_key, str):
+            raise ValueError("brand.logo_key must be a string")
+        return v
 
 
 class TenantOut(BaseModel):
@@ -24,6 +41,7 @@ class TenantOut(BaseModel):
     model_mode: str
     trial_ends_at: datetime | None
     created_at: datetime
+    logo_url: str | None = None
 
 
 class TenantMeOut(TenantOut):
@@ -40,6 +58,16 @@ class MemberOut(BaseModel):
 
 class MemberRolePatch(BaseModel):
     role: str = Field(pattern="^(owner|admin|member)$")
+
+
+class LogoUploadIn(BaseModel):
+    mime: str
+    size_bytes: int = Field(gt=0)
+
+
+class LogoUploadOut(BaseModel):
+    upload_url: str
+    logo_key: str
 
 
 class InviteCreate(BaseModel):

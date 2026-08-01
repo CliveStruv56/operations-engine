@@ -9,18 +9,35 @@ from app.audit import write_audit
 from app.auth import AuthUser, get_current_user
 from app.config import get_settings
 from app.db import db
+from app.errors import ApiError
 from app.litellm import litellm_client
-from app.schemas import TenantCreate, TenantMeOut, TenantOut, TenantPatch
+from app.schemas import (
+    LogoUploadIn,
+    LogoUploadOut,
+    TenantCreate,
+    TenantMeOut,
+    TenantOut,
+    TenantPatch,
+)
 from app.secrets import encrypt_llm_key
+from app.storage import storage
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["tenants"])
+
+# Raster only — SVG can carry scripts, and this asset renders in every
+# tenant user's workspace.
+LOGO_MIMES = {"image/png": "png", "image/jpeg": "jpg", "image/webp": "webp"}
+MAX_LOGO_BYTES = 2 * 1024 * 1024
 
 
 def _tenant_out(row: asyncpg.Record) -> dict:
     out = dict(row)
     out["brand"] = json.loads(out["brand"])
     out["features"] = json.loads(out["features"])
+    logo_key = out["brand"].get("logo_key")
+    # Presigning is local crypto (see app/storage.py) — safe inline.
+    out["logo_url"] = storage.presign_get(logo_key) if logo_key and storage.enabled else None
     return out
 
 
@@ -65,6 +82,21 @@ async def get_my_tenant(
 ):
     row = await conn.fetchrow("select * from tenants where id = $1", ctx.tenant_id)
     return {**_tenant_out(row), "role": ctx.role}
+
+
+@router.post("/tenants/me/logo", response_model=LogoUploadOut)
+async def presign_logo_upload(
+    body: LogoUploadIn,
+    ctx: TenantContext = Depends(require_role("admin")),
+):
+    """Presigned PUT for the workspace logo. The client uploads, then PATCHes
+    brand.logo_key; /tenants/me responses carry a presigned logo_url."""
+    if body.mime not in LOGO_MIMES:
+        raise ApiError(400, "unsupported_type", "Logos must be PNG, JPEG or WebP")
+    if body.size_bytes > MAX_LOGO_BYTES:
+        raise ApiError(400, "too_large", "Logos are limited to 2 MB")
+    key = f"{ctx.tenant_id}/brand/logo.{LOGO_MIMES[body.mime]}"
+    return {"upload_url": storage.presign_put(key, body.mime), "logo_key": key}
 
 
 @router.patch("/tenants/me", response_model=TenantMeOut)

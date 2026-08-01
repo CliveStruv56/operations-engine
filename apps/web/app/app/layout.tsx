@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { deriveBrandVars } from "@/lib/brand";
 import Sidebar from "./sidebar";
 import { useWorkspace, WorkspaceProvider } from "./workspace";
 
@@ -83,7 +84,10 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   if (!ws.tenant) return <Onboarding />;
 
   return (
-    <div className="flex h-screen flex-col md:flex-row">
+    <div
+      className="flex h-screen flex-col md:flex-row"
+      style={deriveBrandVars(ws.tenant.brand?.accent)}
+    >
       <header className="flex shrink-0 items-center gap-3 border-b border-line bg-paper px-4 py-2.5 md:hidden">
         <button
           onClick={() => setNavOpen(true)}

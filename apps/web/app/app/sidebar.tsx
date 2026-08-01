@@ -87,7 +87,17 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
       >
         <div className="border-b border-line px-5 py-4">
           <p className="data text-ink-faint uppercase">Operations Engine</p>
-          <h1 className="mt-1 truncate text-base font-semibold tracking-tight">{tenant.name}</h1>
+          {tenant.logo_url ? (
+            // Presigned storage URL — next/image can't optimise it.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={tenant.logo_url}
+              alt={tenant.name}
+              className="mt-1.5 max-h-10 w-auto max-w-full"
+            />
+          ) : (
+            <h1 className="mt-1 truncate text-base font-semibold tracking-tight">{tenant.name}</h1>
+          )}
         </div>
 
         <nav className="min-h-0 flex-1 overflow-y-auto p-3" onClick={onClose}>
@@ -273,9 +283,27 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             </p>
           )}
           <p className="truncate text-xs text-ink-muted">{ws.email}</p>
-          <button onClick={ws.logout} className="text-xs text-ink-muted underline hover:text-ink">
-            Sign out
-          </button>
+          <div className="flex items-center gap-3">
+            {(tenant.role === "admin" || tenant.role === "owner") && (
+              <Link
+                href="/app/settings"
+                onClick={onClose}
+                className={`text-xs underline ${
+                  pathname.startsWith("/app/settings")
+                    ? "text-accent"
+                    : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                Settings
+              </Link>
+            )}
+            <button
+              onClick={ws.logout}
+              className="text-xs text-ink-muted underline hover:text-ink"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </aside>
     </>

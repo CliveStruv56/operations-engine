@@ -20,6 +20,7 @@ export type Tenant = {
   features: Record<string, unknown>;
   trial_ends_at: string | null;
   role: string;
+  logo_url: string | null;
 };
 
 export type MembershipRef = { tenant_id: string; name: string; role: string };
@@ -54,6 +55,7 @@ type WorkspaceState = {
   createProject: (name: string) => Promise<Project | null>;
   refreshProjects: () => Promise<void>;
   refreshConversations: () => Promise<void>;
+  refreshTenant: () => Promise<void>;
   logout: () => Promise<void>;
 };
 
@@ -166,6 +168,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (tenant) await loadConversations(tenant.id);
   }, [tenant, loadConversations]);
 
+  const refreshTenant = useCallback(async () => {
+    if (tenant) await selectTenant(tenant.id);
+  }, [tenant, selectTenant]);
+
   const logout = useCallback(async () => {
     await createClient().auth.signOut();
     localStorage.removeItem("tenantId");
@@ -189,6 +195,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         createProject,
         refreshProjects,
         refreshConversations,
+        refreshTenant,
         logout,
       }}
     >

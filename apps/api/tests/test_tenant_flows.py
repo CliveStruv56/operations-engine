@@ -73,6 +73,60 @@ async def test_admin_can_patch_brand(client):
     assert resp.json()["brand"]["primary"] == "#123456"
 
 
+async def test_brand_validation_and_logo_upload_guards(client):
+    tenant = await seed_tenant(client, f"logo-{uuid4().hex[:6]}")
+    headers = auth(tenant.owner_id, tenant.id)
+
+    resp = await client.patch(
+        "/api/v1/tenants/me", json={"brand": {"accent": "green"}}, headers=headers
+    )
+    assert resp.status_code == 422
+
+    resp = await client.patch(
+        "/api/v1/tenants/me", json={"brand": {"accent": "#336699"}}, headers=headers
+    )
+    assert resp.status_code == 200
+    assert resp.json()["brand"]["accent"] == "#336699"
+    assert resp.json()["logo_url"] is None
+
+    resp = await client.post(
+        "/api/v1/tenants/me/logo",
+        json={"mime": "image/svg+xml", "size_bytes": 100},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "unsupported_type"
+
+    resp = await client.post(
+        "/api/v1/tenants/me/logo",
+        json={"mime": "image/png", "size_bytes": 3 * 1024 * 1024},
+        headers=headers,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "too_large"
+
+    # Storage is disabled in unit tests: a valid request 503s rather than
+    # minting a URL.
+    resp = await client.post(
+        "/api/v1/tenants/me/logo", json={"mime": "image/png", "size_bytes": 1000}, headers=headers
+    )
+    assert resp.status_code == 503
+    assert resp.json()["error"]["code"] == "storage_unavailable"
+
+    # Members cannot touch branding.
+    member = uuid4()
+    accepted = await client.post(
+        "/api/v1/invites/accept", json={"token": tenant.invite_token}, headers=auth(member)
+    )
+    assert accepted.status_code == 200
+    resp = await client.post(
+        "/api/v1/tenants/me/logo",
+        json={"mime": "image/png", "size_bytes": 1000},
+        headers=auth(member, tenant.id),
+    )
+    assert resp.status_code == 403
+
+
 async def test_seat_enforcement_on_invites(client):
     tenant = await seed_tenant(client, f"seats-{uuid4().hex[:6]}")
     headers = auth(tenant.owner_id, tenant.id)
