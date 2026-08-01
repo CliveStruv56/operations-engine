@@ -35,7 +35,12 @@ export default function RootLayout({
       lang="en"
       className={`${jakarta.variable} ${fraunces.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      {/* suppressHydrationWarning: browser extensions (e.g. ColorZilla's
+          cz-shortcut-listen) stamp attributes on <body> before hydration;
+          this scopes only to this element's attributes, not children. */}
+      <body suppressHydrationWarning className="min-h-full flex flex-col">
+        {children}
+      </body>
     </html>
   );
 }
