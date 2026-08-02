@@ -42,7 +42,25 @@ async def workspace_search(
         """,
         pattern,
     )
+    # Contacts join the palette only when the CRM feature flag is on, mirroring
+    # the module gate on /contacts itself.
+    contacts: list[asyncpg.Record] = []
+    crm_enabled = await conn.fetchval(
+        "select features->>'contacts' = 'true' from tenants where id = $1", ctx.tenant_id
+    )
+    if crm_enabled:
+        contacts = await conn.fetch(
+            """
+            select c.id, c.name, c.job_title, c.email, co.name as company_name
+            from crm_contacts c
+            left join crm_companies co on co.id = c.company_id
+            where c.name ilike $1 or c.email ilike $1 or co.name ilike $1
+            order by c.name limit 10
+            """,
+            pattern,
+        )
     return {
         "conversations": [dict(r) for r in conversations],
         "documents": [dict(r) for r in documents],
+        "contacts": [dict(r) for r in contacts],
     }

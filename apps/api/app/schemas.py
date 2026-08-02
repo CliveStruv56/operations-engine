@@ -304,9 +304,20 @@ class UsageBucket(BaseModel):
     requests: int
 
 
+class ContactHit(BaseModel):
+    """⌘K search row for a CRM contact — list shape only, not the full record."""
+
+    id: UUID
+    name: str
+    job_title: str | None
+    company_name: str | None
+    email: str | None
+
+
 class SearchResultsOut(BaseModel):
     conversations: list[ConversationOut]
     documents: list[DocumentOut]
+    contacts: list[ContactHit]
 
 
 class UsageSummaryOut(BaseModel):

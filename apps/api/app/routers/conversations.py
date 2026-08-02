@@ -18,10 +18,18 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from app.audit import write_audit
+from app.crm.lookup import contacts_block, match_contacts
 from app.db import db
 from app.errors import ApiError
 from app.litellm import StreamResult, estimate_cost_usd, litellm_client
-from app.prompts import NO_COVERAGE_PROMPT, SYSTEM_PROMPT, TASK_PROMPTS, VAULT_PROMPT, WEB_PROMPT
+from app.prompts import (
+    CONTACTS_PROMPT,
+    NO_COVERAGE_PROMPT,
+    SYSTEM_PROMPT,
+    TASK_PROMPTS,
+    VAULT_PROMPT,
+    WEB_PROMPT,
+)
 from app.ratelimit import rate_limiter
 from app.retrieval import PRIMARY_WEIGHT, PROJECT_WEIGHT, RetrievedChunk, Scope, retrieve
 from app.routing import estimate_tokens, select_route
@@ -298,14 +306,21 @@ async def post_message(
             "select litellm_key_encrypted, soft_budget_usd, features from tenants where id = $1",
             ctx.tenant_id,
         )
+        features = json.loads(tenant["features"])
         if body.task_kind == "research":
             # Same gate shape as the Groundwork module: research prompts go
             # to a third-party search API, so it is opt-in per tenant.
-            features = json.loads(tenant["features"])
             if features.get("web_search") is not True:
                 raise ApiError(
                     400, "feature_disabled", "Web search is not enabled for this workspace"
                 )
+        # Contact book lookup (CRM module): name/company mentions in the
+        # message pull matching records into the prompt so "what's Sarah's
+        # number?" answers from stored data instead of guessing.
+        matched_contacts: list = []
+        matched_companies: list = []
+        if features.get("contacts") is True:
+            matched_contacts, matched_companies = await match_contacts(conn, body.content)
         month_spend = await conn.fetchval(
             """
             select coalesce(sum(cost_usd), 0) from usage_events
@@ -375,6 +390,10 @@ async def post_message(
             system += "\n\n" + NO_COVERAGE_PROMPT
     if web_sources:
         system += "\n\n" + WEB_PROMPT.format(results=_web_block(web_sources))
+    if matched_contacts or matched_companies:
+        system += "\n\n" + CONTACTS_PROMPT.format(
+            records=contacts_block(matched_contacts, matched_companies)
+        )
     llm_messages = [{"role": "system", "content": system}]
     llm_messages += [{"role": r["role"], "content": r["content"]} for r in history]
     llm_messages.append({"role": "user", "content": body.content})

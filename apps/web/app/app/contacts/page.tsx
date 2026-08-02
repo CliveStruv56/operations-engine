@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ApiError } from "@/lib/api";
 import { Company, Contact, companyAddress, crm } from "@/lib/crm";
 import { tenantId } from "@/lib/groundwork";
@@ -14,7 +14,17 @@ type View = "people" | "companies";
 const NEW = "new" as const;
 
 export default function ContactsPage() {
+  return (
+    // useSearchParams needs a Suspense boundary at the page level.
+    <Suspense>
+      <ContactsPageInner />
+    </Suspense>
+  );
+}
+
+function ContactsPageInner() {
   const router = useRouter();
+  const sp = useSearchParams();
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [companies, setCompanies] = useState<Company[] | null>(null);
   const [view, setView] = useState<View>("people");
@@ -48,6 +58,17 @@ export default function ContactsPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh();
   }, [router, refresh]);
+
+  // ⌘K hands off with ?c=<id>: open that contact's editor once loaded, then
+  // strip the param so refresh/back doesn't reopen it.
+  const wanted = sp.get("c");
+  useEffect(() => {
+    if (!wanted || !contacts) return;
+    const hit = contacts.find((c) => c.id === wanted);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (hit) setEditContact(hit);
+    router.replace("/app/contacts");
+  }, [wanted, contacts, router]);
 
   function closeEditors(saved: boolean) {
     setEditContact(null);

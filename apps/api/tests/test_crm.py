@@ -1,5 +1,6 @@
 """CRM module: feature flag, contact/company CRUD, filters, email dedupe,
-project links, and cross-tenant direct-object-reference attacks.
+project links, cross-tenant direct-object-reference attacks, and chat
+contact-book lookup (prompt injection of matching records).
 
 SQL-level RLS for the crm_* tables is covered by test_isolation.py
 (TENANT_TABLES); this file exercises the API surface.
@@ -7,7 +8,10 @@ SQL-level RLS for the crm_* tables is covered by test_isolation.py
 
 from uuid import uuid4
 
+import pytest
+
 from app.db import db
+from app.litellm import StreamResult, litellm_client
 from tests.conftest import Tenant, auth, seed_tenant
 
 
@@ -258,3 +262,86 @@ async def test_mutations_are_audited(client):
             for r in await conn.fetch("select action from audit_log where target_id = $1", c["id"])
         }
     assert {"crm.contact_create", "crm.contact_update", "crm.contact_delete"} <= actions
+
+
+# -- chat lookup -------------------------------------------------------------
+
+
+@pytest.fixture
+def capture_llm(monkeypatch):
+    """Stub stream_chat, recording the system prompt of each call."""
+    prompts: list[str] = []
+
+    async def _fake(virtual_key, alias, messages, result: StreamResult):
+        prompts.append(messages[0]["content"])
+        result.text_parts.append("ok")
+        yield "ok"
+        result.tokens_in = 10
+        result.tokens_out = 5
+
+    monkeypatch.setattr(litellm_client, "stream_chat", _fake)
+    return prompts
+
+
+async def _chat_ready_tenant(client, name: str, contacts: bool = True) -> Tenant:
+    t = await seed_tenant(client, name)
+    if contacts:
+        await enable_contacts(t)
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            "update tenants set litellm_key_encrypted = 'sk-test-virtual' where id = $1", t.id
+        )
+    return t
+
+
+async def _say(client, tenant: Tenant, content: str) -> None:
+    headers = auth(tenant.owner_id, tenant.id)
+    conv = (await client.post("/api/v1/conversations", json={"title": "t"}, headers=headers)).json()
+    resp = await client.post(
+        f"/api/v1/conversations/{conv['id']}/messages",
+        json={"content": content, "use_vault": False},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_chat_injects_matching_contact(client, capture_llm):
+    t = await _chat_ready_tenant(client, f"crmchat-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    await client.post(
+        "/api/v1/contacts",
+        json={"name": "Sarah Meadows", "phone": "0113 555 0100", "job_title": "Planner"},
+        headers=headers,
+    )
+
+    await _say(client, t, "What is Sarah's phone number?")
+    system = capture_llm[-1]
+    assert "<contact-records>" in system
+    assert "Sarah Meadows" in system
+    assert "0113 555 0100" in system
+
+    # No name mentioned → no injection.
+    await _say(client, t, "Summarise our leave policy")
+    assert "<contact-records>" not in capture_llm[-1]
+
+
+async def test_chat_injects_matching_company(client, capture_llm):
+    t = await _chat_ready_tenant(client, f"crmchatco-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    await client.post(
+        "/api/v1/companies",
+        json={"name": "Brightside Builders", "phone": "0161 555 0199", "city": "Leeds"},
+        headers=headers,
+    )
+
+    await _say(client, t, "Do we have an address for Brightside?")
+    system = capture_llm[-1]
+    assert "Brightside Builders (company)" in system
+    assert "0161 555 0199" in system
+
+
+async def test_chat_lookup_respects_feature_flag(client, capture_llm):
+    t = await _chat_ready_tenant(client, f"crmchatoff-{uuid4().hex[:6]}", contacts=False)
+    # The seeded contact would match by name, but the flag is off.
+    await _say(client, t, "What is the contact's email for our crmchatoff project?")
+    assert "<contact-records>" not in capture_llm[-1]

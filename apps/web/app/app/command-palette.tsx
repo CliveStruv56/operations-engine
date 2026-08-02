@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
-import { ChatIcon, DocIcon, SearchIcon } from "@/components/icons";
+import { ChatIcon, DocIcon, PeopleIcon, SearchIcon } from "@/components/icons";
 import { useWorkspace } from "./workspace";
 
 type SearchResults = {
@@ -14,13 +14,15 @@ type SearchResults = {
     is_mine: boolean;
   }[];
   documents: { id: string; title: string; project_id: string | null; status: string }[];
+  contacts: { id: string; name: string; job_title: string | null; company_name: string | null }[];
 };
 
 type Row =
   | { kind: "conversation"; id: string; title: string; projectId: string | null; shared: boolean }
-  | { kind: "document"; id: string; title: string; projectId: string | null };
+  | { kind: "document"; id: string; title: string; projectId: string | null }
+  | { kind: "contact"; id: string; title: string; detail: string | null };
 
-const EMPTY: SearchResults = { conversations: [], documents: [] };
+const EMPTY: SearchResults = { conversations: [], documents: [], contacts: [] };
 
 /** ⌘K palette: searches chats & documents via GET /search. Opened by the
  * sidebar search button (custom event) or the keyboard shortcut. */
@@ -104,9 +106,22 @@ export default function CommandPalette() {
     ...results.documents.map(
       (d): Row => ({ kind: "document", id: d.id, title: d.title, projectId: d.project_id })
     ),
+    ...results.contacts.map(
+      (c): Row => ({
+        kind: "contact",
+        id: c.id,
+        title: c.name,
+        detail: [c.job_title, c.company_name].filter(Boolean).join(", ") || null,
+      })
+    ),
   ];
 
   function go(row: Row) {
+    setOpen(false);
+    if (row.kind === "contact") {
+      router.push(`/app/contacts?c=${row.id}`);
+      return;
+    }
     const params = new URLSearchParams();
     if (row.kind === "conversation") {
       if (row.projectId) params.set("project", row.projectId);
@@ -115,7 +130,6 @@ export default function CommandPalette() {
       params.set("view", "vault");
       if (row.projectId) params.set("project", row.projectId);
     }
-    setOpen(false);
     router.push(`/app?${params.toString()}`);
   }
 
@@ -175,15 +189,17 @@ export default function CommandPalette() {
               Type to search your conversations and vault documents.
             </p>
           )}
-          {(["conversation", "document"] as const).map((kind) => {
+          {(["conversation", "document", "contact"] as const).map((kind) => {
             const group = rows
               .map((row, i) => ({ row, i }))
               .filter(({ row }) => row.kind === kind);
             if (group.length === 0) return null;
+            const label =
+              kind === "conversation" ? "Chats" : kind === "document" ? "Documents" : "Contacts";
             return (
               <div key={kind}>
                 <p className="px-3 pt-2 pb-1 text-[10.5px] font-bold tracking-[.1em] text-faint uppercase">
-                  {kind === "conversation" ? "Chats" : "Documents"}
+                  {label}
                 </p>
                 {group.map(({ row, i }) => (
                   <button
@@ -196,16 +212,25 @@ export default function CommandPalette() {
                   >
                     {row.kind === "conversation" ? (
                       <ChatIcon className="h-3.5 w-3.5" />
-                    ) : (
+                    ) : row.kind === "document" ? (
                       <DocIcon className="h-3.5 w-3.5" />
+                    ) : (
+                      <PeopleIcon className="h-3.5 w-3.5" />
                     )}
                     <span className="truncate">{row.title}</span>
+                    {row.kind === "contact" && row.detail && (
+                      <span className="truncate text-[11.5px] font-medium text-faint">
+                        {row.detail}
+                      </span>
+                    )}
                     <span className="ml-auto text-[10.5px] font-bold text-faint uppercase">
                       {row.kind === "conversation"
                         ? row.shared
                           ? "shared"
                           : "chat"
-                        : "vault"}
+                        : row.kind === "document"
+                          ? "vault"
+                          : "contact"}
                     </span>
                   </button>
                 ))}

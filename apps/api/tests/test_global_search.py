@@ -2,6 +2,7 @@
 
 from uuid import uuid4
 
+from app.db import db
 from tests.conftest import auth, seed_tenant
 
 
@@ -89,7 +90,38 @@ async def test_search_escapes_like_wildcards(client, two_tenants):
     a, _ = two_tenants
     resp = await client.get("/api/v1/search", params={"q": "%"}, headers=auth(a.owner_id, a.id))
     assert resp.status_code == 200
-    assert resp.json() == {"conversations": [], "documents": []}
+    assert resp.json() == {"conversations": [], "documents": [], "contacts": []}
+
+
+async def test_search_contacts_only_when_flag_on(client, two_tenants):
+    """The seeded contact surfaces in ⌘K only once the CRM flag is enabled,
+    and never crosses tenants."""
+    a, b = two_tenants
+
+    # Flag off (seed default): the seeded contact exists but stays out.
+    resp = await client.get(
+        "/api/v1/search", params={"q": "contact"}, headers=auth(a.owner_id, a.id)
+    )
+    assert resp.status_code == 200
+    assert resp.json()["contacts"] == []
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        await conn.execute(
+            """update tenants set features = features || '{"contacts": true}' where id = $1""",
+            a.id,
+        )
+    resp = await client.get(
+        "/api/v1/search", params={"q": "contact"}, headers=auth(a.owner_id, a.id)
+    )
+    assert resp.status_code == 200
+    hits = resp.json()["contacts"]
+    assert [h["id"] for h in hits] == [str(a.contact_id)]
+    assert hits[0]["company_name"] is not None
+    assert str(b.contact_id) not in {h["id"] for h in hits}
+
+    # Company-name matches surface the company's people too.
+    resp = await client.get("/api/v1/search", params={"q": "ltd"}, headers=auth(a.owner_id, a.id))
+    assert [h["id"] for h in resp.json()["contacts"]] == [str(a.contact_id)]
 
 
 async def test_search_requires_query(client, two_tenants):
