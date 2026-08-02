@@ -12,7 +12,9 @@ import { BudgetTab } from "./tabs/BudgetTab";
 import { RisksTab } from "./tabs/RisksTab";
 import { ConditionsTab } from "./tabs/ConditionsTab";
 import { StakeholdersTab } from "./tabs/StakeholdersTab";
+import { ContactsTab } from "./tabs/ContactsTab";
 import { input } from "./tabs/ui";
+import { useWorkspace } from "../../workspace";
 
 const TABS = [
   "Overview",
@@ -24,13 +26,18 @@ const TABS = [
   "Risks",
   "Conditions",
   "Stakeholders",
+  "Contacts", // shown only when the CRM feature flag is on
 ] as const;
 
 export default function ProjectRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const ws = useWorkspace();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
   const [error, setError] = useState<string | null>(null);
+  const tabs = TABS.filter(
+    (t) => t !== "Contacts" || ws.tenant?.features?.contacts === true
+  );
 
   const refresh = useCallback(
     () =>
@@ -128,7 +135,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
       )}
 
       <nav className="mb-5 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -152,6 +159,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
       {tab === "Risks" && <RisksTab id={id} />}
       {tab === "Conditions" && <ConditionsTab id={id} />}
       {tab === "Stakeholders" && <StakeholdersTab id={id} />}
+      {tab === "Contacts" && <ContactsTab id={id} />}
       </div>
     </main>
   );

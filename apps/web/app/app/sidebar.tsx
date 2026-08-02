@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChatIcon,
   HomeIcon,
+  PeopleIcon,
   PulseIcon,
   SearchIcon,
   TargetIcon,
@@ -119,6 +120,17 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             <VaultIcon />
             Vault
           </Link>
+          {tenant.features?.contacts === true && (
+            <Link
+              href="/app/contacts"
+              className={`${item} mt-0.5 ${
+                pathname.startsWith("/app/contacts") ? itemActive : itemRest
+              }`}
+            >
+              <PeopleIcon />
+              Contacts
+            </Link>
+          )}
 
           {tenant.features?.projects === true && (
             <>
