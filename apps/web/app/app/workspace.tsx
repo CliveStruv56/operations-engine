@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useRouter } from "next/navigation";
@@ -178,6 +179,22 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const refreshTenant = useCallback(async () => {
     if (tenant) await selectTenant(tenant.id);
   }, [tenant, selectTenant]);
+
+  // Refetch on tab focus so tenant-shared data (projects, shared chats)
+  // converges after a teammate changes something. Targeted refreshers only —
+  // refreshTenant re-runs selectTenant and would flash error/picker state.
+  const lastFocusRefetch = useRef(0);
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastFocusRefetch.current < 20_000) return;
+      lastFocusRefetch.current = Date.now();
+      refreshProjects();
+      refreshConversations();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [refreshProjects, refreshConversations]);
 
   const logout = useCallback(async () => {
     await createClient().auth.signOut();
