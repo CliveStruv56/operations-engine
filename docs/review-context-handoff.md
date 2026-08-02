@@ -295,6 +295,76 @@ only via `/admin`. Contacts flag ON: Struvers + W1 Proof (dev), Struvers2
 (staging). API suite now **177 tests**. §6c's "staging still at bc9aaf6"
 is superseded — staging is fully current.
 
+## 6e. Code-review fixes + deploy (2 Aug 2026, after §6d)
+
+A high-effort `/code-review` over the §6d diff (57 changed files) returned
+**10 verified findings — all fixed** in three commits: `9e0f10e` (activity
+leak), `3ecb7fc` (CRM API), `d583dcf` (web). Merged fast-forward to `main`;
+CI + App images green. **New invariants a future session must not undo:**
+
+- **Audit meta is not a safe place for content.** `patch_conversation` now
+  attaches `meta={"title": ...}` **only on share**, never on unshare —
+  `/activity` returns `meta` verbatim to every member, so the unshare row
+  was publishing the title of a chat the owner had just made private.
+  Migration **0011** scrubs the key from existing rows; its `downgrade` is
+  deliberately a **no-op** (restoring the titles would restore the bug).
+- **Patch models reject an explicit `null`** on NOT NULL columns via the
+  `NotNull` `BeforeValidator` in `app/crm/schemas.py` (`ContactPatch.name`
+  /`.tags`, `CompanyPatch.name`) → 422, not a 500 from asyncpg. Unset still
+  means "unchanged"; nullable `company_id` still accepts null.
+- **The CSV importer must not out-write the editor.** Field caps live once
+  in `app/crm/schemas.py` (`NAME_MAX`, `JOB_TITLE_MAX`, …) and the importer
+  imports them; a row whose email fails `EMAIL` is **skipped with its line
+  and reason**, not stored. Previously such rows imported fine and then
+  could never be saved again from `ContactEditor`.
+- **`like_contains()` in `app/sqlutil.py` is now the only way to build an
+  ILIKE pattern** — escapes `%`, `_`, `\`. Contacts, companies and
+  `global_search` all use it (the latter's private `_LIKE_SPECIALS` is
+  gone). Unescaped, `_` silently matched any character and `%` matched the
+  whole tenant.
+- **Chat lookup matches whole words** (`app/crm/lookup.py`): a POSIX
+  `\m(tok|tok)\M` regex over names/company names, plus email matched in
+  **full or by local part**. Substring matching put a bystander's mobile
+  and home address into the prompt ("the SAM report" → Samantha Fry), and
+  a bare domain token returned everyone at that company. These are private
+  contact details — a wrong match is a disclosure, not just noise.
+- **`GET /contacts` has an opt-in `limit` (1–100)**, used by pickers. There
+  is deliberately **no default cap**: silent truncation in the address book
+  would read as "these contacts no longer exist".
+- **Web guards fail closed.** The composer's `readOnly` no longer treats
+  "absent from `ws.conversations`" as writable — that list is also empty
+  when its fetch failed. Ownership is positive: unknown id ⇒ read-only
+  unless this panel created it (`createdHereIds`). New context field
+  **`ws.conversationsLoaded`** distinguishes "no chats" from "fetch
+  failed"; the banner wording depends on it.
+- Contacts page: `Empty` (onboarding) now keys off the **unfiltered**
+  list, with a separate `NoMatches` + Clear filters for filtered-to-nothing.
+  `ContactsTab` picker is a debounced server-side search (no wholesale
+  fetch) and link/unlink surface failures. `InviteLink` is reused for
+  invite **re-issue** (prop widened to `{name, invite}`) so the token is
+  always rendered — a clipboard rejection previously discarded the only
+  copy of a live invite.
+
+**Deploy gotcha (cost us one failed deploy):** `railway up` uploads the
+**linked project root**, not your cwd — running it from `apps/api` sends
+the whole repo and Railpack fails with "could not determine how to build".
+Correct form, from the repo root:
+`railway up ./apps/api --path-as-root --service api` (reproduces the
+`DOCKERFILE` builder earlier deploys used). Migrations were then run inside
+the deployed container: `railway ssh -s api "alembic upgrade head"` — note
+the **remote** shell expands `$$`, so dollar-quoted SQL in a `railway ssh`
+one-liner breaks; use `%s` params instead.
+
+**Environment state**: `main` = `d583dcf` (origin/main had been **11
+commits behind** — the whole §6d series was local-only until this push).
+Staging redeployed from that commit: Railway `api` (health OK) + Vercel
+`ops-engine-staging-web`; **staging DB at 0011**, worker untouched (no
+changes). Staging had **zero** `conversation.unshare` rows, so the scrub
+was a no-op there — nothing had actually leaked. API suite now **185
+tests**. ⚠️ **Local dev DB is still at 0010** — run
+`cd apps/api && uv run alembic upgrade head` before working on audit/feed
+code.
+
 ## 7. Read first in a new session
 
 1. This file.
