@@ -21,7 +21,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Operations Engine",
+  title: "Flowgrid OS",
   description: "Your company documents, working for you",
 };
 

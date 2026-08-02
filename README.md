@@ -1,6 +1,6 @@
-# Operations Engine
+# Flowgrid OS
 
-White-label, multi-tenant AI operations SaaS for UK SMBs (3–50 seats). One branded
+Flowgrid OS (codename "Operations Engine" until Aug 2026) — white-label, multi-tenant AI operations SaaS for UK SMBs (3–50 seats). One branded
 workspace per client: chat workspace, cited knowledge vault (RAG), cost-routed
 open-weight models via cloud APIs only.
 

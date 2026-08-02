@@ -139,7 +139,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               {tenant.name}
             </span>
             <span className="block text-[10.5px] font-bold uppercase tracking-[.09em] text-faint">
-              Operations Engine
+              Flowgrid OS
             </span>
           </span>
         </div>

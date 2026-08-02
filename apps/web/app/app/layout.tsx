@@ -12,7 +12,7 @@ function Onboarding() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <p className="data mb-2 text-ink-faint uppercase">Operations Engine</p>
+        <p className="data mb-2 text-ink-faint uppercase">Flowgrid OS</p>
         {ws.error && (
           <p className="mb-4 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
             {ws.error}
