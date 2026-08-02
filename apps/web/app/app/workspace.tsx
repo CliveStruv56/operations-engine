@@ -38,6 +38,9 @@ export type Conversation = {
   id: string;
   title: string | null;
   project_id: string | null;
+  visibility: "private" | "tenant";
+  is_mine: boolean;
+  owner_email: string | null;
   updated_at: string;
 };
 

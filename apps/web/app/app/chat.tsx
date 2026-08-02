@@ -14,6 +14,7 @@ import {
 } from "@/components/icons";
 import { AnswerMarkdown } from "@/components/markdown";
 import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
+import ShareBar from "./share-bar";
 import { useWorkspace } from "./workspace";
 
 type Citation = {
@@ -129,11 +130,13 @@ function AssistantMessage({
   scope,
   onExport,
   exporting,
+  readOnly,
 }: {
   m: Message;
   scope: string | undefined;
   onExport: () => void;
   exporting: boolean;
+  readOnly: boolean;
 }) {
   const [showAllSources, setShowAllSources] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -189,7 +192,7 @@ function AssistantMessage({
             {showAllSources ? "Show fewer sources" : `Show all ${cites.length} sources`}
           </button>
         )}
-        {isSlideDeck(m.content) && !m.id.startsWith("local-") && (
+        {!readOnly && isSlideDeck(m.content) && !m.id.startsWith("local-") && (
           <button
             onClick={onExport}
             disabled={exporting}
@@ -221,6 +224,10 @@ export default function ChatPanel({
   const ws = useWorkspace();
   const tenantId = ws.tenant!.id;
   const activeProject = ws.projects.find((p) => p.id === activeProjectId) ?? null;
+  // A just-created conversation isn't in ws.conversations yet — that's fine:
+  // it's the caller's own, so the absence correctly means "not read-only".
+  const activeConv = ws.conversations.find((c) => c.id === activeConversationId) ?? null;
+  const readOnly = activeConv !== null && !activeConv.is_mine;
   const [scopes, setScopes] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
@@ -398,6 +405,7 @@ export default function ChatPanel({
           Project: {activeProject.name} — answers prefer this project&apos;s documents
         </p>
       )}
+      {activeConv?.is_mine && !empty && <ShareBar conversation={activeConv} onError={setError} />}
       {softCap && (
         <p className="border-b border-edge bg-warn-soft px-6 py-2 text-sm font-semibold text-warn">
           This workspace has used its monthly budget — replies use the economy model until it
@@ -430,6 +438,7 @@ export default function ChatPanel({
                     scope={scopes[m.id]}
                     onExport={() => exportSlides(m.id)}
                     exporting={exportingId === m.id}
+                    readOnly={readOnly}
                   />
                 )
               )}
@@ -459,6 +468,13 @@ export default function ChatPanel({
         </p>
       )}
 
+      {readOnly ? (
+        <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
+          <p className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge bg-sidebar px-5 py-3.5 text-center text-[13px] font-semibold text-subtle">
+            Shared by {activeConv?.owner_email ?? "a teammate"} — read only
+          </p>
+        </div>
+      ) : (
       <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
         <form
           onSubmit={send}
@@ -561,6 +577,7 @@ export default function ChatPanel({
           </div>
         </form>
       </div>
+      )}
     </section>
   );
 }

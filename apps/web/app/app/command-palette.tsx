@@ -7,12 +7,17 @@ import { ChatIcon, DocIcon, SearchIcon } from "@/components/icons";
 import { useWorkspace } from "./workspace";
 
 type SearchResults = {
-  conversations: { id: string; title: string | null; project_id: string | null }[];
+  conversations: {
+    id: string;
+    title: string | null;
+    project_id: string | null;
+    is_mine: boolean;
+  }[];
   documents: { id: string; title: string; project_id: string | null; status: string }[];
 };
 
 type Row =
-  | { kind: "conversation"; id: string; title: string; projectId: string | null }
+  | { kind: "conversation"; id: string; title: string; projectId: string | null; shared: boolean }
   | { kind: "document"; id: string; title: string; projectId: string | null };
 
 const EMPTY: SearchResults = { conversations: [], documents: [] };
@@ -93,6 +98,7 @@ export default function CommandPalette() {
         id: c.id,
         title: c.title ?? "Untitled",
         projectId: c.project_id,
+        shared: !c.is_mine,
       })
     ),
     ...results.documents.map(
@@ -195,7 +201,11 @@ export default function CommandPalette() {
                     )}
                     <span className="truncate">{row.title}</span>
                     <span className="ml-auto text-[10.5px] font-bold text-faint uppercase">
-                      {row.kind === "conversation" ? "chat" : "vault"}
+                      {row.kind === "conversation"
+                        ? row.shared
+                          ? "shared"
+                          : "chat"
+                        : "vault"}
                     </span>
                   </button>
                 ))}
