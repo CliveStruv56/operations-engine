@@ -51,6 +51,23 @@ async def test_share_event_surfaces_with_title(client):
     assert shared["actor_email"] == "user@example.com"
 
 
+async def test_unshare_event_does_not_expose_title(client):
+    """The feed renders only "unshared a chat", but meta ships in the JSON."""
+    tenant = await seed_tenant(client, f"feedunshare-{uuid4().hex[:6]}")
+    headers = auth(tenant.owner_id, tenant.id)
+    for visibility in ("tenant", "private"):
+        resp = await client.patch(
+            f"/api/v1/conversations/{tenant.conversation_id}",
+            json={"visibility": visibility},
+            headers=headers,
+        )
+        assert resp.status_code == 200, resp.text
+
+    feed = (await client.get("/api/v1/activity", headers=headers)).json()
+    unshared = next(i for i in feed if i["action"] == "conversation.unshare")
+    assert "title" not in unshared["meta"]
+
+
 async def test_feed_limit_and_order(client):
     tenant = await seed_tenant(client, f"feedlimit-{uuid4().hex[:6]}")
     # One transaction per row: now() is transaction-start time, so a single

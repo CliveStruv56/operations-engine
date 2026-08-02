@@ -127,7 +127,7 @@ async def test_unshare_revokes_peer_access(client):
     assert resp.status_code == 404
 
 
-async def test_share_unshare_write_audit_with_title(client):
+async def test_share_writes_title_but_unshare_does_not(client):
     tenant = await seed_tenant(client, f"audit-{uuid4().hex[:6]}")
     owner_headers = auth(tenant.owner_id, tenant.id)
     for visibility in ("tenant", "private"):
@@ -154,9 +154,11 @@ async def test_share_unshare_write_audit_with_title(client):
             str(tenant.conversation_id),
         )
     assert [r["action"] for r in rows] == ["conversation.share", "conversation.unshare"]
-    for row in rows:
-        meta = row["meta"] if isinstance(row["meta"], dict) else json.loads(row["meta"])
-        assert meta["title"].endswith("chat")
+    metas = [r["meta"] if isinstance(r["meta"], dict) else json.loads(r["meta"]) for r in rows]
+    assert metas[0]["title"].endswith("chat")
+    # Making a chat private again must not carry its title into the audit log:
+    # /activity returns meta verbatim to every member of the tenant.
+    assert "title" not in metas[1]
 
 
 async def test_patch_visibility_validates_value(client):

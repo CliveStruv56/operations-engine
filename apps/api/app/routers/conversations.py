@@ -231,7 +231,8 @@ async def patch_conversation(
             conversation_id,
             body.visibility,
         )
-        action = "conversation.share" if body.visibility == "tenant" else "conversation.unshare"
+        shared = body.visibility == "tenant"
+        action = "conversation.share" if shared else "conversation.unshare"
         await write_audit(
             conn,
             ctx.tenant_id,
@@ -239,9 +240,10 @@ async def patch_conversation(
             action,
             "conversation",
             str(conversation_id),
-            # The owner is deliberately publishing this chat to the team, so
-            # its title is fair game for the activity feed.
-            meta={"title": row["title"]},
+            # Only publishing makes the title fair game for the tenant-wide
+            # feed: /activity returns meta verbatim, so carrying the title on
+            # the unshare would broadcast a chat the owner just made private.
+            meta={"title": row["title"]} if shared else None,
         )
     return dict(row)
 
