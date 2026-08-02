@@ -106,8 +106,17 @@ class ConversationOut(BaseModel):
     id: UUID
     title: str | None
     project_id: UUID | None
+    # Defaults keep create/patch paths (which return the bare row) valid;
+    # the list/search queries compute is_mine and join owner_email.
+    visibility: str = "private"
+    is_mine: bool = True
+    owner_email: str | None = None
     created_at: datetime
     updated_at: datetime
+
+
+class ConversationPatch(BaseModel):
+    visibility: str = Field(pattern="^(private|tenant)$")
 
 
 class MessageCreate(BaseModel):

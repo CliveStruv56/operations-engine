@@ -25,7 +25,13 @@ from app.prompts import NO_COVERAGE_PROMPT, SYSTEM_PROMPT, TASK_PROMPTS, VAULT_P
 from app.ratelimit import rate_limiter
 from app.retrieval import PRIMARY_WEIGHT, PROJECT_WEIGHT, RetrievedChunk, Scope, retrieve
 from app.routing import estimate_tokens, select_route
-from app.schemas import ConversationCreate, ConversationOut, MessageCreate, MessageOut
+from app.schemas import (
+    ConversationCreate,
+    ConversationOut,
+    ConversationPatch,
+    MessageCreate,
+    MessageOut,
+)
 from app.search import WebSource, exa_search
 from app.secrets import decrypt_llm_key
 from app.tenant import TenantContext, get_conn, require_role
@@ -160,10 +166,17 @@ async def list_conversations(
     ctx: TenantContext = Depends(require_role("member")),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
-    """A user sees their own conversations; chat history is personal even
-    inside a tenant."""
+    """A user sees their own conversations plus ones shared with the tenant;
+    private chat history is personal even inside a tenant."""
     rows = await conn.fetch(
-        "select * from conversations where user_id = $1 order by updated_at desc",
+        """
+        select c.id, c.title, c.project_id, c.visibility, c.created_at, c.updated_at,
+               c.user_id = $1 as is_mine, m.email as owner_email
+        from conversations c
+        left join memberships m on m.tenant_id = c.tenant_id and m.user_id = c.user_id
+        where c.user_id = $1 or c.visibility = 'tenant'
+        order by c.updated_at desc
+        """,
         ctx.user_id,
     )
     return [dict(r) for r in rows]
@@ -172,14 +185,57 @@ async def list_conversations(
 async def _get_owned_conversation(
     conn: asyncpg.Connection, ctx: TenantContext, conversation_id: UUID
 ) -> asyncpg.Record:
+    """Owner-only gate for writes (delete, post, share, export). 404 either
+    way — existence of someone else's private chat is not revealed, and
+    admins/owners get no override: private means private."""
     row = await conn.fetchrow(
         "select * from conversations where id = $1", conversation_id
     )  # RLS already scopes to tenant
-    if row is None:
-        raise ApiError(404, "not_found", "Conversation not found")
-    if row["user_id"] != ctx.user_id and ctx.role == "member":
+    if row is None or row["user_id"] != ctx.user_id:
         raise ApiError(404, "not_found", "Conversation not found")
     return row
+
+
+async def _get_readable_conversation(
+    conn: asyncpg.Connection, ctx: TenantContext, conversation_id: UUID
+) -> asyncpg.Record:
+    """Read gate: the owner, or any tenant member when shared."""
+    row = await conn.fetchrow(
+        "select * from conversations where id = $1", conversation_id
+    )  # RLS already scopes to tenant
+    if row is None or (row["user_id"] != ctx.user_id and row["visibility"] != "tenant"):
+        raise ApiError(404, "not_found", "Conversation not found")
+    return row
+
+
+@router.patch("/conversations/{conversation_id}", response_model=ConversationOut)
+async def patch_conversation(
+    conversation_id: UUID,
+    body: ConversationPatch,
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    row = await _get_owned_conversation(conn, ctx, conversation_id)
+    if body.visibility != row["visibility"]:
+        # No updated_at bump: sharing shouldn't fake recency in the sidebar.
+        row = await conn.fetchrow(
+            "update conversations set visibility = $2 where id = $1 returning *",
+            conversation_id,
+            body.visibility,
+        )
+        action = "conversation.share" if body.visibility == "tenant" else "conversation.unshare"
+        await write_audit(
+            conn,
+            ctx.tenant_id,
+            ctx.user_id,
+            action,
+            "conversation",
+            str(conversation_id),
+            # The owner is deliberately publishing this chat to the team, so
+            # its title is fair game for the activity feed.
+            meta={"title": row["title"]},
+        )
+    return dict(row)
 
 
 @router.delete("/conversations/{conversation_id}", status_code=204)
@@ -206,7 +262,7 @@ async def list_messages(
     ctx: TenantContext = Depends(require_role("member")),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
-    await _get_owned_conversation(conn, ctx, conversation_id)
+    await _get_readable_conversation(conn, ctx, conversation_id)
     rows = await conn.fetch(
         "select * from messages where conversation_id = $1 order by created_at",
         conversation_id,

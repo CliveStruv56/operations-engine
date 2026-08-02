@@ -1,6 +1,6 @@
 """Workspace search (⌘K palette): title match over the caller's conversations
-and the tenant's documents. Runs under the tenant RLS context; conversations
-are additionally personal (same rule as GET /conversations)."""
+(own + shared-with-tenant) and the tenant's documents. Runs under the tenant
+RLS context; conversations follow the same rule as GET /conversations."""
 
 import asyncpg
 from fastapi import APIRouter, Depends, Query
@@ -22,10 +22,12 @@ async def workspace_search(
     pattern = f"%{q.strip().translate(_LIKE_SPECIALS)}%"
     conversations = await conn.fetch(
         """
-        select id, title, project_id, created_at, updated_at
-        from conversations
-        where user_id = $1 and title ilike $2
-        order by updated_at desc limit 10
+        select c.id, c.title, c.project_id, c.visibility, c.created_at, c.updated_at,
+               c.user_id = $1 as is_mine, m.email as owner_email
+        from conversations c
+        left join memberships m on m.tenant_id = c.tenant_id and m.user_id = c.user_id
+        where (c.user_id = $1 or c.visibility = 'tenant') and c.title ilike $2
+        order by c.updated_at desc limit 10
         """,
         ctx.user_id,
         pattern,

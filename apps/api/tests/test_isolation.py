@@ -10,6 +10,7 @@ from uuid import uuid4
 import asyncpg
 import pytest
 
+from app.db import db
 from tests.conftest import APP_URL, auth
 
 TENANT_TABLES = [
@@ -39,6 +40,7 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("POST", "/api/v1/conversations"),
         ("GET", f"/api/v1/conversations/{b.conversation_id}/messages"),
         ("DELETE", f"/api/v1/conversations/{b.conversation_id}"),
+        ("PATCH", f"/api/v1/conversations/{b.conversation_id}"),
         ("POST", f"/api/v1/conversations/{b.conversation_id}/messages"),
         ("GET", "/api/v1/usage/summary"),
         ("GET", "/api/v1/documents"),
@@ -99,6 +101,22 @@ async def test_direct_object_reference_attacks(client, two_tenants):
 
     docs = (await client.get("/api/v1/documents", headers=headers)).json()
     assert str(b.document_id) not in {d["id"] for d in docs}
+
+
+async def test_shared_conversation_does_not_cross_tenants(client, two_tenants):
+    """Sharing widens visibility within the tenant only — a chat shared in B
+    stays invisible to A (RLS is the outer boundary)."""
+    a, b = two_tenants
+    async with db.tenant_tx(b.owner_id, b.id) as conn:
+        await conn.execute(
+            "update conversations set visibility = 'tenant' where id = $1",
+            b.conversation_id,
+        )
+    headers = auth(a.owner_id, a.id)
+    convs = (await client.get("/api/v1/conversations", headers=headers)).json()
+    assert str(b.conversation_id) not in {c["id"] for c in convs}
+    resp = await client.get(f"/api/v1/conversations/{b.conversation_id}/messages", headers=headers)
+    assert resp.status_code == 404
 
 
 async def test_usage_summary_is_tenant_scoped(client, two_tenants):

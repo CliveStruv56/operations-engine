@@ -1,6 +1,8 @@
 """Workspace search (⌘K): title matching, tenant + per-user scoping."""
 
-from tests.conftest import auth
+from uuid import uuid4
+
+from tests.conftest import auth, seed_tenant
 
 
 async def test_search_matches_conversation_and_document_titles(client, two_tenants):
@@ -36,12 +38,51 @@ async def test_search_is_tenant_scoped(client, two_tenants):
 
 
 async def test_search_conversations_are_personal(client, two_tenants):
-    """Conversations match GET /conversations semantics: only the caller's own."""
+    """Conversations match GET /conversations semantics: own + shared within
+    the tenant — never another tenant's."""
     a, b = two_tenants
     resp = await client.get("/api/v1/search", params={"q": "chat"}, headers=auth(b.owner_id, b.id))
     assert resp.status_code == 200
     ids = {c["id"] for c in resp.json()["conversations"]}
     assert ids == {str(b.conversation_id)}
+
+
+async def test_search_finds_shared_but_not_private_peer_chats(client):
+    """A member finds a teammate's shared chat by title, never a private one."""
+    tenant = await seed_tenant(client, f"searchshare-{uuid4().hex[:6]}")
+    owner_headers = auth(tenant.owner_id, tenant.id)
+    invite = (
+        await client.post(
+            "/api/v1/invites",
+            json={"email": "peer@example.com", "role": "member"},
+            headers=owner_headers,
+        )
+    ).json()
+    peer_id = uuid4()
+    resp = await client.post(
+        "/api/v1/invites/accept", json={"token": invite["token"]}, headers=auth(peer_id)
+    )
+    assert resp.status_code == 200
+    peer_headers = auth(peer_id, tenant.id)
+
+    # Private: invisible to the peer's search.
+    resp = await client.get("/api/v1/search", params={"q": "chat"}, headers=peer_headers)
+    assert resp.status_code == 200
+    assert resp.json()["conversations"] == []
+
+    resp = await client.patch(
+        f"/api/v1/conversations/{tenant.conversation_id}",
+        json={"visibility": "tenant"},
+        headers=owner_headers,
+    )
+    assert resp.status_code == 200
+
+    resp = await client.get("/api/v1/search", params={"q": "chat"}, headers=peer_headers)
+    assert resp.status_code == 200
+    rows = resp.json()["conversations"]
+    assert [c["id"] for c in rows] == [str(tenant.conversation_id)]
+    assert rows[0]["is_mine"] is False
+    assert rows[0]["owner_email"] == "user@example.com"
 
 
 async def test_search_escapes_like_wildcards(client, two_tenants):
