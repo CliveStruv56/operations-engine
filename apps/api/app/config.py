@@ -71,6 +71,18 @@ class Settings(BaseSettings):
     default_seats: int = 3
     default_soft_budget_per_seat_usd: float = 1.50
 
+    # Platform operator console. Comma-separated login emails that may use
+    # /admin endpoints. Empty = console disabled entirely.
+    platform_admin_emails: str = ""
+    # Open self-serve tenant creation. Staging/production set false so new
+    # workspaces come only from the operator console; platform admins are
+    # always allowed.
+    open_signup: bool = True
+
+    @property
+    def platform_admin_email_list(self) -> list[str]:
+        return [e.strip().lower() for e in self.platform_admin_emails.split(",") if e.strip()]
+
     @property
     def effective_app_database_url(self) -> str:
         return self.app_database_url or self.database_url

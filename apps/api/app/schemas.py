@@ -48,6 +48,63 @@ class TenantMeOut(TenantOut):
     role: str
 
 
+# -- operator console (platform admin) --------------------------------------
+
+FEATURE_FLAGS = {"projects", "contacts", "web_search"}
+
+
+class AdminTenantCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    owner_email: EmailStr
+    seats: int | None = Field(default=None, ge=1, le=100)
+    trial_days: int | None = Field(default=None, ge=1, le=365)
+    features: dict[str, bool] = {}
+    brand_accent: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+    @field_validator("features")
+    @classmethod
+    def _known_flags(cls, v: dict[str, bool]) -> dict[str, bool]:
+        unknown = set(v) - FEATURE_FLAGS
+        if unknown:
+            raise ValueError(f"unknown feature flag(s): {sorted(unknown)}")
+        return v
+
+
+class AdminInviteOut(BaseModel):
+    token: str
+    email: str
+    role: str
+    expires_at: datetime
+
+
+class AdminTenantCreatedOut(BaseModel):
+    id: UUID
+    name: str
+    seats: int
+    trial_ends_at: datetime | None
+    features: dict[str, Any]
+    brand: dict[str, Any]
+    invite: AdminInviteOut
+
+
+class AdminOwnerInviteIn(BaseModel):
+    email: EmailStr
+
+
+class AdminTenantRow(BaseModel):
+    id: UUID
+    name: str
+    plan: str
+    seats: int
+    trial_ends_at: datetime | None
+    created_at: datetime
+    features: dict[str, Any]
+    member_count: int
+    pending_invites: int
+    month_cost_usd: float
+    month_requests: int
+
+
 class MemberOut(BaseModel):
     id: UUID
     user_id: UUID

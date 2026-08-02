@@ -6,7 +6,7 @@ import asyncpg
 from fastapi import APIRouter, Depends
 
 from app.audit import write_audit
-from app.auth import AuthUser, get_current_user
+from app.auth import AuthUser, get_current_user, is_platform_admin
 from app.config import get_settings
 from app.db import db
 from app.errors import ApiError
@@ -51,6 +51,10 @@ def _tenant_out(row: asyncpg.Record) -> dict:
 async def create_tenant(body: TenantCreate, user: AuthUser = Depends(get_current_user)):
     """Bootstrap: tenant + owner membership + 14-day trial + LiteLLM virtual key."""
     settings = get_settings()
+    # Invite-only mode: staging/production close self-serve signup so client
+    # workspaces come from the operator console; platform admins keep access.
+    if not settings.open_signup and not is_platform_admin(user.email):
+        raise ApiError(403, "signup_closed", "New workspaces are set up by your provider")
     tenant_id = uuid4()
     trial_ends = datetime.now(UTC) + timedelta(days=settings.trial_days)
     soft_budget = settings.default_seats * settings.default_soft_budget_per_seat_usd

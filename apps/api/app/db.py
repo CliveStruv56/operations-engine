@@ -58,5 +58,20 @@ class Database:
                 await conn.execute("select set_config('app.current_user', $1, true)", str(user_id))
                 yield conn
 
+    @asynccontextmanager
+    async def platform_tx(self) -> AsyncIterator[asyncpg.Connection]:
+        """THE deliberate cross-tenant exception: a read connection as the
+        table-owner role (database_url, same as migrations), which RLS does
+        not bind. Used ONLY by the operator console's fleet listing behind
+        require_platform_admin — never in tenant-facing handlers. A direct
+        connection, not a pool: admin listing is rare and must not let
+        owner-role connections linger."""
+        conn = await asyncpg.connect(get_settings().database_url)
+        try:
+            async with conn.transaction():
+                yield conn
+        finally:
+            await conn.close()
+
 
 db = Database()

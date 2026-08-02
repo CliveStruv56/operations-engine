@@ -28,6 +28,9 @@ os.environ["STORAGE_ENDPOINT"] = ""
 # A developer .env with a live Exa key must not turn the search unit tests
 # into integration tests.
 os.environ["EXA_API_KEY"] = ""
+# Operator console: tokens minted with this email are platform admins.
+os.environ["PLATFORM_ADMIN_EMAILS"] = "operator@example.com"
+os.environ["OPEN_SIGNUP"] = "true"
 
 import jwt as pyjwt  # noqa: E402
 import psycopg  # noqa: E402

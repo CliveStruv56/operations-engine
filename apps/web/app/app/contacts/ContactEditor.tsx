@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ApiError } from "@/lib/api";
 import { Company, Contact, ContactForm, crm } from "@/lib/crm";
 import { btn, btnGhost, input, label } from "./ui";
-import { Panel } from "./Panel";
+import { Panel } from "@/components/Panel";
 
 const empty: ContactForm = {
   name: "",

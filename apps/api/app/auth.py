@@ -18,6 +18,12 @@ class AuthUser:
     email: str | None
 
 
+def is_platform_admin(email: str | None) -> bool:
+    """Operator identity: login email is on the PLATFORM_ADMIN_EMAILS list.
+    Empty list = no platform admins (console disabled)."""
+    return email is not None and email.lower() in get_settings().platform_admin_email_list
+
+
 @lru_cache
 def _jwks_client(url: str) -> jwt.PyJWKClient:
     return jwt.PyJWKClient(url, cache_keys=True)

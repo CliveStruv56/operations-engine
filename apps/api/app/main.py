@@ -13,6 +13,7 @@ from app.queue import ingest_queue
 from app.ratelimit import rate_limiter
 from app.routers import (
     activity,
+    admin,
     conversations,
     crm,
     documents,
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
         return {"status": "ok"}
 
     for router in (
+        admin.router,
         tenants.router,
         members.router,
         invites.router,

@@ -1,0 +1,171 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ApiError } from "@/lib/api";
+import {
+  AdminInvite,
+  AdminTenantCreated,
+  AdminTenantRow,
+  FEATURE_FLAGS,
+  admin,
+  inviteUrl,
+} from "@/lib/admin";
+import { InviteLink, NewWorkspace } from "./NewWorkspace";
+
+const fmtDate = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
+
+export default function AdminConsole() {
+  const router = useRouter();
+  const [rows, setRows] = useState<AdminTenantRow[] | null>(null);
+  const [denied, setDenied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<AdminTenantCreated | null>(null);
+  const [reissued, setReissued] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    try {
+      setRows(await admin<AdminTenantRow[]>("/admin/tenants"));
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) router.push("/login");
+      else if (err instanceof ApiError && err.status === 403) setDenied(true);
+      else setError(err instanceof Error ? err.message : String(err));
+    }
+  }, [router]);
+
+  useEffect(() => {
+    // Fetch-on-mount: every setState in refresh happens after an await.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    refresh();
+  }, [refresh]);
+
+  async function reissueInvite(t: AdminTenantRow) {
+    const email = window.prompt(`Owner invite for ${t.name} — send to which email?`);
+    if (!email) return;
+    try {
+      const invite = await admin<AdminInvite>(`/admin/tenants/${t.id}/owner-invite`, {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      await navigator.clipboard.writeText(inviteUrl(invite.token));
+      setReissued(`Owner invite for ${t.name} copied to clipboard (sent to ${email}).`);
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Invite failed — try again.");
+    }
+  }
+
+  if (denied)
+    return (
+      <main className="mx-auto max-w-2xl p-10">
+        <p className="rounded-card border border-edge bg-surface p-6 text-sm text-ink-muted">
+          This console is for the platform operator.
+        </p>
+      </main>
+    );
+
+  return (
+    <main className="min-h-screen">
+      <div className="mx-auto max-w-6xl p-6">
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="data text-ink-faint uppercase">Flowgrid OS</p>
+            <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">
+              Operator console
+            </h1>
+          </div>
+          <button
+            onClick={() => setCreating(true)}
+            className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+          >
+            New client workspace
+          </button>
+        </header>
+
+        {error && (
+          <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+            {error}
+          </p>
+        )}
+        {reissued && (
+          <p className="mb-3 rounded-[10px] border border-edge bg-surface px-3 py-2 text-sm">
+            {reissued}
+            <button
+              onClick={() => setReissued(null)}
+              className="ml-2 text-xs text-ink-muted underline hover:text-ink"
+            >
+              Dismiss
+            </button>
+          </p>
+        )}
+
+        {rows && (
+          <div className="overflow-x-auto rounded-card border border-edge bg-surface">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="data border-b border-line text-left text-ink-muted uppercase">
+                  <th className="px-4 py-2.5">Workspace</th>
+                  <th className="px-4 py-2.5">Created</th>
+                  <th className="px-4 py-2.5">Trial ends</th>
+                  <th className="px-4 py-2.5">Members</th>
+                  <th className="px-4 py-2.5">Month usage</th>
+                  <th className="px-4 py-2.5">Modules</th>
+                  <th className="px-4 py-2.5"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {rows.map((t) => (
+                  <tr key={t.id}>
+                    <td className="px-4 py-3 font-medium">{t.name}</td>
+                    <td className="data px-4 py-3 text-ink-faint">{fmtDate(t.created_at)}</td>
+                    <td className="px-4 py-3 text-ink-muted">{fmtDate(t.trial_ends_at)}</td>
+                    <td className="data px-4 py-3">
+                      {t.member_count}/{t.seats}
+                      {t.pending_invites > 0 && (
+                        <span className="text-ink-faint"> +{t.pending_invites} invited</span>
+                      )}
+                    </td>
+                    <td className="data px-4 py-3">
+                      ${t.month_cost_usd.toFixed(2)} · {t.month_requests} req
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="flex flex-wrap gap-1">
+                        {FEATURE_FLAGS.filter((f) => t.features[f.key] === true).map((f) => (
+                          <span key={f.key} className="stamp text-ink-muted">
+                            {f.key}
+                          </span>
+                        ))}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => reissueInvite(t)}
+                        className="text-xs text-ink-muted underline hover:text-ink"
+                      >
+                        Owner invite
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {creating && (
+        <NewWorkspace
+          onClose={() => setCreating(false)}
+          onCreated={(t) => {
+            setCreating(false);
+            setCreated(t);
+            refresh();
+          }}
+        />
+      )}
+      {created && <InviteLink invite={created} onDone={() => setCreated(null)} />}
+    </main>
+  );
+}
