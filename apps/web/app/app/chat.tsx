@@ -224,13 +224,11 @@ export default function ChatPanel({
   const ws = useWorkspace();
   const tenantId = ws.tenant!.id;
   const activeProject = ws.projects.find((p) => p.id === activeProjectId) ?? null;
-  // A just-created conversation isn't in ws.conversations yet — that's fine:
-  // it's the caller's own, so the absence correctly means "not read-only".
   const activeConv = ws.conversations.find((c) => c.id === activeConversationId) ?? null;
-  const readOnly = activeConv !== null && !activeConv.is_mine;
   const [scopes, setScopes] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
+  const [createdHereIds, setCreatedHereIds] = useState<string[]>([]);
   const [streamText, setStreamText] = useState<string | null>(null);
   const [softCap, setSoftCap] = useState(false);
   const [useVault, setUseVault] = useState(true);
@@ -249,6 +247,15 @@ export default function ChatPanel({
   // Set when this panel just created the conversation itself: the URL update
   // that follows must not refetch (and clobber) the in-flight local state.
   const justCreatedRef = useRef<string | null>(null);
+  // Ownership has to be established positively. Treating "absent from
+  // ws.conversations" as writable fails open: the list is also empty when its
+  // fetch failed, which would put a live composer on a teammate's shared chat
+  // and silently discard whatever was typed into it. createdHereIds keeps the
+  // ids this panel made — ws.conversations lags a create by one refresh, and
+  // writability must not blink off under a reply that is still streaming.
+  const createdHere = activeConversationId !== null && createdHereIds.includes(activeConversationId);
+  const unknownConversation = activeConversationId !== null && !createdHere && activeConv === null;
+  const readOnly = (activeConv !== null && !activeConv.is_mine) || unknownConversation;
 
   useEffect(() => {
     if (!activeConversationId) {
@@ -330,6 +337,7 @@ export default function ChatPanel({
         );
         convId = created.id;
         justCreatedRef.current = convId;
+        setCreatedHereIds((ids) => [...ids, created.id]);
         setModes((s) => ({ ...s, [created.id]: s["new"] ?? "chat" }));
         router.replace(convHref(convId));
         ws.refreshConversations();
@@ -471,7 +479,11 @@ export default function ChatPanel({
       {readOnly ? (
         <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
           <p className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge bg-sidebar px-5 py-3.5 text-center text-[13px] font-semibold text-subtle">
-            Shared by {activeConv?.owner_email ?? "a teammate"} — read only
+            {unknownConversation
+              ? ws.conversationsLoaded
+                ? "This chat isn't one of yours — read only"
+                : "Couldn't check who owns this chat — refresh to reply"
+              : `Shared by ${activeConv?.owner_email ?? "a teammate"} — read only`}
           </p>
         </div>
       ) : (

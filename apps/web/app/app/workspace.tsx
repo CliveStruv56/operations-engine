@@ -52,6 +52,9 @@ type WorkspaceState = {
   memberships: MembershipRef[] | null;
   projects: Project[];
   conversations: Conversation[];
+  /** False until a /conversations fetch has succeeded — an empty list alone
+   *  cannot tell "no chats" apart from "the fetch failed". */
+  conversationsLoaded: boolean;
   error: string | null;
   setError: (e: string | null) => void;
   selectTenant: (tenantId?: string) => Promise<void>;
@@ -79,6 +82,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [memberships, setMemberships] = useState<MembershipRef[] | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // A failing list must not take down the workspace, but it should be visible:
@@ -95,8 +99,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const loadConversations = useCallback(async (tenantId: string) => {
     try {
       setConversations(await api<Conversation[]>("/conversations", {}, tenantId));
+      setConversationsLoaded(true);
     } catch (err) {
       console.error("Failed to load conversations", err);
+      // Consumers must be able to tell "you have no chats" from "we don't
+      // know what you have" — the composer's read-only guard depends on it.
+      setConversationsLoaded(false);
       setError("Couldn't load your conversations — refresh to try again.");
     }
   }, []);
@@ -212,6 +220,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         memberships,
         projects,
         conversations,
+        conversationsLoaded,
         error,
         setError,
         selectTenant,

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ApiError } from "@/lib/api";
-import { AdminTenantCreated, FEATURE_FLAGS, admin, inviteUrl } from "@/lib/admin";
+import { AdminInvite, AdminTenantCreated, FEATURE_FLAGS, admin, inviteUrl } from "@/lib/admin";
 import { Panel } from "@/components/Panel";
 
 const input =
@@ -146,12 +146,22 @@ export function NewWorkspace({
   );
 }
 
-/** Post-create handoff: the invite link to send to the client. */
-export function InviteLink({ invite, onDone }: { invite: AdminTenantCreated; onDone: () => void }) {
+/** Invite handoff: the link to send, after a create or a re-issue. The token
+ *  is shown, never only copied — it is the one copy the operator gets, and
+ *  the Clipboard API rejects outright on a non-secure origin. */
+export function InviteLink({
+  invite,
+  title,
+  onDone,
+}: {
+  invite: { name: string; invite: AdminInvite };
+  title?: string;
+  onDone: () => void;
+}) {
   const url = inviteUrl(invite.invite.token);
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
   return (
-    <Panel title={`${invite.name} is ready`} onClose={onDone}>
+    <Panel title={title ?? `${invite.name} is ready`} onClose={onDone}>
       <p className="text-sm text-ink-muted">
         Send this invite link to <span className="font-medium text-ink">{invite.invite.email}</span>
         {" "}— accepting it makes them the workspace owner. The link expires{" "}
@@ -162,13 +172,17 @@ export function InviteLink({ invite, onDone }: { invite: AdminTenantCreated; onD
           {url}
         </code>
         <button
-          onClick={() => {
-            navigator.clipboard.writeText(url);
-            setCopied(true);
+          onClick={async () => {
+            try {
+              await navigator.clipboard.writeText(url);
+              setCopy("copied");
+            } catch {
+              setCopy("failed"); // the link above stays selectable by hand
+            }
           }}
           className="shrink-0 rounded-[10px] bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
         >
-          {copied ? "Copied" : "Copy"}
+          {copy === "copied" ? "Copied" : copy === "failed" ? "Copy failed" : "Copy"}
         </button>
       </div>
     </Panel>

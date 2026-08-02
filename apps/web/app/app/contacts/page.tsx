@@ -153,10 +153,19 @@ function ContactsPageInner() {
 
         {view === "people" && contacts && (
           people.length === 0 ? (
-            <Empty
-              headline="Everyone your team deals with, in one shared address book."
-              hint="Add people by hand now — funders, planners, contractors, suppliers — and link them to companies and projects."
-            />
+            contacts.length === 0 ? (
+              <Empty
+                headline="Everyone your team deals with, in one shared address book."
+                hint="Add people by hand now — funders, planners, contractors, suppliers — and link them to companies and projects."
+              />
+            ) : (
+              <NoMatches
+                onClear={() => {
+                  setQ("");
+                  setTag(null);
+                }}
+              />
+            )
           ) : (
             <div className="overflow-x-auto rounded-card border border-edge bg-surface">
               <table className="w-full text-sm">
@@ -209,10 +218,14 @@ function ContactsPageInner() {
 
         {view === "companies" && companies && (
           cos.length === 0 ? (
-            <Empty
-              headline="Companies keep shared details in one place."
-              hint="Add an organisation once — address, phone, website — and every contact you link to it stays up to date."
-            />
+            companies.length === 0 ? (
+              <Empty
+                headline="Companies keep shared details in one place."
+                hint="Add an organisation once — address, phone, website — and every contact you link to it stays up to date."
+              />
+            ) : (
+              <NoMatches onClear={() => setQ("")} />
+            )
           ) : (
             <div className="overflow-x-auto rounded-card border border-edge bg-surface">
               <table className="w-full text-sm">
@@ -268,6 +281,19 @@ function Empty({ headline, hint }: { headline: string; hint: string }) {
     <div className="rounded-card border border-edge bg-surface p-10 text-center">
       <p className="text-sm font-medium">{headline}</p>
       <p className="mt-1 text-sm text-ink-muted">{hint}</p>
+    </div>
+  );
+}
+
+/** Shown when a filter hides everything — distinct from Empty, which invites
+ *  onboarding and would otherwise imply the records are gone. */
+function NoMatches({ onClear }: { onClear: () => void }) {
+  return (
+    <div className="rounded-card border border-edge bg-surface p-10 text-center">
+      <p className="text-sm font-medium">Nothing matches those filters.</p>
+      <button onClick={onClear} className="mt-1 text-sm text-ink-muted underline hover:text-ink">
+        Clear filters
+      </button>
     </div>
   );
 }

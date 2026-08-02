@@ -9,7 +9,6 @@ import {
   AdminTenantRow,
   FEATURE_FLAGS,
   admin,
-  inviteUrl,
 } from "@/lib/admin";
 import { InviteLink, NewWorkspace } from "./NewWorkspace";
 
@@ -23,7 +22,7 @@ export default function AdminConsole() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<AdminTenantCreated | null>(null);
-  const [reissued, setReissued] = useState<string | null>(null);
+  const [reissued, setReissued] = useState<{ name: string; invite: AdminInvite } | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -49,8 +48,10 @@ export default function AdminConsole() {
         method: "POST",
         body: JSON.stringify({ email }),
       });
-      await navigator.clipboard.writeText(inviteUrl(invite.token));
-      setReissued(`Owner invite for ${t.name} copied to clipboard (sent to ${email}).`);
+      // The invite is live from here. Hand it over on screen rather than
+      // copying it silently: a clipboard rejection used to land in the catch
+      // below and discard the only copy of a token that had really been made.
+      setReissued({ name: t.name, invite });
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Invite failed — try again.");
@@ -87,17 +88,6 @@ export default function AdminConsole() {
         {error && (
           <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
             {error}
-          </p>
-        )}
-        {reissued && (
-          <p className="mb-3 rounded-[10px] border border-edge bg-surface px-3 py-2 text-sm">
-            {reissued}
-            <button
-              onClick={() => setReissued(null)}
-              className="ml-2 text-xs text-ink-muted underline hover:text-ink"
-            >
-              Dismiss
-            </button>
           </p>
         )}
 
@@ -166,6 +156,13 @@ export default function AdminConsole() {
         />
       )}
       {created && <InviteLink invite={created} onDone={() => setCreated(null)} />}
+      {reissued && (
+        <InviteLink
+          invite={reissued}
+          title={`New owner invite for ${reissued.name}`}
+          onDone={() => setReissued(null)}
+        />
+      )}
     </main>
   );
 }
