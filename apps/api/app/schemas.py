@@ -119,6 +119,16 @@ class ConversationPatch(BaseModel):
     visibility: str = Field(pattern="^(private|tenant)$")
 
 
+class ActivityFeedItem(BaseModel):
+    action: str
+    actor_email: str | None
+    target_type: str | None
+    target_id: str | None
+    target_title: str | None
+    meta: dict[str, Any] = {}
+    created_at: datetime
+
+
 class MessageCreate(BaseModel):
     content: str = Field(min_length=1, max_length=200_000)
     task_kind: str | None = Field(

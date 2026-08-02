@@ -12,6 +12,7 @@ from app.litellm import litellm_client
 from app.queue import ingest_queue
 from app.ratelimit import rate_limiter
 from app.routers import (
+    activity,
     conversations,
     documents,
     global_search,
@@ -80,6 +81,7 @@ def create_app() -> FastAPI:
         documents.router,
         usage.router,
         global_search.router,
+        activity.router,
     ):
         app.include_router(router, prefix="/api/v1")
     return app

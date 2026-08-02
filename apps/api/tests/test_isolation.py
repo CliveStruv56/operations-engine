@@ -43,6 +43,7 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("PATCH", f"/api/v1/conversations/{b.conversation_id}"),
         ("POST", f"/api/v1/conversations/{b.conversation_id}/messages"),
         ("GET", "/api/v1/usage/summary"),
+        ("GET", "/api/v1/activity"),
         ("GET", "/api/v1/documents"),
         ("POST", "/api/v1/documents"),
         ("GET", f"/api/v1/documents/{b.document_id}"),
