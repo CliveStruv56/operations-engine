@@ -127,3 +127,23 @@ and every divergence is recorded here.
     palette in `globals.css`. The evidence side panel was replaced by
     inline source-passage cards in answers; chat pin/rename was
     deliberately not built.
+
+## Recorded during team-visibility work (2 Aug 2026)
+
+18. **Chat visibility model** (2 Aug 2026, founder decision; the Phase-1
+    spec doesn't address intra-tenant chat privacy). Conversations are
+    **private to their owner by default — including from admins/owners**:
+    the previous elevated-role read override in
+    `routers/conversations.py::_get_owned_conversation` was removed
+    (migration 0008 adds `conversations.visibility`,
+    `'private'|'tenant'`). Owners may share a chat with the team
+    (`PATCH /conversations/{id}`), which grants every tenant member
+    **read-only** access — list/⌘K/messages, but not post, delete,
+    re-share or pptx export (messages carry no per-author attribution, so
+    collaborative shared chats are deliberately out of scope). Share and
+    unshare are audited (`conversation.share`/`.unshare`) with the chat
+    title in `meta` — the owner is knowingly publishing it. Everything
+    else (vault, projects, Groundwork) stays tenant-visible; the model is
+    "chats personal unless shared, all else shared". A tenant-wide
+    activity feed (`GET /activity`) exposes a curated **allowlist** of
+    audit actions so private-chat events can never surface.

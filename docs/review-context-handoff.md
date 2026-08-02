@@ -222,6 +222,21 @@ has a "QA Demo Scheme" dev project + a few QA test chats (kept as demo
 data). One pre-fix research message in dev DB still shows raw 【c:…】
 markers (historical data, not a bug).
 
+**Team visibility landed (2 Aug 2026 evening,** commits `a560d01..`**)**:
+- **Chats truly private** — migration **0008** (`conversations.visibility`),
+  admin/owner read override removed; **share with team** = read-only for
+  members (sidebar "Shared with team" section, ⌘K "shared" tag, ShareBar
+  toggle in chat, read-only strip replaces composer). ASSUMPTIONS **#18**.
+- **Tenant activity feed** — `GET /activity` (curated allowlist over
+  audit_log, actor emails, target titles) + "Recent team activity" card on
+  the hero (`activity-card.tsx`).
+- **Refetch-on-focus** — WorkspaceProvider refreshes projects+conversations
+  on visibilitychange (20 s throttle).
+- Sidebar chat lists extracted to `sidebar-chats.tsx`; new
+  `share-bar.tsx`. Dev DB migrated to 0008. Staging still at `bc9aaf6` —
+  **run migration 0008 on staging before deploying these commits**.
+  Manual two-user QA of sharing not yet done (needs two Struvers sessions).
+
 **Next up:** (1) domain Part B when the user finishes Part A; (2) pilot
 consultancy onboarding (PRD §9) — the platform is ready; (3) Stripe
 billing (Slice 5); (4) Slice 6 hardening — draft latency is the top item.

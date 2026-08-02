@@ -9,6 +9,7 @@ import {
   gw,
 } from "@/lib/groundwork";
 import { DocIcon, PenIcon } from "@/components/icons";
+import ActivityCard from "./activity-card";
 import { RagDots } from "./projects/page";
 import type { Project } from "./workspace";
 
@@ -207,6 +208,8 @@ export default function EmptyHero({
           ))}
         </div>
       )}
+
+      <ActivityCard />
 
       <p className="mt-4 text-xs font-semibold text-faint">
         Answers cite your documents — verify anything critical.
