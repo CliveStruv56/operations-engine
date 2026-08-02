@@ -73,6 +73,24 @@ class ContactPatch(BaseModel):
     tags: list[str] | None = None
 
 
+class ImportIn(BaseModel):
+    # ~2MB ceiling — thousands of contacts; the row cap is enforced separately.
+    csv: str = Field(min_length=1, max_length=2_000_000)
+
+
+class ImportError_(BaseModel):
+    line: int
+    reason: str
+
+
+class ImportOut(BaseModel):
+    created: int
+    updated: int
+    skipped: int
+    companies_created: int
+    errors: list[ImportError_]
+
+
 class ContactOut(BaseModel):
     id: UUID
     name: str

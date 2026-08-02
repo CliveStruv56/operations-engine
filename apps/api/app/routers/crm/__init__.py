@@ -6,8 +6,9 @@ routes, so include order relative to other routers does not matter.
 
 from fastapi import APIRouter
 
-from app.routers.crm import companies, contacts
+from app.routers.crm import companies, contacts, imports
 
 router = APIRouter(tags=["crm"])
+router.include_router(imports.router)  # literal /contacts/import before {id} matchers
 router.include_router(contacts.router)
 router.include_router(companies.router)

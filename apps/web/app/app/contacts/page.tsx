@@ -7,6 +7,7 @@ import { Company, Contact, companyAddress, crm } from "@/lib/crm";
 import { tenantId } from "@/lib/groundwork";
 import { CompanyEditor } from "./CompanyEditor";
 import { ContactEditor } from "./ContactEditor";
+import { ImportCsv } from "./ImportCsv";
 import { btn } from "./ui";
 
 type View = "people" | "companies";
@@ -103,12 +104,15 @@ function ContactsPageInner() {
       <div className="mx-auto max-w-6xl p-6">
         <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Contacts</h1>
-          <button
-            onClick={() => (view === "people" ? setEditContact(NEW) : setEditCompany(NEW))}
-            className={btn}
-          >
-            {view === "people" ? "Add contact" : "Add company"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {view === "people" && <ImportCsv onDone={refresh} />}
+            <button
+              onClick={() => (view === "people" ? setEditContact(NEW) : setEditCompany(NEW))}
+              className={btn}
+            >
+              {view === "people" ? "Add contact" : "Add company"}
+            </button>
+          </div>
         </header>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">

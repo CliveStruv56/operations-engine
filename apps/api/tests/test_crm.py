@@ -345,3 +345,68 @@ async def test_chat_lookup_respects_feature_flag(client, capture_llm):
     # The seeded contact would match by name, but the flag is off.
     await _say(client, t, "What is the contact's email for our crmchatoff project?")
     assert "<contact-records>" not in capture_llm[-1]
+
+
+# -- CSV import --------------------------------------------------------------
+
+
+async def test_csv_import_creates_updates_and_skips(client):
+    t = await seed_tenant(client, f"crmimp-{uuid4().hex[:6]}")
+    await enable_contacts(t)
+    headers = auth(t.owner_id, t.id)
+
+    csv_text = (
+        "Name,Email,Phone,Job Title,Company,Tags\n"
+        "Sarah Meadows,sarah@acme.example,0113 555 0100,Planner,Acme Homes,planning;consultant\n"
+        "Jo Field,jo@acme.example,,Surveyor,Acme Homes,\n"
+        ",missing@name.example,,,,\n"
+    )
+    resp = await client.post("/api/v1/contacts/import", json={"csv": csv_text}, headers=headers)
+    assert resp.status_code == 200, resp.text
+    out = resp.json()
+    assert out["created"] == 2
+    assert out["updated"] == 0
+    assert out["skipped"] == 1
+    assert out["companies_created"] == 1  # Acme Homes reused across both rows
+    assert out["errors"] == [{"line": 4, "reason": "no name"}]
+
+    contacts = (await client.get("/api/v1/contacts", headers=headers)).json()
+    sarah = next(c for c in contacts if c["name"] == "Sarah Meadows")
+    assert sarah["company_name"] == "Acme Homes"
+    assert sarah["tags"] == ["planning", "consultant"]
+
+    # Re-import with the same email: updates in place (case-insensitive),
+    # blanks never erase, tags merge, existing company matched not duplicated.
+    csv_text = (
+        "name,email,mobile,company,tags\n"
+        "Sarah B Meadows,SARAH@ACME.EXAMPLE,07700 900123,acme homes,vip\n"
+    )
+    resp = await client.post("/api/v1/contacts/import", json={"csv": csv_text}, headers=headers)
+    out = resp.json()
+    assert (out["created"], out["updated"], out["companies_created"]) == (0, 1, 0)
+
+    sarah = (await client.get("/api/v1/contacts?q=Meadows", headers=headers)).json()[0]
+    assert sarah["name"] == "Sarah B Meadows"
+    assert sarah["phone"] == "0113 555 0100"  # untouched
+    assert sarah["mobile"] == "07700 900123"
+    assert set(sarah["tags"]) == {"planning", "consultant", "vip"}
+
+
+async def test_csv_import_first_last_name_columns(client):
+    t = await seed_tenant(client, f"crmimpfl-{uuid4().hex[:6]}")
+    await enable_contacts(t)
+    headers = auth(t.owner_id, t.id)
+
+    csv_text = "First Name,Last Name,Email\nPat,Lane,pat@lane.example\n"
+    resp = await client.post("/api/v1/contacts/import", json={"csv": csv_text}, headers=headers)
+    assert resp.json()["created"] == 1
+    contacts = (await client.get("/api/v1/contacts?q=pat", headers=headers)).json()
+    assert contacts[0]["name"] == "Pat Lane"
+
+
+async def test_csv_import_flag_off_404(client):
+    t = await seed_tenant(client, f"crmimpoff-{uuid4().hex[:6]}")
+    resp = await client.post(
+        "/api/v1/contacts/import", json={"csv": "name\nX\n"}, headers=auth(t.owner_id, t.id)
+    )
+    assert resp.status_code == 404
