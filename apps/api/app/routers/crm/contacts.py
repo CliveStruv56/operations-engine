@@ -7,13 +7,13 @@ RLS-scoped select before use — a cross-tenant id must 404, never link.
 from uuid import UUID
 
 import asyncpg
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.audit import write_audit
 from app.crm.schemas import ContactIn, ContactOut, ContactPatch
 from app.errors import ApiError
 from app.routers.crm.common import require_contacts
-from app.sqlutil import patch_sets
+from app.sqlutil import like_contains, patch_sets
 from app.tenant import TenantContext, get_conn
 
 router = APIRouter()
@@ -34,17 +34,21 @@ async def list_contacts(
     tag: str | None = None,
     company_id: UUID | None = None,
     project_id: UUID | None = None,
+    # Opt-in bound for pickers. The address book itself wants every row, so
+    # there is no default cap — a silent truncation there would read as
+    # "these contacts no longer exist".
+    limit: int | None = Query(default=None, ge=1, le=100),
     ctx: TenantContext = Depends(require_contacts),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     clauses: list[str] = []
     params: list[object] = []
     if q:
-        params.append(q)
+        params.append(like_contains(q))
         n = len(params)
         clauses.append(
-            f"(c.name ilike '%' || ${n} || '%' or c.email ilike '%' || ${n} || '%'"
-            f" or c.job_title ilike '%' || ${n} || '%' or co.name ilike '%' || ${n} || '%')"
+            f"(c.name ilike ${n} or c.email ilike ${n}"
+            f" or c.job_title ilike ${n} or co.name ilike ${n})"
         )
     if tag:
         params.append(tag)
@@ -59,7 +63,11 @@ async def list_contacts(
             f" where cp.contact_id = c.id and cp.project_id = ${len(params)})"
         )
     where = f"where {' and '.join(clauses)}" if clauses else ""
-    rows = await conn.fetch(f"{_SELECT} {where} order by c.name", *params)
+    bound = ""
+    if limit is not None:
+        params.append(limit)
+        bound = f"limit ${len(params)}"
+    rows = await conn.fetch(f"{_SELECT} {where} order by c.name {bound}", *params)
     return [dict(r) for r in rows]
 
 

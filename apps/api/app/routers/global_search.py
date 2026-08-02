@@ -6,11 +6,10 @@ import asyncpg
 from fastapi import APIRouter, Depends, Query
 
 from app.schemas import SearchResultsOut
+from app.sqlutil import like_contains
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["search"])
-
-_LIKE_SPECIALS = str.maketrans({"%": r"\%", "_": r"\_", "\\": "\\\\"})
 
 
 @router.get("/search", response_model=SearchResultsOut)
@@ -19,7 +18,7 @@ async def workspace_search(
     ctx: TenantContext = Depends(require_role("member")),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
-    pattern = f"%{q.strip().translate(_LIKE_SPECIALS)}%"
+    pattern = like_contains(q)
     conversations = await conn.fetch(
         """
         select c.id, c.title, c.project_id, c.visibility, c.created_at, c.updated_at,

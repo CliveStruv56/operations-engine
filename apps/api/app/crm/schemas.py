@@ -1,11 +1,35 @@
 """CRM schemas — module-local to keep the core schemas file lean."""
 
 from datetime import datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, BeforeValidator, Field
 
 EMAIL = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+
+# Field limits the CSV importer mirrors so imported rows stay editable.
+NAME_MAX = 200
+JOB_TITLE_MAX = 200
+EMAIL_MAX = 320
+PHONE_MAX = 50
+ADDRESS_MAX = 1_000
+NOTES_MAX = 5_000
+
+
+def _reject_null(value: object) -> object:
+    """Patch fields are `X | None` to mean "unset", never "set to null".
+
+    The column behind these is NOT NULL, so an explicit null would reach the
+    UPDATE and surface as a 500. Defaults skip validation in Pydantic, so this
+    fires only when the client actually sends null.
+    """
+    if value is None:
+        raise ValueError("must not be null — omit the field to leave it unchanged")
+    return value
+
+
+NotNull = BeforeValidator(_reject_null)
 
 
 class CompanyIn(BaseModel):
@@ -21,7 +45,7 @@ class CompanyIn(BaseModel):
 
 
 class CompanyPatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: Annotated[str | None, NotNull] = Field(default=None, min_length=1, max_length=200)
     website: str | None = Field(default=None, max_length=500)
     email: str | None = Field(default=None, max_length=320, pattern=EMAIL)
     phone: str | None = Field(default=None, max_length=50)
@@ -62,7 +86,7 @@ class ContactIn(BaseModel):
 
 
 class ContactPatch(BaseModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: Annotated[str | None, NotNull] = Field(default=None, min_length=1, max_length=200)
     company_id: UUID | None = None
     job_title: str | None = Field(default=None, max_length=200)
     email: str | None = Field(default=None, max_length=320, pattern=EMAIL)
@@ -70,7 +94,7 @@ class ContactPatch(BaseModel):
     mobile: str | None = Field(default=None, max_length=50)
     address: str | None = Field(default=None, max_length=1_000)
     notes: str | None = Field(default=None, max_length=5_000)
-    tags: list[str] | None = None
+    tags: Annotated[list[str] | None, NotNull] = None
 
 
 class ImportIn(BaseModel):

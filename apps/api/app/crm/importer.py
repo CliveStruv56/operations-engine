@@ -10,12 +10,39 @@ and auto-created.
 
 import csv
 import io
+import re
 from dataclasses import dataclass, field
 from uuid import UUID
 
 import asyncpg
 
+from app.crm.schemas import (
+    ADDRESS_MAX,
+    EMAIL,
+    EMAIL_MAX,
+    JOB_TITLE_MAX,
+    NAME_MAX,
+    NOTES_MAX,
+    PHONE_MAX,
+)
+
 MAX_ROWS = 2_000
+
+_EMAIL_RE = re.compile(EMAIL)
+
+# Per-field caps mirroring app.crm.schemas. An imported row must satisfy the
+# same limits ContactPatch enforces — a contact the editor refuses to accept
+# back can never be saved from the UI again, so it is better to truncate (or
+# reject the row outright, for a malformed email) at import time.
+_CAPS = {
+    "email": EMAIL_MAX,
+    "phone": PHONE_MAX,
+    "mobile": PHONE_MAX,
+    "job_title": JOB_TITLE_MAX,
+    "company": NAME_MAX,
+    "address": ADDRESS_MAX,
+    "notes": NOTES_MAX,
+}
 
 # normalised header -> contact field
 _HEADERS = {
@@ -108,12 +135,20 @@ def parse_csv(text: str, result: ImportResult) -> list[ParsedRow]:
             result.skip(line_no, "no name")
             continue
         tags = [t.strip() for t in values.pop("tags", "").replace(";", ",").split(",")]
+        email = values.get("email")
+        if email is not None and not _EMAIL_RE.match(email):
+            # Placeholders like "n/a" are common in exports. Storing one would
+            # produce a contact the editor can never save; skipping reports the
+            # line so the operator can fix the CSV and re-import (email dedupe
+            # makes that safe).
+            result.skip(line_no, f"invalid email: {email[:60]}")
+            continue
         rows.append(
             ParsedRow(
                 line=line_no,
-                name=name[:200],
+                name=name[:NAME_MAX],
                 tags=[t for t in tags if t],
-                **{k: v[:1_000] for k, v in values.items()},
+                **{k: v[: _CAPS[k]] for k, v in values.items()},
             )
         )
     return rows
@@ -138,7 +173,7 @@ async def apply_rows(
                     values ($1, $2, $3) returning id
                     """,
                     tenant_id,
-                    row.company[:200],
+                    row.company[:NAME_MAX],
                     user_id,
                 )
                 company_ids[row.company.lower()] = company_id

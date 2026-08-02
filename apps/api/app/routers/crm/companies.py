@@ -9,7 +9,7 @@ from app.audit import write_audit
 from app.crm.schemas import CompanyIn, CompanyOut, CompanyPatch
 from app.errors import ApiError
 from app.routers.crm.common import require_contacts
-from app.sqlutil import patch_sets
+from app.sqlutil import like_contains, patch_sets
 from app.tenant import TenantContext, get_conn
 
 router = APIRouter()
@@ -29,7 +29,7 @@ async def list_companies(
 ):
     if q:
         rows = await conn.fetch(
-            f"{_SELECT} where co.name ilike '%' || $1 || '%' order by co.name", q
+            f"{_SELECT} where co.name ilike $1 order by co.name", like_contains(q)
         )
     else:
         rows = await conn.fetch(f"{_SELECT} order by co.name")

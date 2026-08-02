@@ -6,6 +6,19 @@ that safety from silently eroding as models grow (aliases, extra fields,
 call-site additions) — an unknown key is a hard error, never SQL.
 """
 
+LIKE_SPECIALS = str.maketrans({"%": r"\%", "_": r"\_", "\\": "\\\\"})
+
+
+def like_contains(value: str) -> str:
+    """`%value%` for ILIKE, with the caller's own wildcards neutralised.
+
+    Unescaped, a `_` in a search box silently matches any character and a `%`
+    matches every row in the table — the filter returns the wrong records
+    rather than none, so it reads as a data bug, not a search miss.
+    """
+    return f"%{value.strip().translate(LIKE_SPECIALS)}%"
+
+
 PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
     "projects": frozenset({"name", "description", "archived"}),
     "documents": frozenset({"project_id", "is_primary"}),

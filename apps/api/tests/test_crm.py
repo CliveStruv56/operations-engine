@@ -171,6 +171,37 @@ async def test_list_filters(client):
     assert [c["id"] for c in resp.json()] == [str(t.contact_id)]
 
 
+async def test_list_limit_is_opt_in(client):
+    t = await seed_tenant(client, f"crmlim-{uuid4().hex[:6]}")
+    await enable_contacts(t)
+    headers = auth(t.owner_id, t.id)
+    for name in ("Ann Adams", "Bob Barr", "Cal Crane"):
+        await client.post("/api/v1/contacts", json={"name": name}, headers=headers)
+
+    assert len((await client.get("/api/v1/contacts?limit=2", headers=headers)).json()) == 2
+    # Unbounded by default: the address book would otherwise hide contacts.
+    everyone = (await client.get("/api/v1/contacts", headers=headers)).json()
+    assert len(everyone) >= 3
+    assert (await client.get("/api/v1/contacts?limit=0", headers=headers)).status_code == 422
+
+
+async def test_search_treats_like_wildcards_literally(client):
+    t = await seed_tenant(client, f"crmwild-{uuid4().hex[:6]}")
+    await enable_contacts(t)
+    headers = auth(t.owner_id, t.id)
+
+    await client.post("/api/v1/companies", json={"name": "100% Homes"}, headers=headers)
+    for name in ("Jo_Field", "JoXField"):
+        await client.post("/api/v1/contacts", json={"name": name}, headers=headers)
+
+    # `_` is a single-character wildcard unless escaped.
+    resp = await client.get("/api/v1/contacts?q=jo_field", headers=headers)
+    assert [c["name"] for c in resp.json()] == ["Jo_Field"]
+    # `%` would otherwise match every row in the tenant.
+    resp = await client.get("/api/v1/companies?q=%25", headers=headers)
+    assert [c["name"] for c in resp.json()] == ["100% Homes"]
+
+
 # -- project links -----------------------------------------------------------
 
 
@@ -340,6 +371,35 @@ async def test_chat_injects_matching_company(client, capture_llm):
     assert "0161 555 0199" in system
 
 
+async def test_chat_lookup_matches_whole_words_only(client, capture_llm):
+    """A bystander's private details must not ride along on a substring hit."""
+    t = await _chat_ready_tenant(client, f"crmchatsub-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    await client.post(
+        "/api/v1/contacts",
+        json={"name": "Samantha Fry", "mobile": "07700 900999", "address": "3 Cedar Rise"},
+        headers=headers,
+    )
+    await client.post(
+        "/api/v1/contacts",
+        json={"name": "Ravi Shah", "email": "ravi@brightside.example"},
+        headers=headers,
+    )
+
+    await _say(client, t, "can you summarise the SAM report for me?")
+    assert "Samantha Fry" not in capture_llm[-1]
+
+    # A domain token must not drag in everyone who shares the domain.
+    await _say(client, t, "what does brightside.example cover?")
+    assert "Ravi Shah" not in capture_llm[-1]
+
+    # The real mention still matches, by name and by email local part.
+    await _say(client, t, "What is Samantha's mobile?")
+    assert "07700 900999" in capture_llm[-1]
+    await _say(client, t, "Did ravi reply?")
+    assert "ravi@brightside.example" in capture_llm[-1]
+
+
 async def test_chat_lookup_respects_feature_flag(client, capture_llm):
     t = await _chat_ready_tenant(client, f"crmchatoff-{uuid4().hex[:6]}", contacts=False)
     # The seeded contact would match by name, but the flag is off.
@@ -402,6 +462,54 @@ async def test_csv_import_first_last_name_columns(client):
     assert resp.json()["created"] == 1
     contacts = (await client.get("/api/v1/contacts?q=pat", headers=headers)).json()
     assert contacts[0]["name"] == "Pat Lane"
+
+
+async def test_csv_import_keeps_rows_editable(client):
+    """Imported values must satisfy the limits the editor endpoints enforce."""
+    t = await seed_tenant(client, f"crmimpval-{uuid4().hex[:6]}")
+    await enable_contacts(t)
+    headers = auth(t.owner_id, t.id)
+
+    csv_text = (
+        "Name,Email,Job Title,Phone\n"
+        "Placeholder Pat,n/a,Surveyor,0113 555 0100\n"
+        f"Long Title Lou,lou@acme.example,{'x' * 400},{'9' * 80}\n"
+    )
+    resp = await client.post("/api/v1/contacts/import", json={"csv": csv_text}, headers=headers)
+    assert resp.status_code == 200, resp.text
+    out = resp.json()
+    assert (out["created"], out["skipped"]) == (1, 1)
+    assert out["errors"] == [{"line": 2, "reason": "invalid email: n/a"}]
+
+    lou = (await client.get("/api/v1/contacts?q=Lou", headers=headers)).json()[0]
+    assert len(lou["job_title"]) == 200
+    assert len(lou["phone"]) == 50
+
+    # The round trip the import previously made impossible.
+    resp = await client.patch(
+        f"/api/v1/contacts/{lou['id']}", json={"notes": "called back"}, headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+
+
+@pytest.mark.parametrize(
+    ("path", "body"),
+    [
+        ("contacts", {"name": None}),
+        ("contacts", {"tags": None}),
+        ("companies", {"name": None}),
+    ],
+)
+async def test_patch_explicit_null_on_not_null_column_is_422(client, path, body):
+    t = await seed_tenant(client, f"crmnull-{uuid4().hex[:6]}")
+    await enable_contacts(t)
+    headers = auth(t.owner_id, t.id)
+    created = await client.post(f"/api/v1/{path}", json={"name": "Nullable Nell"}, headers=headers)
+    assert created.status_code == 201, created.text
+
+    resp = await client.patch(f"/api/v1/{path}/{created.json()['id']}", json=body, headers=headers)
+    assert resp.status_code == 422, resp.text
+    assert resp.json()["error"]["code"] == "validation_error"
 
 
 async def test_csv_import_flag_off_404(client):
