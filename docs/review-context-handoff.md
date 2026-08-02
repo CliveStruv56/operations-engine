@@ -241,6 +241,60 @@ markers (historical data, not a bug).
 consultancy onboarding (PRD §9) — the platform is ready; (3) Stripe
 billing (Slice 5); (4) Slice 6 hardening — draft latency is the top item.
 
+## 6d. CRM module + operator console (2 Aug 2026, after §6c)
+
+**CRM contact book — all four phases live on dev AND staging** (commits
+`5e8cece`, `c7f09b9`, `fb11b6f`, `7f95d45`; plan agreed in-chat for the
+consultant evaluation):
+- **Migration 0009**: `crm_companies` (structured UK address),
+  `crm_contacts` (phone+mobile, free-text address, `tags text[]`,
+  per-tenant unique `lower(email)` → 409 `duplicate_email`),
+  `crm_contact_projects` (join to **core** `projects`, chosen over
+  `uuid[]` for FK cascade). Standard RLS; tables seeded in
+  `tests/conftest.py` and covered by `test_isolation.py` TENANT_TABLES.
+- **API**: `/contacts` + `/companies` in `app/routers/crm/`, gated on
+  `tenants.features->>'contacts'` (mirrors `require_projects`). FK checks
+  bypass RLS, so cross-tenant `company_id`/`project_id` are rejected by
+  RLS-scoped existence checks. `POST /contacts/import` (CSV text, 2MB/2000
+  rows, header normalisation incl. first/last-name combine, email-dedupe
+  update-in-place, tag merge, company auto-create, line-numbered skip
+  reasons). Deleting a company detaches its contacts (`set null`).
+- **Web**: `/app/contacts` (People/Companies toggle, search, tag chips,
+  slide-over editors, Import CSV w/ result banner), flag-gated sidebar
+  entry, project-room **Contacts** tab (link/unlink), `lib/crm.ts`.
+- **⌘K + chat**: `GET /search` gained a flag-gated `contacts` group;
+  palette hands off to `/app/contacts?c=<id>` (auto-opens editor). Chat
+  injects matching contact/company records via `app/crm/lookup.py`
+  (stopword-filtered token ILIKE, possessive stripping) under
+  `CONTACTS_PROMPT` — quoted-exactly, no-invention, deliberately **no**
+  `[c:]` markers (resolver would drop them as fabricated).
+- ASSUMPTIONS **#19**: `proj_stakeholders` deliberately NOT unified.
+
+**Operator console + invite-only signup** (commit `f30dbae`,
+migration **0010** widens `invites.role` to allow `'owner'`):
+- `PLATFORM_ADMIN_EMAILS` (login-email match, `is_platform_admin` in
+  `app/auth.py`) gates `/admin/*`. `POST /admin/tenants` creates a client
+  workspace (seats/trial/features/brand-accent + LiteLLM key) and returns
+  an **owner-role invite**; operator holds no membership. Reissue via
+  `POST /admin/tenants/{id}/owner-invite`. Tenant-facing `InviteCreate`
+  still caps at admin|member.
+- `GET /admin/tenants` (fleet view w/ members, pending invites, month
+  usage) uses **`db.platform_tx()`** — THE single fenced cross-tenant
+  owner-role connection; never use it in tenant-facing handlers.
+- `OPEN_SIGNUP=false` → `POST /tenants` 403s (`signup_closed`) except for
+  platform admins. Web `/admin` page (standalone route, outside the /app
+  shell): fleet table, new-workspace slide-over, copyable invite links.
+  Shared `Panel` moved to `apps/web/components/Panel.tsx`.
+
+**Environment state**: dev DB at **0010**; `PLATFORM_ADMIN_EMAILS=
+clive@platform91.com` in `apps/api/.env` (OPEN_SIGNUP defaults true
+locally). Staging: api + web deployed, DB at 0010,
+`PLATFORM_ADMIN_EMAILS=clive@platform91.com` + `OPEN_SIGNUP=false` on the
+Railway api service — **staging is invite-only**; new client workspaces
+only via `/admin`. Contacts flag ON: Struvers + W1 Proof (dev), Struvers2
+(staging). API suite now **177 tests**. §6c's "staging still at bc9aaf6"
+is superseded — staging is fully current.
+
 ## 7. Read first in a new session
 
 1. This file.

@@ -11,7 +11,9 @@
 > NEXT-009 (error/loading routes + surfaced failures, fd7743a) closed on
 > 1 Aug. Still open from the wider Phase 1 spec: Stripe billing
 > (deliberately re-sequenced). See `docs/review-context-handoff.md` for
-> everything that happened after this brief, including the Hearth UI system.
+> everything that happened after this brief, including the Hearth UI system,
+> the CRM contact book (2 Aug, handoff §6d) and the operator console with
+> invite-only signup (2 Aug, §6d).
 
 ---
 

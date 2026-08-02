@@ -2,7 +2,9 @@
 
 Flowgrid OS (codename "Operations Engine" until Aug 2026) — white-label, multi-tenant AI operations SaaS for UK SMBs. One branded workspace
 per client: chat workspace, cited knowledge vault (RAG), cost-routed open-weight
-models via cloud APIs only.
+models via cloud APIs only. Per-tenant modules gate on `tenants.features` jsonb
+(`projects`, `contacts`, `web_search`); client workspaces are created by the
+platform operator via `/admin` (see `PLATFORM_ADMIN_EMAILS` / `OPEN_SIGNUP`).
 
 ## Hard constraints (non-negotiable)
 
@@ -39,9 +41,12 @@ Each app is independently managed — there is **no root package.json or
 workspace**. `pnpm-workspace.yaml` lives in `apps/web/`.
 
 Key api modules: `app/tenant.py` (RLS context), `app/retrieval.py` (RAG),
-`app/routing.py` + `app/litellm.py` (model routing), `app/schemas.py` and
-`app/groundwork/schemas.py` (all Pydantic models — add new ones there, not
-inline).
+`app/routing.py` + `app/litellm.py` (model routing), `app/schemas.py`,
+`app/groundwork/schemas.py` and `app/crm/schemas.py` (all Pydantic models —
+add new ones there, not inline), `app/crm/` + `app/routers/crm/` (contact
+book, chat lookup, CSV import), `app/routers/admin.py` (operator console —
+`db.platform_tx()` is the ONLY sanctioned cross-tenant connection; never use
+it in tenant-facing handlers).
 
 ## Commands
 
