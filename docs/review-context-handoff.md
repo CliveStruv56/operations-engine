@@ -1,9 +1,9 @@
 # Session Context Handoff
 
-**Project:** Operations Engine
-**Handoff date:** 2026-08-01
-**Prepared by:** UI-overhaul session (supersedes the 2026-07-31 review handoff; the review itself remains in `docs/review-report.md`)
-**Purpose:** Resume in a new context window without re-deriving this session's work.
+**Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
+**Handoff date:** 2026-08-02 (§6c is the latest state; §1–6b are the 1 Aug history)
+**Prepared by:** UI-overhaul session, extended through the 1–2 Aug QA/rename sessions
+**Purpose:** Resume in a new context window without re-deriving this work.
 
 ---
 
@@ -178,6 +178,53 @@ Follow-ups landed 1 Aug evening (user-reviewed live on :3000):
   project banner shows only during a conversation. Design constraint:
   chat retrieval is vault-only, so Groundwork structured facts render as
   UI, never as suggested chat prompts.
+
+## 6c. Current state (2 Aug 2026) — read this first when resuming
+
+**Product renamed to "Flowgrid OS"** (commit `bc9aaf6`): sidebar platform
+tag, page title, auth/onboarding kickers, API title, README/CLAUDE.md.
+Domain **flowgridos.co.uk** purchased. The go-live checklist lives in the
+Notion task **"Get flowgridos.co.uk live"** (Ultimate Brain Tasks DB,
+project "Flowgrid OS"): Part A (user: Cloudflare nameservers, Vercel
+domain `app.`, Railway api domain `api.` on port 8000) then Part B
+(Claude: CORS_ORIGINS, NEXT_PUBLIC_API_URL rebuild, Supabase redirect
+allow-list, R2 bucket CORS, smoke test). Name was NOT on the sprint
+shortlist — user still owes a trademark/Companies House screen.
+
+**QA pass done (1 Aug, driven in the user's Chrome).** All Hearth flows
+verified live: hero states, ⌘K, cited chat, Stop, research, slides→pptx,
+settings, usage, chat delete, dev-project creation + status card. Fixes
+that came out of it (commits `2eed3aa`, `6f2ab19`):
+- CJK-bracket citation markers (【c:…】 from GLM/DeepSeek) now resolve in
+  both api and worker resolvers (+test).
+- Chat answers render **markdown** (`components/markdown.tsx`,
+  `AnswerMarkdown`, `.md-answer` styles) with [n] cite buttons injected
+  recursively; streaming buffer too.
+- Sidebar refreshes after dev-project creation; grounded-badge grammar.
+Still unverified: 360 px drawer (window wouldn't resize), file-upload
+dialogs (logo/slides template).
+
+**Staging is fully current** (api + worker + web at `bc9aaf6`):
+EXA_API_KEY is live on the Railway api service (user-run CLI set;
+dashboard attempts didn't reach the service env) and research mode was
+**verified end-to-end on staging** as Struvers2. `features.web_search`
+on for Struvers2.
+
+**Notion is current**: project page renamed "Flowgrid OS"; Build Status
+section added; milestones ticked (Phase 1 core, Groundwork+staging,
+name chosen); tasks updated (developer-hire task closed as
+overtaken-by-events; new tasks: pilot onboarding 15 Aug, domain go-live
+8 Aug, staging QA 5 Aug — done in substance, Stripe 15 Sep).
+
+**Local dev state:** api uvicorn on :8000 (restarted 1 Aug, NO --reload
+— restart it after API changes), pnpm dev on :3000. Dev tenant Struvers
+has a "QA Demo Scheme" dev project + a few QA test chats (kept as demo
+data). One pre-fix research message in dev DB still shows raw 【c:…】
+markers (historical data, not a bug).
+
+**Next up:** (1) domain Part B when the user finishes Part A; (2) pilot
+consultancy onboarding (PRD §9) — the platform is ready; (3) Stripe
+billing (Slice 5); (4) Slice 6 hardening — draft latency is the top item.
 
 ## 7. Read first in a new session
 
