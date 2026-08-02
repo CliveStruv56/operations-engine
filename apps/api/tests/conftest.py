@@ -92,6 +92,8 @@ class Tenant:
     conversation_id: UUID
     invite_id: UUID
     invite_token: str
+    company_id: UUID
+    contact_id: UUID
 
 
 async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
@@ -167,6 +169,35 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
             tenant_id,
             owner_id,
         )
+        company_id = await conn.fetchval(
+            """
+            insert into crm_companies (tenant_id, name, created_by)
+            values ($1, $2, $3) returning id
+            """,
+            tenant_id,
+            f"{name} ltd",
+            owner_id,
+        )
+        contact_id = await conn.fetchval(
+            """
+            insert into crm_contacts (tenant_id, company_id, name, email, created_by)
+            values ($1, $2, $3, $4, $5) returning id
+            """,
+            tenant_id,
+            company_id,
+            f"{name} contact",
+            f"contact-{name}@example.com",
+            owner_id,
+        )
+        await conn.execute(
+            """
+            insert into crm_contact_projects (tenant_id, contact_id, project_id)
+            values ($1, $2, $3)
+            """,
+            tenant_id,
+            contact_id,
+            project_id,
+        )
     return Tenant(
         id=tenant_id,
         owner_id=owner_id,
@@ -176,6 +207,8 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         conversation_id=conversation_id,
         invite_id=UUID(invite["id"]),
         invite_token=invite["token"],
+        company_id=company_id,
+        contact_id=contact_id,
     )
 
 

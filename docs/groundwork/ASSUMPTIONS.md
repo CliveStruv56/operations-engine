@@ -147,3 +147,22 @@ and every divergence is recorded here.
     "chats personal unless shared, all else shared". A tenant-wide
     activity feed (`GET /activity`) exposes a curated **allowlist** of
     audit actions so private-chat events can never surface.
+
+## Recorded during CRM work (2 Aug 2026)
+
+19. **CRM contacts vs `proj_stakeholders`** (2 Aug 2026, founder-approved
+    plan). The CRM module (migration 0009: `crm_companies`,
+    `crm_contacts`, `crm_contact_projects`; routes `/contacts`,
+    `/companies` behind `tenants.features->>'contacts'`) is a
+    tenant-wide contact book and deliberately does **not** absorb or link
+    to the project-scoped `proj_stakeholders` table — the overlap is
+    acknowledged and unification deferred (it would need a data migration
+    plus Groundwork UI changes). Contact↔project association is a join
+    table against the **core** `projects` table (not `proj_projects`),
+    chosen over a `uuid[]` column so deleted projects cascade instead of
+    leaving dangling ids. Per-tenant unique `lower(email)` on contacts is
+    the dedupe anchor (409 `duplicate_email`); companies are first-class
+    with the structured address, contacts carry only a free-text one.
+    Because FK checks bypass RLS, cross-tenant `company_id`/`project_id`
+    references are rejected by RLS-scoped existence checks in the
+    routers, covered by `tests/test_crm.py`.

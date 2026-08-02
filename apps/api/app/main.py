@@ -14,6 +14,7 @@ from app.ratelimit import rate_limiter
 from app.routers import (
     activity,
     conversations,
+    crm,
     documents,
     global_search,
     groundwork,
@@ -76,6 +77,7 @@ def create_app() -> FastAPI:
         groundwork.router,
         groundwork_drafts.router,  # literal /projects/drafts path before room matchers
         groundwork_room.router,
+        crm.router,
         conversations.router,
         slides.router,
         documents.router,

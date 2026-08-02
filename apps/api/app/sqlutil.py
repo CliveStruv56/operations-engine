@@ -88,6 +88,32 @@ PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
     "proj_stakeholders": frozenset(
         {"name", "org", "role", "email", "phone", "notes", "last_contact"}
     ),
+    "crm_companies": frozenset(
+        {
+            "name",
+            "website",
+            "email",
+            "phone",
+            "address_line1",
+            "address_line2",
+            "city",
+            "postcode",
+            "notes",
+        }
+    ),
+    "crm_contacts": frozenset(
+        {
+            "name",
+            "company_id",
+            "job_title",
+            "email",
+            "phone",
+            "mobile",
+            "address",
+            "notes",
+            "tags",
+        }
+    ),
 }
 
 

@@ -23,6 +23,9 @@ TENANT_TABLES = [
     "usage_events",
     "invites",
     "audit_log",
+    "crm_companies",
+    "crm_contacts",
+    "crm_contact_projects",
 ]
 
 
@@ -50,6 +53,14 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("POST", f"/api/v1/documents/{b.document_id}/complete"),
         ("POST", f"/api/v1/documents/{b.document_id}/reprocess"),
         ("DELETE", f"/api/v1/documents/{b.document_id}"),
+        ("GET", "/api/v1/contacts"),
+        ("POST", "/api/v1/contacts"),
+        ("GET", f"/api/v1/contacts/{b.contact_id}"),
+        ("PATCH", f"/api/v1/contacts/{b.contact_id}"),
+        ("DELETE", f"/api/v1/contacts/{b.contact_id}"),
+        ("GET", "/api/v1/companies"),
+        ("GET", f"/api/v1/companies/{b.company_id}"),
+        ("DELETE", f"/api/v1/companies/{b.company_id}"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
