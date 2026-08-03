@@ -562,14 +562,46 @@ Decisions to know before touching the drafting layer:
   and route. No LLM touches it, so every figure is a recorded row, which is
   what makes it safe to send to a funder when a draft is not.
 
-**Next**: step 5 — web (`lib/grants.ts`, `/app/grants` pages, sidebar nav +
-icon, flag guard via `useModuleEnabled`/`ModuleDisabled`, vitest coverage).
-That is the last step in the §6f sequence.
+**Step 5 shipped** (`5cb3437`) — the §6f sequence is complete.
+`lib/grants.ts`, `/app/grants` (portfolio + reporting calendar),
+`/app/grants/new`, and the application room with six tabs (stages & gates,
+tasks, bid pack, conditions, reporting, impact). Sidebar entry + `GrantIcon`;
+`GRANTS_DISABLED` in `module-gate.tsx`. Every page reads the flag from
+workspace state before fetching, and a mid-session 404 falls back to the same
+panel.
 
-**Not yet done for Grantwork overall**: staging deploy (staging DB is at
-0012 — 0013 goes out with the Railway pre-deploy hook, then the seeder must
-be run there), and no end-to-end run of a real draft against the live
-gateway.
+Three UI decisions that carry a backend guarantee — don't "simplify" them:
+- The pipeline tile shows **weighted** value, not the sum of asks.
+- A blank measure shows **"not recorded"**, never 0.
+- An unverified/stale catalogue row **badges** on the application header and
+  the create form, saying the drafted bid carries the same page-one warning.
+
+## Grantwork: what is done, and what is not
+
+**Done** — all five steps, on `main`, **not pushed**: migration 0013 + RLS +
+isolation; 29 routes + schemas + analytics; template library + funder
+catalogue; the drafting adapter + impact card; the web layer.
+Suites: **API 244, worker 61, web 27**; ruff, mypy, typecheck, lint, build
+all clean. Local dev DB at 0013 and seeded.
+
+**Not done, in priority order:**
+1. **No end-to-end run of a real draft.** Nothing has exercised
+   `grant_draft_document` against a live worker + LiteLLM gateway. Every
+   piece is unit-tested and the pipeline is the one Groundwork already uses
+   in anger, but the Grantwork path itself has never produced a DOCX.
+   Same for the impact card PDF (WeasyPrint is absent locally, so
+   `test_pdf_is_one_page` skips).
+2. **Staging has nothing.** DB at **0012**; 0013 goes out with the Railway
+   pre-deploy hook on the next api deploy, and `uv run python -m
+   app.grants.seeds` must then be run there with the owner connection.
+   Worker and web both need redeploying too.
+3. **The funder catalogue is unverified** by design (#24). Until an operator
+   promotes rows, every bid drafted from one carries a warning — correct, but
+   it means the module does not look finished to a demo audience.
+4. **No `grants` flag is enabled on any tenant.** Enable via
+   `PATCH /admin/tenants/{id}/features` in the operator console.
+5. Web coverage is the portfolio page + two lib helpers; the room's six tabs
+   are verifiable only by running the app.
 
 Two schema divergences from the PRD's §1 entity list, both argued in #23:
 `grant_tasks` (the seeded library specifies standard tasks, which the listed
