@@ -15,6 +15,29 @@
 > apps must bind `::` (IPv6 private mesh) and the Dockerfile needs EXPOSE
 > for edge port detection; LiteLLM config is baked via infra/litellm/Dockerfile
 > (Railway can't mount files).
+>
+> **Deploying api/worker to Railway** (verified 3 Aug 2026). Both services are
+> source-deployed — no linked repo, no source image — so a deploy is a CLI
+> upload that Railway builds from the app's own Dockerfile:
+>
+> ```sh
+> railway up ./apps/api    --path-as-root --service api    --environment production
+> railway up ./apps/worker --path-as-root --service worker --environment production
+> ```
+>
+> `--path-as-root` is not optional. `railway up` archives from the **linked
+> project root**, not the working directory, so running it from inside
+> `apps/api` uploads the whole monorepo and Railpack fails with "could not
+> determine how to build the app". A failed build leaves the running
+> deployment untouched, so this is safe to get wrong. Add `--detach --json`
+> to get a deployment id back and poll `railway deployment list --json
+> --service <svc>` instead of streaming (the log stream drops on long builds,
+> and `railway logs` without an explicit id shows the last *successful*
+> deployment, not the one that just failed).
+>
+> **Railway does not consume the GHCR images** — it builds from the uploaded
+> source. The GHCR images serve the local dev stack and the future
+> self-hosted move; see the Images note below.
 
 Original plan below — target: Hetzner + Coolify per spec §12. Postgres 16 + pgvector, Redis,
 LiteLLM proxy (own Postgres), API, worker, web. Cloudflare R2 replaces dev
@@ -27,6 +50,16 @@ copy lives gitignored at `infra/.env.staging`), `infra/staging-roles.sql`
 (`.github/workflows/app-images.yml` / `worker-image.yml`); web is built by
 Coolify from `apps/web/Dockerfile` because `NEXT_PUBLIC_*` values bake into
 the bundle at build time.
+
+**Who actually consumes the GHCR images** (3 Aug 2026): the **worker** image
+is pulled by `infra/docker-compose.dev.yml` — that is what runs locally, and
+why the worker is never built on a dev machine. Both images are also pinned
+by `infra/docker-compose.staging.yml`, which belongs to the Hetzner+Coolify
+plan and is **not** what staging runs today. So the API image currently has
+no consumer; it stays because it is the artefact the self-hosted move needs.
+After a worker change lands, `docker compose -f infra/docker-compose.dev.yml
+pull worker` is the step that picks it up locally — CI publishing it is not
+enough.
 
 ## 1. Cloudflare R2 (bucket exists — wire it up)
 
@@ -92,9 +125,12 @@ the bundle at build time.
    verify `/health` and one completion per alias.
 3. API up → `/api/v1/health` → sign up a staging tenant (email confirm) —
    bootstrap must mint an encrypted virtual key (check `tenants` row).
-4. Worker up — the CI-built GHCR image (verified 31 Jul in dev: job_timeout
-   3600, WeasyPrint + pango, health-card function; container health-card
-   proof green). Never build images on the dev machine — pull from GHCR.
+4. Worker up. On Railway this is `railway up ./apps/worker --path-as-root
+   --service worker` (built from source there, not pulled from GHCR — see
+   the header note). The GHCR image is what the **local dev** stack pulls;
+   never build the worker image on the dev machine. Verified 31 Jul in dev:
+   job_timeout 3600, WeasyPrint + pango, health-card function; container
+   health-card proof green.
 5. Web up → full smoke: upload a PDF → `ready`; cited chat answer; monthly
    report draft (expect ~10–30 min); health card (~seconds, opens PDF).
 6. Point Sentry at both API + worker and confirm an event arrives.
