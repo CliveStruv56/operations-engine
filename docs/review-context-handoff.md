@@ -494,8 +494,8 @@ visibility` covers the soft link both ways — including asserting the
 FK-bypasses-RLS hazard outright, which is why step 2's routers must validate
 every referenced id with an RLS-scoped existence check (#19's ruling).
 
-Suites green: **API 231** (196 / 228 / 231 after steps 1–3), worker 31,
-web 10; ruff + mypy clean.
+Suites green: **API 244** (196 / 228 / 231 / 244 after steps 1–4),
+**worker 61** (was 31), web 10; ruff + mypy clean.
 **Local dev DB upgraded to 0013.** Staging DB is still at **0012** — 0013 goes
 out with the Railway pre-deploy hook on the next api deploy.
 
@@ -537,8 +537,39 @@ the funder's own guidance, then set `status='open'` and
 Run the seeder with the owner connection: `uv run python -m app.grants.seeds`
 (templates + catalogue, idempotent). Dev DB is seeded; **staging is not**.
 
-**Next**: step 4 — drafting (`worker/grants/` pack + the four skeletons +
-`DraftModule` + the non-LLM impact card), then step 5 — web. Per §6f.
+**Step 4 shipped** (`4cc0b13`): `worker/grants/` — one `DraftModule`, the
+four skeletons, three data tables, the register, and the impact card. Nothing
+in `worker/drafting/` changed, which is the module kit working as intended.
+Worker jobs `grant_draft_document` + `generate_impact_card`; queue methods
+`enqueue_grant_draft` / `enqueue_impact_card`; routes
+`POST/GET .../drafts`, `GET /grants/drafts/{job_id}`, `POST .../impact-card`.
+
+Decisions to know before touching the drafting layer:
+- **Monitoring returns retrieve nothing from the vault.** No `QUERY_SETS`
+  entry ⇒ the engine skips the embedding call. A return accounts for what the
+  grant did, and those facts are module rows.
+- **Figures never come from the model.** An unrecorded measure renders the
+  words "not recorded", not a dash and not a zero — asserted in both the DOCX
+  and the PDF.
+- **An unverified catalogue row warns on page one** of any bid (only bids;
+  on a return it is noise). This is #24 paying off.
+- **`scope_weights` follows the project link** (#23): linked ⇒ boost that
+  project's vault docs; standalone ⇒ whole vault, unweighted.
+- **Monitoring returns get per-period registry rows** (#9 suffixing) carrying
+  `reporting_period_id`, and registering one moves its period to 'drafting'.
+  The other three version onto their seeded launcher rows.
+- **The impact card is an export, not a `DraftIn` kind** — its own job kind
+  and route. No LLM touches it, so every figure is a recorded row, which is
+  what makes it safe to send to a funder when a draft is not.
+
+**Next**: step 5 — web (`lib/grants.ts`, `/app/grants` pages, sidebar nav +
+icon, flag guard via `useModuleEnabled`/`ModuleDisabled`, vitest coverage).
+That is the last step in the §6f sequence.
+
+**Not yet done for Grantwork overall**: staging deploy (staging DB is at
+0012 — 0013 goes out with the Railway pre-deploy hook, then the seeder must
+be run there), and no end-to-end run of a real draft against the live
+gateway.
 
 Two schema divergences from the PRD's §1 entity list, both argued in #23:
 `grant_tasks` (the seeded library specifies standard tasks, which the listed
