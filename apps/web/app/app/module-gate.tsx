@@ -42,6 +42,12 @@ export function ModuleDisabled({ title, blurb }: { title: string; blurb: string 
   );
 }
 
+export const GRANTS_DISABLED = {
+  title: "Grant funding isn't switched on",
+  blurb:
+    "This workspace doesn't have the grant funding module. Ask whoever provides your workspace to enable it.",
+} as const;
+
 export const PROJECTS_DISABLED = {
   title: "Development projects aren't switched on",
   blurb:

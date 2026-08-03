@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChatIcon,
+  GrantIcon,
   HomeIcon,
   PeopleIcon,
   PulseIcon,
@@ -129,6 +130,18 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             >
               <PeopleIcon />
               Contacts
+            </Link>
+          )}
+
+          {tenant.features?.grants === true && (
+            <Link
+              href="/app/grants"
+              className={`${item} mt-0.5 ${
+                pathname.startsWith("/app/grants") ? itemActive : itemRest
+              }`}
+            >
+              <GrantIcon />
+              Grant funding
             </Link>
           )}
 

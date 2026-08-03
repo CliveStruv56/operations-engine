@@ -83,6 +83,17 @@ export function PeopleIcon(p: IconProps) {
   );
 }
 
+export function GrantIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M4 4h11l5 5v11H4z" />
+      <path d="M14 4v5h5" />
+      <path d="M8.5 15.5h7" />
+      <path d="M12 12.5v6" />
+    </Icon>
+  );
+}
+
 export function DocIcon(p: IconProps) {
   return (
     <Icon {...p}>
