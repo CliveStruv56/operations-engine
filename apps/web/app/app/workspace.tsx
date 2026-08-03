@@ -45,7 +45,7 @@ export type Conversation = {
   updated_at: string;
 };
 
-type WorkspaceState = {
+export type WorkspaceState = {
   loading: boolean;
   email: string | null;
   tenant: Tenant | null;
@@ -70,7 +70,9 @@ type WorkspaceState = {
   logout: () => Promise<void>;
 };
 
-const WorkspaceContext = createContext<WorkspaceState | null>(null);
+/** Exported so tests can mount a component against a made-up workspace
+ *  instead of a live session. Application code uses useWorkspace(). */
+export const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
 export function useWorkspace(): WorkspaceState {
   const ctx = useContext(WorkspaceContext);

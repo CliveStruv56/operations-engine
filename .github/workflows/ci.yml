@@ -83,6 +83,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm exec tsc --noEmit
+      - run: pnpm test
       - run: pnpm build
       # Fails on high/critical advisories, including transitive deps.
       - run: pnpm audit --audit-level high
