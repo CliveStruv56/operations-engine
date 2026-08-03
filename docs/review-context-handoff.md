@@ -365,8 +365,113 @@ tests**. ⚠️ **Local dev DB is still at 0010** — run
 `cd apps/api && uv run alembic upgrade head` before working on audit/feed
 code.
 
+## 6f. Module kit + drafting-engine extraction (3 Aug 2026) — NEXT UP: Grantwork
+
+**The next task is building the Grantwork module.** Everything below is the
+ground it stands on. Spec: `docs/modules/grantwork-prd.md`. Sequencing and
+rationale: `docs/vertical-module-roadmap.md`.
+
+### What shipped today (all on `main`, pushed, CI green)
+
+| Commit | What |
+| --- | --- |
+| `8cfbcc7` | Module manifest, RLS coverage test, `PATCH /admin/tenants/{id}/features` |
+| `9b62239` | Vertical-module roadmap + mini-PRDs (Grantwork, Tenderhouse, Assurance) |
+| `322f869` `6c35e6c` | CI actions off the deprecated Node 20 runtime |
+| `d1d4e62` | Worker image builds again — CPU torch (see below) |
+| `cf9124e` `b92f68d` | Staging checklist corrections |
+| `f5fa56f` | Operator console: edit + suspend workspaces (migration **0012**) |
+| `760df09` `30dc4d2` | Web: module flag guard; suspended-workspace screen |
+| `c62b6d7` | **Drafting pipeline extracted from Groundwork** — the thing Grantwork builds on |
+
+Suites: **API 195**, **worker 31**. `apps/web` has **no test tooling at all**
+— UI changes are verifiable only by running it.
+
+### The drafting seam (read before writing any Grantwork drafting code)
+
+`worker/drafting/` is now module-agnostic and owns the pipeline, the
+`LlmLedger` cost guard (≤15 calls, ≤24k context), hybrid retrieval, prompt
+construction, DOCX assembly, citation resolution and the `[TO CONFIRM]`
+contract. `worker/drafts/` is the **Groundwork adapter** and is the worked
+example to copy.
+
+A vertical supplies one `DraftModule` (`worker/drafting/engine.py`):
+`storage_segment`, `job_table`, `system_prompt`, `skeletons`, `tables`, and
+four callables — `gather`, `queries_for`, `scope_weights`, `register`. Its
+pack subclasses `DraftPackBase` (`worker/drafting/pack.py`) and overrides
+only the hooks that differ; Groundwork overrides five (`doc_title`,
+`subject_lines`, `prompt_notes`, `warning_block`, `source_notes`).
+Build the system prompt with `prompts.grounding_prompt(domain)` — never
+restate the grounding contract.
+
+### Module registration (what a new flag now costs)
+
+`apps/api/app/modules.py` is the manifest. Add one `Module(flag, label,
+tables, feed_prefix)` entry and `FEATURE_FLAGS`, the gate dependency, the
+activity-feed namespaces and the RLS coverage test all follow. Then:
+
+- migration: tables + `enable_tenant_rls()` from `migrations/rls.py`
+- `app/<mod>/schemas.py` for Pydantic models (**not** core `schemas.py` —
+  ASSUMPTIONS #20; Groundwork's split is legacy, do not copy it)
+- `sqlutil.PATCHABLE_COLUMNS` entries for any PATCH endpoint
+- router package + registration in `app/main.py` (**order-sensitive**)
+- `tests/test_isolation.py` `TENANT_TABLES` + attack list + `conftest`
+  fixture rows
+- web: `lib/<mod>.ts` client, pages, sidebar nav + icon, and the flag guard
+  via `app/app/module-gate.tsx` (`useModuleEnabled` + `ModuleDisabled`)
+- worker jobs: `app/queue.py` enqueue method + `worker/main.py` functions
+
+`test_every_module_table_has_rls` is the safety net: a table declared in the
+manifest without RLS **and** both policy clauses fails the suite. This is
+the check that makes the previously-silent failure loud — do not weaken it.
+
+### Environment state
+
+- **Staging fully current**: api `16:48`, worker `16:07`, web (Vercel)
+  `19:05`, all 3 Aug. Staging DB at **0012**.
+- **Migrations run as a Railway pre-deploy hook** on the api service
+  (`alembic upgrade head`). It is Railway-side state, not in the repo — see
+  the header note in `docs/staging-deploy-checklist.md` for how to re-apply.
+- **Deploys**: `railway up ./apps/api --path-as-root --service api`.
+  `--path-as-root` is mandatory (see checklist). Web: `vercel --prod` from
+  `apps/web`. **Railway builds from source and never pulls the GHCR
+  images** — those serve local dev.
+- **Local worker image refreshed** to the CPU-torch build (9.54 GB → 2.79
+  GB). Torch PyPI wheels bundle CUDA; the Dockerfile now installs
+  torch/torchvision from the PyTorch CPU index first so docling never pulls
+  it. Do not undo that.
+- Postgres/redis/litellm services last deployed 31 Jul — correct, they only
+  redeploy on config change.
+
+### Open items (not blockers for Grantwork)
+
+1. **Hard delete of a workspace.** Suspension shipped; purge did not. Needs
+   the R2 prefix, the LiteLLM virtual key, and an RLS delete policy on
+   `tenants` (deliberately absent since 0001).
+2. Groundwork's schema split (ASSUMPTIONS #20) left as-is.
+3. Roadmap §1.6 hygiene: only the web flag guard was done.
+4. Two harmless ad-hoc SQL parse errors in the staging Postgres log (2 Aug,
+   3 Aug) — not app code, no data touched; something holds a direct psql
+   connection to staging.
+
+### Suggested first move on Grantwork
+
+Phased, committing on green at each step, because CLAUDE.md's hard
+constraint is that **a migration is not done until its table has RLS and an
+isolation test**:
+
+1. Migration `0013` — `grant_*` tables + `enable_tenant_rls()`; manifest
+   entry; isolation tests and `conftest` fixture rows. Commit.
+2. Routers + schemas + the `grants` gate. Commit.
+3. Seeds: funder catalogue extending the `proj_ref_programmes` shape, with
+   `last_verified`/`next_review`. Commit.
+4. Drafting: pack + skeletons + registry via `DraftModule`. Commit.
+5. Web: client, pages, nav, flag guard. Commit.
+
 ## 7. Read first in a new session
 
-1. This file.
-2. `docs/groundwork/ASSUMPTIONS.md` (items 14–16 are new).
-3. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
+1. This file — **§6f first**, it is the current state.
+2. `docs/modules/grantwork-prd.md` (the task) and
+   `docs/vertical-module-roadmap.md` §1 (why the kit looks like this).
+3. `docs/groundwork/ASSUMPTIONS.md` (items 20–22 are the newest rulings).
+4. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
