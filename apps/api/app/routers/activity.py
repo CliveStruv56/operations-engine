@@ -11,6 +11,7 @@ import json
 import asyncpg
 from fastapi import APIRouter, Depends
 
+from app.modules import FEED_PATTERNS
 from app.schemas import ActivityFeedItem
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -25,9 +26,13 @@ ALLOWED_ACTIONS = [
     "member.role_change",
     "invite.accept",  # invite.create would leak invitee emails pre-join
     "tenant.update",
+    "tenant.features_change",  # a module appearing is team-relevant; meta is flag names
     "conversation.share",
     "conversation.unshare",
 ]
+
+# Module namespaces admitted wholesale, from the manifest. A module opts in by
+# declaring a feed_prefix, so a new one cannot start broadcasting by accident.
 
 
 @router.get("/activity", response_model=list[ActivityFeedItem])
@@ -43,10 +48,11 @@ async def tenant_activity(
         left join memberships m on m.tenant_id = a.tenant_id and m.user_id = a.user_id
         left join documents d on a.target_type = 'document' and d.id::text = a.target_id
         left join projects p on a.target_type = 'project' and p.id::text = a.target_id
-        where a.action = any($1::text[]) or a.action like 'projects.%'
+        where a.action = any($1::text[]) or a.action like any($2::text[])
         order by a.created_at desc limit 15
         """,
         ALLOWED_ACTIONS,
+        list(FEED_PATTERNS),
     )
     out = []
     for r in rows:

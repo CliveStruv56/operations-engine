@@ -21,6 +21,8 @@ from app.errors import ApiError
 from app.litellm import litellm_client
 from app.routers.invites import INVITE_TTL_DAYS
 from app.schemas import (
+    AdminFeaturesIn,
+    AdminFeaturesOut,
     AdminInviteOut,
     AdminOwnerInviteIn,
     AdminTenantCreate,
@@ -128,6 +130,49 @@ async def admin_reissue_owner_invite(
         if not await conn.fetchval("select 1 from tenants where id = $1", tenant_id):
             raise ApiError(404, "not_found", "Workspace not found")
         return await _create_owner_invite(conn, tenant_id, body.email, user.id)
+
+
+@router.patch("/admin/tenants/{tenant_id}/features", response_model=AdminFeaturesOut)
+async def admin_update_features(
+    tenant_id: UUID,
+    body: AdminFeaturesIn,
+    user: AuthUser = Depends(require_platform_admin),
+):
+    """Switch modules on or off for an existing workspace.
+
+    Creation was the only way to set `features`, so selling a module to a
+    live client meant hand-editing jsonb in the database. Modules are the
+    packaging lever for the plan tiers, so that had to become an operation.
+
+    Merge rather than replace: the body names only what changes, so enabling
+    one module can never silently drop another. Setting a flag false is how
+    a module is withdrawn — the gates test `= 'true'`, so the routes 404 and
+    the nav item disappears on the client's next load. Nothing is deleted;
+    the module's rows survive a re-enable.
+
+    Runs in tenant_tx scoped to the target tenant, as tenant creation does —
+    the `tenant_update` policy accepts `id = app_current_tenant()`, so this
+    needs no owner-role connection and platform_tx stays read-only.
+    """
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        row = await conn.fetchrow(
+            "update tenants set features = features || $2::jsonb where id = $1"
+            " returning id, features",
+            tenant_id,
+            json.dumps(body.features),
+        )
+        if row is None:
+            raise ApiError(404, "not_found", "Workspace not found")
+        await write_audit(
+            conn,
+            tenant_id,
+            user.id,
+            "tenant.features_change",
+            "tenant",
+            str(tenant_id),
+            meta={"platform_admin": True, "changed": body.features},
+        )
+    return {"id": row["id"], "features": json.loads(row["features"])}
 
 
 @router.get("/admin/tenants", response_model=list[AdminTenantRow])

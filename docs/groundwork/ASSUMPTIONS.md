@@ -166,3 +166,64 @@ and every divergence is recorded here.
     Because FK checks bypass RLS, cross-tenant `company_id`/`project_id`
     references are rejected by RLS-scoped existence checks in the
     routers, covered by `tests/test_crm.py`.
+
+## Recorded during vertical-module research (2 Aug 2026)
+
+20. **Module schemas live in `app/<mod>/schemas.py`, not core
+    `app/schemas.py`.** Groundwork currently splits them — setup and
+    portfolio models sit in the core `app/schemas.py` (`GroundworkSetup`,
+    `PortfolioRow`, `RagOut`, …) while room models sit in
+    `app/groundwork/schemas.py`. That split was incidental, not
+    designed. The rule going forward: **all module Pydantic models
+    belong in the module's own `schemas.py`**; core `app/schemas.py`
+    holds only core-surface models. Groundwork's existing split is left
+    in place (moving it churns imports across 13 routers for no
+    behavioural gain) but is not a precedent — new modules must not
+    copy it. Recorded before module #3 so the ruling exists ahead of the
+    decision rather than after it.
+
+21. **Module registration is a manifest, not scattered constants**
+    (3 Aug 2026, implemented). Adding a feature flag used to mean
+    hand-editing six independent places: `FEATURE_FLAGS`
+    (`app/schemas.py`), `apps/web/lib/admin.ts`, a copy-pasted
+    `require_<flag>()` gate, the sidebar JSX, `ALLOWED_ACTIONS`
+    (`app/routers/activity.py`) and `TENANT_TABLES`
+    (`tests/test_isolation.py`). Nothing enforced consistency, and the
+    RLS block in migrations was likewise copy-pasted — the one place
+    where a slip fails silently rather than turning a test red.
+    `app/modules.py` now holds one `Module(flag, label, tables,
+    feed_prefix)` per entitlement; `FEATURE_FLAGS`, the
+    `make_feature_gate()` dependencies and the feed's namespace patterns
+    derive from it. `require_projects` / `require_contacts` are kept as
+    aliases at their old import paths, so no router changed.
+    `migrations/rls.py::enable_tenant_rls()` is the blessed policy
+    helper — migrations-local, not imported from `app`, so schema
+    history cannot shift when application code is refactored; 0003,
+    0005 and 0009 now call it and emit byte-identical SQL. The real
+    enforcement is `test_every_module_table_has_rls`, which asserts
+    every declared table has RLS plus a `tenant_isolation` policy with
+    both USING and WITH CHECK keyed on `app_current_tenant()`.
+    `TENANT_TABLES` in the isolation suite stays a hand-written list —
+    it drives per-table row assertions that need the `two_tenants`
+    fixture to have seeded rows, which module tables do not.
+    `web_search` is declared as a module with no tables: it is
+    cross-cutting chat enrichment (400 `feature_disabled`, not a 404
+    router) but is still an entitlement the operator console must offer.
+
+22. **Feature flags have an update path** (3 Aug 2026, implemented).
+    `POST /admin/tenants` was the only write path for
+    `tenants.features` (`PATCH /tenants/me` takes `name` and `brand`
+    only), so enabling a module on a live tenant needed raw SQL — which
+    made modules-as-upsell, the packaging lever for the plan tiers,
+    inoperable by ops. `PATCH /admin/tenants/{id}/features` is platform
+    admin only and audited as `tenant.features_change`. Two rulings
+    worth keeping: it **merges** rather than replaces, so naming one
+    module cannot silently drop another, and withdrawal is
+    `{"flag": false}` (the gates test `= 'true'`) which hides the module
+    without deleting its rows. It runs in `db.tenant_tx()` scoped to the
+    target tenant — as tenant creation does — because the `tenant_update`
+    policy accepts `id = app_current_tenant()`; **`db.platform_tx()` was
+    deliberately not used**, keeping that fenced connection read-only as
+    its docstring promises. `tenant.features_change` was added to the
+    activity feed's `ALLOWED_ACTIONS`: a module appearing is
+    team-relevant and the meta is flag names only.

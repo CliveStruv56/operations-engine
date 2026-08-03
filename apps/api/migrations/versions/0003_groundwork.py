@@ -13,6 +13,8 @@ Create Date: 2026-07-30
 
 from alembic import op
 
+from migrations.rls import enable_tenant_rls
+
 revision = "0003"
 down_revision = "0002"
 branch_labels = None
@@ -236,15 +238,7 @@ def upgrade() -> None:
     )
     op.execute("create index on proj_stakeholders (tenant_id, project_id)")
 
-    for table in MODULE_TENANT_TABLES:
-        op.execute(f"alter table {table} enable row level security")
-        op.execute(
-            f"""
-            create policy tenant_isolation on {table} for all
-            using (tenant_id = app_current_tenant())
-            with check (tenant_id = app_current_tenant())
-            """
-        )
+    enable_tenant_rls(MODULE_TENANT_TABLES)
 
     # Platform reference data: readable by every authenticated tenant context,
     # writable only by the owner role (migrations / seed script) — RLS with a

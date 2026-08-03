@@ -22,6 +22,7 @@ async def test_admin_endpoints_reject_non_admins(client, two_tenants):
         ("GET", "/api/v1/admin/tenants", None),
         ("POST", "/api/v1/admin/tenants", {"name": "X", "owner_email": "x@example.com"}),
         ("POST", f"/api/v1/admin/tenants/{a.id}/owner-invite", {"email": "x@example.com"}),
+        ("PATCH", f"/api/v1/admin/tenants/{a.id}/features", {"features": {"contacts": True}}),
     ]:
         resp = await client.request(method, path, json=body, headers=headers)
         assert resp.status_code == 403, f"{method} {path} -> {resp.status_code}"
@@ -104,6 +105,96 @@ async def test_tenant_admins_still_cannot_invite_owners(client, two_tenants):
         headers=auth(a.owner_id, a.id),
     )
     assert resp.status_code == 422
+
+
+# -- module entitlements -----------------------------------------------------
+
+
+async def test_admin_enables_a_module_on_a_live_workspace(client, two_tenants):
+    """Selling a module to an existing client: the flag flips and its routes
+    come alive, without touching the database by hand."""
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    # Contacts is off for the seeded tenant, so the CRM router is invisible.
+    assert (await client.get("/api/v1/contacts", headers=headers)).status_code == 404
+
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features",
+        json={"features": {"contacts": True}},
+        headers=admin_auth(uuid4()),
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["features"]["contacts"] is True
+
+    assert (await client.get("/api/v1/contacts", headers=headers)).status_code == 200
+    me = (await client.get("/api/v1/tenants/me", headers=headers)).json()
+    assert me["features"]["contacts"] is True
+
+
+async def test_features_patch_merges_and_can_withdraw_a_module(client, two_tenants):
+    """Naming one module must not disturb another, and false withdraws
+    access without deleting anything."""
+    a, _ = two_tenants
+    operator = admin_auth(uuid4())
+
+    await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features",
+        json={"features": {"contacts": True, "projects": True}},
+        headers=operator,
+    )
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features",
+        json={"features": {"web_search": True}},
+        headers=operator,
+    )
+    assert resp.json()["features"] == {"contacts": True, "projects": True, "web_search": True}
+
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features",
+        json={"features": {"contacts": False}},
+        headers=operator,
+    )
+    assert resp.json()["features"]["contacts"] is False
+    assert resp.json()["features"]["projects"] is True  # untouched
+    headers = auth(a.owner_id, a.id)
+    assert (await client.get("/api/v1/contacts", headers=headers)).status_code == 404
+
+
+async def test_features_patch_rejects_unknown_flags_and_missing_workspaces(client, two_tenants):
+    a, _ = two_tenants
+    operator = admin_auth(uuid4())
+
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features",
+        json={"features": {"contatcs": True}},  # typo would otherwise persist silently
+        headers=operator,
+    )
+    assert resp.status_code == 422
+
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features", json={"features": {}}, headers=operator
+    )
+    assert resp.status_code == 422
+
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{uuid4()}/features",
+        json={"features": {"contacts": True}},
+        headers=operator,
+    )
+    assert resp.status_code == 404
+
+
+async def test_features_change_is_audited_and_surfaces_to_the_team(client, two_tenants):
+    a, _ = two_tenants
+    await client.patch(
+        f"/api/v1/admin/tenants/{a.id}/features",
+        json={"features": {"contacts": True}},
+        headers=admin_auth(uuid4()),
+    )
+    feed = (await client.get("/api/v1/activity", headers=auth(a.owner_id, a.id))).json()
+    entry = next(i for i in feed if i["action"] == "tenant.features_change")
+    assert entry["meta"]["changed"] == {"contacts": True}
 
 
 # -- fleet listing -----------------------------------------------------------

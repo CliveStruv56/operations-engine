@@ -5,6 +5,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.modules import FEATURE_FLAGS
+
 _HEX_COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
 
 
@@ -50,7 +52,15 @@ class TenantMeOut(TenantOut):
 
 # -- operator console (platform admin) --------------------------------------
 
-FEATURE_FLAGS = {"projects", "contacts", "web_search"}
+
+def _reject_unknown_flags(v: dict[str, bool]) -> dict[str, bool]:
+    """Flags are an allowlist, not free-form jsonb: a typo would otherwise
+    persist a key no gate ever reads, looking enabled in the console and
+    404ing in the app."""
+    unknown = set(v) - FEATURE_FLAGS
+    if unknown:
+        raise ValueError(f"unknown feature flag(s): {sorted(unknown)}")
+    return v
 
 
 class AdminTenantCreate(BaseModel):
@@ -61,13 +71,22 @@ class AdminTenantCreate(BaseModel):
     features: dict[str, bool] = {}
     brand_accent: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
 
-    @field_validator("features")
-    @classmethod
-    def _known_flags(cls, v: dict[str, bool]) -> dict[str, bool]:
-        unknown = set(v) - FEATURE_FLAGS
-        if unknown:
-            raise ValueError(f"unknown feature flag(s): {sorted(unknown)}")
-        return v
+    _known_flags = field_validator("features")(_reject_unknown_flags)
+
+
+class AdminFeaturesIn(BaseModel):
+    """Modules to switch on or off for an existing workspace. Merged into
+    the tenant's flags, so naming one module never disturbs another; set a
+    flag false to switch it off (the gates test `= 'true'`)."""
+
+    features: dict[str, bool] = Field(min_length=1)
+
+    _known_flags = field_validator("features")(_reject_unknown_flags)
+
+
+class AdminFeaturesOut(BaseModel):
+    id: UUID
+    features: dict[str, Any]
 
 
 class AdminInviteOut(BaseModel):

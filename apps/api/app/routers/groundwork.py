@@ -16,29 +16,23 @@ from fastapi import APIRouter, Depends
 from app.audit import write_audit
 from app.errors import ApiError
 from app.groundwork.rag import compute_rag
+from app.modules import make_feature_gate
 from app.schemas import (
     GroundworkSetup,
     GroundworkSetupOut,
     GroundworkStatusIn,
     PortfolioRow,
 )
-from app.tenant import TenantContext, get_conn, require_role
+from app.tenant import TenantContext, get_conn
 
 router = APIRouter(tags=["groundwork"])
 
 TEMPLATE_KEY = "clh_new_build"
 
 
-async def require_projects(
-    ctx: TenantContext = Depends(require_role("member")),
-    conn: asyncpg.Connection = Depends(get_conn),
-) -> TenantContext:
-    enabled = await conn.fetchval(
-        "select features->>'projects' = 'true' from tenants where id = $1", ctx.tenant_id
-    )
-    if not enabled:
-        raise ApiError(404, "not_found", "Not found")
-    return ctx
+# Gate from the module manifest; the name is kept because every groundwork
+# router imports it from here.
+require_projects = make_feature_gate("projects")
 
 
 @router.post("/projects/{project_id}/setup", status_code=201, response_model=GroundworkSetupOut)

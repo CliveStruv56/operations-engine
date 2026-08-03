@@ -11,8 +11,12 @@ import asyncpg
 import pytest
 
 from app.db import db
+from app.modules import MODULE_TENANT_TABLES
 from tests.conftest import APP_URL, auth
 
+# Tables the two_tenants fixture seeds rows into, so the per-table checks
+# below can assert a context sees its own rows. Module tables that the
+# fixture does not seed are covered by test_every_module_table_has_rls.
 TENANT_TABLES = [
     "memberships",
     "projects",
@@ -199,6 +203,43 @@ async def test_sql_level_rls_per_table(two_tenants):
                 assert mine > 0, f"{table}: tenant A context sees none of its own rows"
             visible_tenants = await conn.fetch("select id from tenants")
             assert {r["id"] for r in visible_tenants} == {a.id}
+    finally:
+        await conn.close()
+
+
+async def test_every_module_table_has_rls():
+    """Every table declared in the module manifest carries RLS and the
+    tenant_isolation policy, in both directions.
+
+    This is the check that makes a forgotten policy loud. A module table
+    without one leaks across tenants while every functional test stays
+    green — nothing else in the suite would notice, because the tables a
+    new module adds are exactly the tables no existing test touches.
+    """
+    conn = await asyncpg.connect(APP_URL)
+    try:
+        for table in MODULE_TENANT_TABLES:
+            enabled = await conn.fetchval(
+                "select relrowsecurity from pg_class where oid = $1::regclass", table
+            )
+            assert enabled is True, f"{table}: row level security is not enabled"
+
+            policy = await conn.fetchrow(
+                "select qual, with_check from pg_policies"
+                " where tablename = $1 and policyname = 'tenant_isolation'",
+                table,
+            )
+            assert policy is not None, f"{table}: no tenant_isolation policy"
+            # USING alone still permits writing rows tagged for another
+            # tenant; WITH CHECK alone still permits reading them.
+            assert policy["qual"] is not None, f"{table}: tenant_isolation has no USING clause"
+            assert policy["with_check"] is not None, (
+                f"{table}: tenant_isolation has no WITH CHECK clause"
+            )
+            for clause in (policy["qual"], policy["with_check"]):
+                assert "app_current_tenant()" in clause, (
+                    f"{table}: tenant_isolation is not keyed on app_current_tenant()"
+                )
     finally:
         await conn.close()
 

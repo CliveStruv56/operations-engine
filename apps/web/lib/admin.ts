@@ -35,11 +35,23 @@ export type AdminTenantCreated = {
   invite: AdminInvite;
 };
 
+/** Mirrors the API's module manifest (apps/api/app/modules.py). Keys the API
+ *  does not know are rejected with a 422, so the two lists cannot silently
+ *  drift into a flag that looks enabled here and 404s in the app. */
 export const FEATURE_FLAGS = [
   { key: "projects", label: "Development projects" },
   { key: "contacts", label: "Contacts (CRM)" },
   { key: "web_search", label: "Web search" },
 ] as const;
+
+export type AdminFeatures = { id: string; features: Record<string, boolean> };
+
+/** Merge semantics: send only the flags that change. */
+export const updateFeatures = (tenantId: string, features: Record<string, boolean>) =>
+  admin<AdminFeatures>(`/admin/tenants/${tenantId}/features`, {
+    method: "PATCH",
+    body: JSON.stringify({ features }),
+  });
 
 export function inviteUrl(token: string): string {
   return `${window.location.origin}/invite/${token}`;

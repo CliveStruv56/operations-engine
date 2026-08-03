@@ -10,6 +10,8 @@ Create Date: 2026-07-31
 
 from alembic import op
 
+from migrations.rls import enable_tenant_rls
+
 revision = "0005"
 down_revision = "0004"
 branch_labels = None
@@ -43,14 +45,7 @@ def upgrade() -> None:
         """
     )
     op.execute("create index on proj_draft_jobs (tenant_id, project_id, created_at desc)")
-    op.execute("alter table proj_draft_jobs enable row level security")
-    op.execute(
-        """
-        create policy tenant_isolation on proj_draft_jobs for all
-        using (tenant_id = app_current_tenant())
-        with check (tenant_id = app_current_tenant())
-        """
-    )
+    enable_tenant_rls(["proj_draft_jobs"])
 
 
 def downgrade() -> None:

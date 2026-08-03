@@ -1,19 +1,9 @@
-"""CRM module gate: every route 404s unless `tenants.features->>'contacts'`."""
+"""CRM module gate: every route 404s unless `tenants.features->>'contacts'`.
 
-import asyncpg
-from fastapi import Depends
+The gate itself comes from the module manifest (`app/modules.py`); this
+alias keeps the import path every CRM router already uses.
+"""
 
-from app.errors import ApiError
-from app.tenant import TenantContext, get_conn, require_role
+from app.modules import make_feature_gate
 
-
-async def require_contacts(
-    ctx: TenantContext = Depends(require_role("member")),
-    conn: asyncpg.Connection = Depends(get_conn),
-) -> TenantContext:
-    enabled = await conn.fetchval(
-        "select features->>'contacts' = 'true' from tenants where id = $1", ctx.tenant_id
-    )
-    if not enabled:
-        raise ApiError(404, "not_found", "Not found")
-    return ctx
+require_contacts = make_feature_gate("contacts")

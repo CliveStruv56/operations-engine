@@ -11,6 +11,7 @@ import {
   admin,
 } from "@/lib/admin";
 import { InviteLink, NewWorkspace } from "./NewWorkspace";
+import { ModulesEditor } from "./ModulesEditor";
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
@@ -23,6 +24,7 @@ export default function AdminConsole() {
   const [creating, setCreating] = useState(false);
   const [created, setCreated] = useState<AdminTenantCreated | null>(null);
   const [reissued, setReissued] = useState<{ name: string; invite: AdminInvite } | null>(null);
+  const [editingModules, setEditingModules] = useState<AdminTenantRow | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -121,13 +123,18 @@ export default function AdminConsole() {
                       ${t.month_cost_usd.toFixed(2)} · {t.month_requests} req
                     </td>
                     <td className="px-4 py-3">
-                      <span className="flex flex-wrap gap-1">
+                      <button
+                        onClick={() => setEditingModules(t)}
+                        title="Change this workspace's modules"
+                        className="flex flex-wrap items-center gap-1 rounded-[8px] px-1 py-0.5 hover:bg-card"
+                      >
                         {FEATURE_FLAGS.filter((f) => t.features[f.key] === true).map((f) => (
                           <span key={f.key} className="stamp text-ink-muted">
                             {f.key}
                           </span>
                         ))}
-                      </span>
+                        <span className="text-xs text-ink-faint underline">Edit</span>
+                      </button>
                     </td>
                     <td className="px-4 py-3 text-right">
                       <button
@@ -151,6 +158,16 @@ export default function AdminConsole() {
           onCreated={(t) => {
             setCreating(false);
             setCreated(t);
+            refresh();
+          }}
+        />
+      )}
+      {editingModules && (
+        <ModulesEditor
+          tenant={editingModules}
+          onClose={() => setEditingModules(null)}
+          onSaved={() => {
+            setEditingModules(null);
             refresh();
           }}
         />
