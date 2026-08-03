@@ -35,6 +35,37 @@
 > and `railway logs` without an explicit id shows the last *successful*
 > deployment, not the one that just failed).
 >
+> **Migrations run as a Railway pre-deploy hook** (set 3 Aug 2026). The api
+> service has `preDeployCommand = ["alembic upgrade head"]`, so Railway runs
+> migrations against the new image after build and **before** switching
+> traffic. A failing migration fails the deploy and leaves the previous
+> release serving.
+>
+> This matters because the API container's CMD is only uvicorn — there was no
+> migration step at all, and nothing warns you. Migration 0012 added
+> `tenants.suspended_at`, which tenant resolution selects on every request, so
+> shipping that code against an unmigrated database would have 500'd every
+> tenant request until someone noticed.
+>
+> **The hook is Railway-side state, not in this repo** — a rebuilt project
+> will not have it. To re-apply, either set it in the service's Settings →
+> Deploy → Pre-deploy Command, or:
+>
+> ```sh
+> # serviceId/environmentId from `railway status --json`
+> curl -s https://backboard.railway.com/graphql/v2 \
+>   -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
+>   -d '{"query":"mutation{serviceInstanceUpdate(serviceId:\"<svc>\",environmentId:\"<env>\",input:{preDeployCommand:[\"alembic upgrade head\"]})}"}'
+> ```
+>
+> The database is on `postgres.railway.internal`, so it is unreachable from a
+> laptop: `railway run` injects the env vars but still executes locally and
+> cannot resolve the private host. For one-off SQL or to check state, use
+> `railway ssh --service api "alembic current"`, which runs inside the
+> deployed container — note that container only carries the migrations that
+> shipped in *its* image, so it cannot apply a revision newer than itself.
+> That is the whole reason the hook exists rather than a manual step.
+>
 > **Railway does not consume the GHCR images** — it builds from the uploaded
 > source. The GHCR images serve the local dev stack and the future
 > self-hosted move; see the Images note below.
@@ -121,6 +152,10 @@ enough.
    `python -m app.groundwork.seeds` (reference data, idempotent). Both
    commands run from the API image:
    `docker compose -f infra/docker-compose.staging.yml run --rm api <cmd>`.
+   **On Railway `alembic upgrade head` is not a manual step** — it is the
+   service's pre-deploy hook (see the header note), so it runs on every
+   deploy. The seed script is still manual and idempotent:
+   `railway ssh --service api "python -m app.groundwork.seeds"`.
 2. LiteLLM proxy up with `infra/litellm-config` aliases + provider keys;
    verify `/health` and one completion per alias.
 3. API up → `/api/v1/health` → sign up a staging tenant (email confirm) —
