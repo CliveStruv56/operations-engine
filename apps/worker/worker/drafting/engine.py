@@ -82,9 +82,7 @@ async def run_draft(
     loop = asyncio.get_running_loop()
 
     async with _tenant_tx(pool, tenant_id) as conn:
-        job = await conn.fetchrow(
-            f"select * from {module.job_table} where id = $1", UUID(job_id)
-        )
+        job = await conn.fetchrow(f"select * from {module.job_table} where id = $1", UUID(job_id))
         if job is None:
             return "gone"  # deleted between enqueue and run
         kind = job["kind"]
@@ -95,8 +93,7 @@ async def run_draft(
             )
         )
         await conn.execute(
-            f"update {module.job_table} set status = 'running', updated_at = now()"
-            " where id = $1",
+            f"update {module.job_table} set status = 'running', updated_at = now() where id = $1",
             UUID(job_id),
         )
 
@@ -115,9 +112,7 @@ async def run_draft(
             ledger.embed_cost_usd = embedded.cost_usd
             async with _tenant_tx(pool, tenant_id) as conn:
                 weights = await module.scope_weights(conn, UUID(subject_id))
-                pack.excerpts = await retrieve_excerpts(
-                    conn, queries, embedded.vectors, weights
-                )
+                pack.excerpts = await retrieve_excerpts(conn, queries, embedded.vectors, weights)
 
         sections_spec = module.skeletons[kind]
         system, user = outline_prompt(pack, sections_spec, module.system_prompt)
@@ -131,12 +126,8 @@ async def run_draft(
             text = await chat(ledger, virtual_key, section.alias, system, user)
             sections.append((section, text))
 
-        draft: AssembledDraft = assemble_docx(
-            pack, sections, date.today(), tables=module.tables
-        )
-        file_key = (
-            f"{tenant_id}/{module.storage_segment}/{subject_id}/drafts/{job_id}.docx"
-        )
+        draft: AssembledDraft = assemble_docx(pack, sections, date.today(), tables=module.tables)
+        file_key = f"{tenant_id}/{module.storage_segment}/{subject_id}/drafts/{job_id}.docx"
         await loop.run_in_executor(None, upload_bytes, file_key, draft.data, DOCX_MIME)
 
         async with _tenant_tx(pool, tenant_id) as conn:

@@ -45,9 +45,7 @@ def excerpt_block(excerpts: list[VaultExcerpt]) -> str:
     return "\n\n---\n\n".join(parts)
 
 
-def outline_prompt(
-    pack: DraftPackBase, sections: list[Section], system: str
-) -> tuple[str, str]:
+def outline_prompt(pack: DraftPackBase, sections: list[Section], system: str) -> tuple[str, str]:
     """One cheap call that annotates the fixed skeleton with what this
     subject's data actually supports covering in each section."""
     listed = [{"key": s.key, "title": s.title} for s in sections]
@@ -84,8 +82,7 @@ def section_prompt(
     pack: DraftPackBase, section: Section, notes: list[str], system: str
 ) -> tuple[str, str]:
     parts = [
-        f"Document: {pack.doc_title()}. "
-        f'Write the body of the section titled "{section.title}".',
+        f'Document: {pack.doc_title()}. Write the body of the section titled "{section.title}".',
     ]
     if section.guidance:
         parts.append(f"Section focus: {section.guidance}")

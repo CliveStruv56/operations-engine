@@ -35,9 +35,7 @@ _FROM = """
 """
 
 
-async def project_scope_weights(
-    conn: asyncpg.Connection, project_id: UUID
-) -> dict[UUID, float]:
+async def project_scope_weights(conn: asyncpg.Connection, project_id: UUID) -> dict[UUID, float]:
     """Project docs outrank the general vault; primary docs outrank all —
     same boosts as project-scoped chat."""
     rows = await conn.fetch(
