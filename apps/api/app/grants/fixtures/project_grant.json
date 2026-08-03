@@ -1,0 +1,128 @@
+{
+  "key": "project_grant",
+  "version": 1,
+  "payload": {
+    "label": "Project grant",
+    "stages": [
+      {
+        "stage_key": "case",
+        "label": "Case for support",
+        "position": 1,
+        "gate": [
+          { "id": "c1", "criterion": "Legal entity and charity/company number recorded", "kind": "manual" },
+          { "id": "c2", "criterion": "Need evidence gathered", "kind": "doc", "ref": "need_evidence" },
+          { "id": "c3", "criterion": "Case for support written", "kind": "doc", "ref": "case_for_support" }
+        ]
+      },
+      {
+        "stage_key": "prospect",
+        "label": "Prospect research",
+        "position": 2,
+        "gate": [
+          { "id": "p1", "criterion": "Funder identified and recorded", "kind": "manual" },
+          { "id": "p2", "criterion": "Eligibility checked against the funder's current criteria", "kind": "manual" },
+          { "id": "p3", "criterion": "Deadline and application route confirmed", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "apply",
+        "label": "Application",
+        "position": 3,
+        "gate": [
+          { "id": "a1", "criterion": "Application drafted", "kind": "doc", "ref": "funding_application" },
+          { "id": "a2", "criterion": "Project budget agreed", "kind": "doc", "ref": "project_budget" },
+          { "id": "a3", "criterion": "Supporting documents assembled", "kind": "manual" },
+          { "id": "a4", "criterion": "Reviewed and signed off by a trustee or senior lead", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "decision",
+        "label": "Decision",
+        "position": 4,
+        "gate": [
+          { "id": "d1", "criterion": "Application submitted and reference recorded", "kind": "manual" },
+          { "id": "d2", "criterion": "Outcome recorded", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "deliver",
+        "label": "Delivery",
+        "position": 5,
+        "gate": [
+          { "id": "v1", "criterion": "Award letter filed", "kind": "doc", "ref": "award_letter" },
+          { "id": "v2", "criterion": "Award conditions logged", "kind": "manual" },
+          { "id": "v3", "criterion": "Impact measures baselined against the offer", "kind": "manual" }
+        ]
+      },
+      {
+        "stage_key": "monitor",
+        "label": "Monitoring",
+        "position": 6,
+        "gate": [
+          { "id": "m1", "criterion": "Reporting periods scheduled to the funder's timetable", "kind": "manual" },
+          { "id": "m2", "criterion": "First monitoring return submitted", "kind": "doc", "ref": "monitoring_report" }
+        ]
+      },
+      {
+        "stage_key": "evaluate",
+        "label": "Evaluation",
+        "position": 7,
+        "gate": [
+          { "id": "e1", "criterion": "End-of-grant evaluation completed", "kind": "doc", "ref": "impact_evaluation" },
+          { "id": "e2", "criterion": "Learning captured for the next application", "kind": "manual" }
+        ]
+      }
+    ],
+    "tasks": [
+      { "stage_key": "case", "title": "Confirm governing document and charitable objects are current" },
+      { "stage_key": "case", "title": "Gather evidence of need (data, consultation, waiting lists)", "tags": ["evidence"] },
+      { "stage_key": "case", "title": "Collect beneficiary stories and consent to use them", "tags": ["evidence"] },
+      { "stage_key": "case", "title": "Draft the case for support", "is_milestone": true },
+      { "stage_key": "prospect", "title": "Shortlist funders whose criteria match this project" },
+      { "stage_key": "prospect", "title": "Check the funder's current guidance and closing date", "details": "Catalogue rows are point-in-time — verify against the funder's own site before relying on them." },
+      { "stage_key": "prospect", "title": "Check the grant size band against what the funder actually awards" },
+      { "stage_key": "prospect", "title": "Make contact with the funder where they invite it" },
+      { "stage_key": "apply", "title": "Build the project budget and confirm full cost recovery" },
+      { "stage_key": "apply", "title": "Draft the application against the funder's questions", "is_milestone": true },
+      { "stage_key": "apply", "title": "Define outcome measures, baselines and targets", "tags": ["impact"] },
+      { "stage_key": "apply", "title": "Assemble supporting documents (accounts, policies, governance)" },
+      { "stage_key": "apply", "title": "Confirm match funding or partner contributions" },
+      { "stage_key": "apply", "title": "Internal review and trustee sign-off" },
+      { "stage_key": "decision", "title": "Submit the application and record the funder's reference", "is_milestone": true },
+      { "stage_key": "decision", "title": "Diarise the funder's stated decision date" },
+      { "stage_key": "decision", "title": "Record the outcome and request feedback if declined" },
+      { "stage_key": "deliver", "title": "File the award letter and log every condition", "tags": ["conditions"] },
+      { "stage_key": "deliver", "title": "Set up restricted-fund coding with finance", "tags": ["finance"] },
+      { "stage_key": "deliver", "title": "Schedule the reporting periods the offer requires", "is_milestone": true },
+      { "stage_key": "deliver", "title": "Record baseline figures for every impact measure", "tags": ["impact"] },
+      { "stage_key": "monitor", "title": "Collect outcome data for the current reporting period", "tags": ["impact"] },
+      { "stage_key": "monitor", "title": "Draft and submit the monitoring return", "is_milestone": true },
+      { "stage_key": "monitor", "title": "Notify the funder of any material change to the project" },
+      { "stage_key": "evaluate", "title": "Aggregate outcomes across all reporting periods", "tags": ["impact"] },
+      { "stage_key": "evaluate", "title": "Complete the end-of-grant evaluation", "is_milestone": true },
+      { "stage_key": "evaluate", "title": "Confirm any unspent funds position with the funder", "tags": ["finance"] },
+      { "stage_key": "evaluate", "title": "Write up what to repeat and what to change next time" }
+    ],
+    "doc_types": [
+      { "doc_type_key": "need_evidence", "title": "Evidence of need", "stage_key": "case", "ai_draftable": false },
+      { "doc_type_key": "case_for_support", "title": "Case for support", "stage_key": "case", "ai_draftable": true },
+      { "doc_type_key": "governance_docs", "title": "Governing document and trustee list", "stage_key": "prospect", "ai_draftable": false },
+      { "doc_type_key": "funding_application", "title": "Funding application", "stage_key": "apply", "ai_draftable": true },
+      { "doc_type_key": "project_budget", "title": "Project budget", "stage_key": "apply", "ai_draftable": false },
+      { "doc_type_key": "annual_accounts", "title": "Most recent annual accounts", "stage_key": "apply", "ai_draftable": false },
+      { "doc_type_key": "safeguarding_policy", "title": "Safeguarding policy", "stage_key": "apply", "ai_draftable": false },
+      { "doc_type_key": "equality_policy", "title": "Equality and diversity policy", "stage_key": "apply", "ai_draftable": false },
+      { "doc_type_key": "award_letter", "title": "Award letter and offer conditions", "stage_key": "decision", "ai_draftable": false },
+      { "doc_type_key": "monitoring_report", "title": "Monitoring return", "stage_key": "monitor", "ai_draftable": true },
+      { "doc_type_key": "impact_evaluation", "title": "End-of-grant evaluation", "stage_key": "evaluate", "ai_draftable": true }
+    ],
+    "conditions": [
+      { "number": "1", "description": "Acknowledge the funder in publicity and printed materials as their guidance requires", "pre_drawdown": false },
+      { "number": "2", "description": "Notify the funder in writing of any material change to the project, its budget or its timetable", "pre_drawdown": false },
+      { "number": "3", "description": "Spend the grant only on the purposes set out in the application", "pre_drawdown": false },
+      { "number": "4", "description": "Submit monitoring returns on the funder's schedule", "pre_drawdown": false },
+      { "number": "5", "description": "Return any unspent funds at the end of the grant period", "pre_drawdown": false },
+      { "number": "6", "description": "Confirm match funding is secured before drawing down", "pre_drawdown": true }
+    ]
+  }
+}

@@ -18,6 +18,7 @@ from app.routers import (
     crm,
     documents,
     global_search,
+    grants,
     groundwork,
     groundwork_drafts,
     groundwork_room,
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
         groundwork.router,
         groundwork_drafts.router,  # literal /projects/drafts path before room matchers
         groundwork_room.router,
+        grants.router,
         crm.router,
         conversations.router,
         slides.router,

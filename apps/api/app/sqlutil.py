@@ -104,6 +104,91 @@ PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
     "proj_stakeholders": frozenset(
         {"name", "org", "role", "email", "phone", "notes", "last_contact"}
     ),
+    "grant_funders": frozenset(
+        {
+            "name",
+            "ref_key",
+            "kind",
+            "website",
+            "contact_name",
+            "contact_email",
+            "relationship",
+            "notes",
+        }
+    ),
+    "grant_applications": frozenset(
+        {
+            "title",
+            "funder_id",
+            "project_id",
+            "reference",
+            "programme_key",
+            "amount_requested",
+            "amount_awarded",
+            "restricted",
+            "deadline",
+            "start_date",
+            "end_date",
+            "reporting_note",
+            "notes",
+        }
+    ),
+    # `status` is deliberately absent: the pipeline moves through
+    # POST /grants/applications/{id}/status, which also seeds award conditions
+    # and audits the transition. A bare PATCH would skip both.
+    "grant_stages": frozenset(
+        {
+            "status",
+            "planned_start",
+            "planned_end",
+            "forecast_start",
+            "forecast_end",
+            "actual_start",
+            "actual_end",
+            "gate_exceptions",
+        }
+    ),
+    "grant_tasks": frozenset(
+        {
+            "title",
+            "stage_key",
+            "details",
+            "owner_name",
+            "due_date",
+            "is_milestone",
+            "tags",
+            "status",
+            "completed_at",
+        }
+    ),
+    "grant_documents": frozenset({"status", "notes", "vault_document_id"}),
+    "grant_conditions": frozenset(
+        {
+            "number",
+            "description",
+            "pre_drawdown",
+            "status",
+            "due_date",
+            "submitted_at",
+            "discharged_at",
+            "notes",
+        }
+    ),
+    "grant_reporting_periods": frozenset(
+        {
+            "label",
+            "period_start",
+            "period_end",
+            "due_date",
+            "status",
+            "submitted_at",
+            "accepted_at",
+            "notes",
+        }
+    ),
+    "grant_impact_measures": frozenset(
+        {"name", "definition", "unit", "baseline", "target", "notes"}
+    ),
     "crm_companies": frozenset(
         {
             "name",
