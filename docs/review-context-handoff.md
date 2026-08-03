@@ -384,10 +384,11 @@ rationale: `docs/vertical-module-roadmap.md`.
 | `760df09` `30dc4d2` | Web: module flag guard; suspended-workspace screen |
 | `c62b6d7` | **Drafting pipeline extracted from Groundwork** — the thing Grantwork builds on |
 
-Suites: **API 195**, **worker 31**, **web 10** (`pnpm test` — vitest +
-Testing Library, added 3 Aug in `18c6f3d`; covers the module feature gate and
-the projects page). Web coverage is still thin — anything outside those two
-files is verifiable only by running the app.
+Suites at the time of this section: **API 195**, **worker 31**, **web 10**
+(`pnpm test` — vitest + Testing Library, added 3 Aug in `18c6f3d`; covers the
+module feature gate and the projects page). Web coverage is still thin —
+anything outside those two files is verifiable only by running the app.
+API is **196** as of `ff957ab` (§6g).
 
 ### The drafting seam (read before writing any Grantwork drafting code)
 
@@ -469,6 +470,42 @@ isolation test**:
    `last_verified`/`next_review`. Commit.
 4. Drafting: pack + skeletons + registry via `DraftModule`. Commit.
 5. Web: client, pages, nav, flag guard. Commit.
+
+## 6g. Grantwork build — step 1 done (3 Aug 2026)
+
+**Rulings taken before any code** (founder, recorded as ASSUMPTIONS **#23**):
+two funding surfaces rather than one — Grantwork does not absorb Groundwork's
+funding tab; applications are **standalone** rows, *not* core-project
+extensions (the opposite of #1's ruling for `proj_projects`, because a
+charity's twenty-bid portfolio would flood the sidebar and split the vault);
+`grant_applications.project_id` is a nullable soft link to the **core**
+`projects` row. All four draftable document kinds are in scope for this phase.
+
+**Shipped** (`ff957ab`, on `main`, **not pushed**): migration **0013** — ten
+tenant tables (`grant_funders`, `grant_applications`, `grant_stages`,
+`grant_tasks`, `grant_reporting_periods`, `grant_documents`,
+`grant_conditions`, `grant_impact_measures`, `grant_outcomes`,
+`grant_draft_jobs`) through `enable_tenant_rls()`, plus select-only
+`grant_ref_funders` / `grant_ref_templates`. Manifest entry
+`Module(flag="grants", label="Grant funding", feed_prefix="grants")`,
+mirrored in `apps/web/lib/admin.ts`. `two_tenants` seeds a full chain through
+all ten tables, and `test_grantwork_cross_module_link_does_not_widen_
+visibility` covers the soft link both ways — including asserting the
+FK-bypasses-RLS hazard outright, which is why step 2's routers must validate
+every referenced id with an RLS-scoped existence check (#19's ruling).
+
+Suites green: **API 196**, worker 31, web 10; ruff + mypy clean.
+**Local dev DB upgraded to 0013.** Staging DB is still at **0012** — 0013 goes
+out with the Railway pre-deploy hook on the next api deploy.
+
+**Next**: step 2 (routers + `app/grants/schemas.py` + the `grants` gate +
+`sqlutil.PATCHABLE_COLUMNS` + cross-tenant attack-list entries), then seeds,
+drafting, web — the five-step sequence in §6f.
+
+Two schema divergences from the PRD's §1 entity list, both argued in #23:
+`grant_tasks` (the seeded library specifies standard tasks, which the listed
+entities had nowhere to hold) and `grant_draft_jobs` (the shared engine takes
+a per-module `job_table`).
 
 ## 7. Read first in a new session
 
