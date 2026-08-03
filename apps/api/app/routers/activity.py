@@ -27,6 +27,8 @@ ALLOWED_ACTIONS = [
     "invite.accept",  # invite.create would leak invitee emails pre-join
     "tenant.update",
     "tenant.features_change",  # a module appearing is team-relevant; meta is flag names
+    "tenant.suspend",  # only ever read after a resume — the feed is unreachable while dark
+    "tenant.resume",
     "conversation.share",
     "conversation.unshare",
 ]

@@ -25,11 +25,15 @@ from app.schemas import (
     AdminFeaturesOut,
     AdminInviteOut,
     AdminOwnerInviteIn,
+    AdminSuspendIn,
     AdminTenantCreate,
     AdminTenantCreatedOut,
+    AdminTenantOut,
+    AdminTenantPatch,
     AdminTenantRow,
 )
 from app.secrets import encrypt_llm_key
+from app.sqlutil import patch_sets
 
 router = APIRouter(tags=["admin"])
 
@@ -175,12 +179,142 @@ async def admin_update_features(
     return {"id": row["id"], "features": json.loads(row["features"])}
 
 
+_TENANT_COLS = (
+    "id, name, plan, seats, trial_ends_at, features, brand, suspended_at, suspended_reason"
+)
+
+
+def _tenant_out(row) -> dict:
+    out = dict(row)
+    out["features"] = json.loads(out["features"])
+    out["brand"] = json.loads(out["brand"])
+    return out
+
+
+@router.patch("/admin/tenants/{tenant_id}", response_model=AdminTenantOut)
+async def admin_update_tenant(
+    tenant_id: UUID,
+    body: AdminTenantPatch,
+    user: AuthUser = Depends(require_platform_admin),
+):
+    """Edit a workspace after creation — name, seats, trial end, plan, accent.
+
+    Creation was previously the only chance to set any of these, so a typo in
+    a client's name or a pilot needing another fortnight meant editing the
+    database by hand.
+
+    Only the fields present in the request body change, so two operators
+    editing different fields cannot overwrite each other. Changing seats also
+    moves `soft_budget_usd` (seats x the per-seat cap) to keep the gateway's
+    fair-use ceiling in step with what the client is paying for; the LiteLLM
+    key's own budget is not re-synced here — see the note in the console.
+    """
+    updates = body.changes()
+    if not updates:
+        raise ApiError(400, "no_changes", "Send at least one field to change")
+    accent = updates.pop("brand_accent", None)
+
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        current = await conn.fetchrow("select brand, seats from tenants where id = $1", tenant_id)
+        if current is None:
+            raise ApiError(404, "not_found", "Workspace not found")
+
+        if "seats" in updates:
+            per_seat = get_settings().default_soft_budget_per_seat_usd
+            updates["soft_budget_usd"] = updates["seats"] * per_seat
+        if accent is not None:
+            brand = json.loads(current["brand"])
+            brand["accent"] = accent
+            updates["brand"] = json.dumps(brand)
+
+        sets, params = patch_sets("tenants", updates)
+        row = await conn.fetchrow(
+            f"update tenants set {sets}, updated_at = now() where id = $1 returning {_TENANT_COLS}",
+            tenant_id,
+            *params,
+        )
+        await write_audit(
+            conn,
+            tenant_id,
+            user.id,
+            "tenant.update",
+            "tenant",
+            str(tenant_id),
+            meta={"platform_admin": True, "fields": sorted(body.changes())},
+        )
+    return _tenant_out(row)
+
+
+@router.post("/admin/tenants/{tenant_id}/suspend", response_model=AdminTenantOut)
+async def admin_suspend_tenant(
+    tenant_id: UUID,
+    body: AdminSuspendIn,
+    user: AuthUser = Depends(require_platform_admin),
+):
+    """Take a workspace dark, reversibly.
+
+    Tenant resolution 403s `tenant_suspended` for every member from the next
+    request, which also means no suspended tenant can reach the LiteLLM
+    gateway and spend. Nothing is deleted: rows, uploads and the tenant's key
+    all survive, so resume restores the workspace exactly.
+
+    This is not deletion. A real purge has to reach outside Postgres — the R2
+    prefix and the LiteLLM virtual key — and is deliberately a separate job.
+    """
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        row = await conn.fetchrow(
+            "update tenants set suspended_at = now(), suspended_reason = $2,"
+            f" updated_at = now() where id = $1 returning {_TENANT_COLS}",
+            tenant_id,
+            body.reason,
+        )
+        if row is None:
+            raise ApiError(404, "not_found", "Workspace not found")
+        await write_audit(
+            conn,
+            tenant_id,
+            user.id,
+            "tenant.suspend",
+            "tenant",
+            str(tenant_id),
+            meta={"platform_admin": True, "reason": body.reason},
+        )
+    return _tenant_out(row)
+
+
+@router.post("/admin/tenants/{tenant_id}/resume", response_model=AdminTenantOut)
+async def admin_resume_tenant(
+    tenant_id: UUID,
+    user: AuthUser = Depends(require_platform_admin),
+):
+    """Lift a suspension. Idempotent — resuming an active workspace is a no-op."""
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        row = await conn.fetchrow(
+            "update tenants set suspended_at = null, suspended_reason = null,"
+            f" updated_at = now() where id = $1 returning {_TENANT_COLS}",
+            tenant_id,
+        )
+        if row is None:
+            raise ApiError(404, "not_found", "Workspace not found")
+        await write_audit(
+            conn,
+            tenant_id,
+            user.id,
+            "tenant.resume",
+            "tenant",
+            str(tenant_id),
+            meta={"platform_admin": True},
+        )
+    return _tenant_out(row)
+
+
 @router.get("/admin/tenants", response_model=list[AdminTenantRow])
 async def admin_list_tenants(user: AuthUser = Depends(require_platform_admin)):
     async with db.platform_tx() as conn:
         rows = await conn.fetch(
             """
             select t.id, t.name, t.plan, t.seats, t.trial_ends_at, t.created_at, t.features,
+                   t.brand, t.suspended_at, t.suspended_reason,
                    (select count(*) from memberships m where m.tenant_id = t.id)::int
                        as member_count,
                    (select count(*) from invites i
@@ -197,9 +331,4 @@ async def admin_list_tenants(user: AuthUser = Depends(require_platform_admin)):
             from tenants t order by t.created_at desc
             """
         )
-    out = []
-    for r in rows:
-        d = dict(r)
-        d["features"] = json.loads(d["features"])
-        out.append(d)
-    return out
+    return [_tenant_out(r) for r in rows]

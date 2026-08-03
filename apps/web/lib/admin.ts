@@ -12,10 +12,52 @@ export type AdminTenantRow = {
   trial_ends_at: string | null;
   created_at: string;
   features: Record<string, boolean>;
+  brand: Record<string, unknown>;
+  suspended_at: string | null;
+  suspended_reason: string | null;
   member_count: number;
   pending_invites: number;
   month_cost_usd: number;
   month_requests: number;
+};
+
+export type AdminTenantPatch = {
+  name?: string;
+  seats?: number;
+  trial_ends_at?: string | null;
+  plan?: string;
+  brand_accent?: string;
+};
+
+export const PLANS = ["trial", "core", "pro", "managed"] as const;
+
+/** Partial: send only what changed, so concurrent edits to different fields
+ *  cannot clobber one another. */
+export const updateTenant = (tenantId: string, patch: AdminTenantPatch) =>
+  admin<AdminTenant>(`/admin/tenants/${tenantId}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+
+export const suspendTenant = (tenantId: string, reason: string) =>
+  admin<AdminTenant>(`/admin/tenants/${tenantId}/suspend`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+
+export const resumeTenant = (tenantId: string) =>
+  admin<AdminTenant>(`/admin/tenants/${tenantId}/resume`, { method: "POST" });
+
+export type AdminTenant = {
+  id: string;
+  name: string;
+  plan: string;
+  seats: number;
+  trial_ends_at: string | null;
+  features: Record<string, boolean>;
+  brand: Record<string, unknown>;
+  suspended_at: string | null;
+  suspended_reason: string | null;
 };
 
 export type AdminInvite = {

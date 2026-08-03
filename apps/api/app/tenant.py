@@ -34,6 +34,22 @@ async def _heal_membership_email(user: AuthUser, row: asyncpg.Record) -> None:
         )
 
 
+def _reject_if_suspended(row: asyncpg.Record) -> None:
+    """A suspended workspace goes dark for its members.
+
+    Enforced here rather than per-router because tenant resolution is the one
+    gate every tenant-scoped request passes through — including chat, so a
+    suspended tenant cannot reach the LiteLLM gateway and cannot spend. The
+    operator console is unaffected: its routes carry no tenant context.
+    """
+    if row["suspended_at"] is not None:
+        raise ApiError(
+            403,
+            "tenant_suspended",
+            "This workspace is suspended. Contact your provider.",
+        )
+
+
 async def resolve_tenant(
     request: Request, user: AuthUser = Depends(get_current_user)
 ) -> TenantContext:
@@ -42,7 +58,7 @@ async def resolve_tenant(
     async with db.user_tx(user.id) as conn:
         rows = await conn.fetch(
             """
-            select m.tenant_id, m.role, m.email, t.name
+            select m.tenant_id, m.role, m.email, t.name, t.suspended_at
             from memberships m
             join tenants t on t.id = m.tenant_id
             where m.user_id = $1
@@ -58,11 +74,13 @@ async def resolve_tenant(
             raise ApiError(400, "invalid_tenant_id", "X-Tenant-Id is not a UUID") from exc
         for row in rows:
             if row["tenant_id"] == wanted:
+                _reject_if_suspended(row)
                 await _heal_membership_email(user, row)
                 return TenantContext(user_id=user.id, tenant_id=wanted, role=row["role"])
         raise ApiError(403, "not_a_member", "You are not a member of this tenant")
     if len(rows) == 1:
         row = rows[0]
+        _reject_if_suspended(row)
         await _heal_membership_email(user, row)
         return TenantContext(user_id=user.id, tenant_id=row["tenant_id"], role=row["role"])
     raise ApiError(

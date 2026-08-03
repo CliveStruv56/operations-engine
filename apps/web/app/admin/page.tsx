@@ -9,9 +9,11 @@ import {
   AdminTenantRow,
   FEATURE_FLAGS,
   admin,
+  resumeTenant,
 } from "@/lib/admin";
 import { InviteLink, NewWorkspace } from "./NewWorkspace";
 import { ModulesEditor } from "./ModulesEditor";
+import { EditWorkspace, SuspendWorkspace } from "./EditWorkspace";
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
@@ -25,6 +27,8 @@ export default function AdminConsole() {
   const [created, setCreated] = useState<AdminTenantCreated | null>(null);
   const [reissued, setReissued] = useState<{ name: string; invite: AdminInvite } | null>(null);
   const [editingModules, setEditingModules] = useState<AdminTenantRow | null>(null);
+  const [editing, setEditing] = useState<AdminTenantRow | null>(null);
+  const [suspending, setSuspending] = useState<AdminTenantRow | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -57,6 +61,17 @@ export default function AdminConsole() {
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Invite failed — try again.");
+    }
+  }
+
+  // Resume needs no confirmation — it only restores access, and the reason
+  // that justified the suspension is already on screen.
+  async function resume(t: AdminTenantRow) {
+    try {
+      await resumeTenant(t.id);
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not resume — try again.");
     }
   }
 
@@ -109,8 +124,20 @@ export default function AdminConsole() {
               </thead>
               <tbody className="divide-y divide-line">
                 {rows.map((t) => (
-                  <tr key={t.id}>
-                    <td className="px-4 py-3 font-medium">{t.name}</td>
+                  <tr key={t.id} className={t.suspended_at ? "bg-card/60" : undefined}>
+                    <td className="px-4 py-3 font-medium">
+                      <span className={t.suspended_at ? "text-ink-muted" : undefined}>
+                        {t.name}
+                      </span>
+                      {t.suspended_at && (
+                        <span
+                          className="stamp ml-2 text-danger"
+                          title={t.suspended_reason ?? undefined}
+                        >
+                          suspended
+                        </span>
+                      )}
+                    </td>
                     <td className="data px-4 py-3 text-ink-faint">{fmtDate(t.created_at)}</td>
                     <td className="px-4 py-3 text-ink-muted">{fmtDate(t.trial_ends_at)}</td>
                     <td className="data px-4 py-3">
@@ -136,13 +163,36 @@ export default function AdminConsole() {
                         <span className="text-xs text-ink-faint underline">Edit</span>
                       </button>
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => reissueInvite(t)}
-                        className="text-xs text-ink-muted underline hover:text-ink"
-                      >
-                        Owner invite
-                      </button>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-3 text-xs">
+                        <button
+                          onClick={() => setEditing(t)}
+                          className="text-ink-muted underline hover:text-ink"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => reissueInvite(t)}
+                          className="text-ink-muted underline hover:text-ink"
+                        >
+                          Owner invite
+                        </button>
+                        {t.suspended_at ? (
+                          <button
+                            onClick={() => resume(t)}
+                            className="text-grounded underline hover:opacity-80"
+                          >
+                            Resume
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setSuspending(t)}
+                            className="text-danger underline hover:opacity-80"
+                          >
+                            Suspend
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -168,6 +218,26 @@ export default function AdminConsole() {
           onClose={() => setEditingModules(null)}
           onSaved={() => {
             setEditingModules(null);
+            refresh();
+          }}
+        />
+      )}
+      {editing && (
+        <EditWorkspace
+          tenant={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            refresh();
+          }}
+        />
+      )}
+      {suspending && (
+        <SuspendWorkspace
+          tenant={suspending}
+          onClose={() => setSuspending(null)}
+          onDone={() => {
+            setSuspending(null);
             refresh();
           }}
         />

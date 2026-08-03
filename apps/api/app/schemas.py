@@ -89,6 +89,42 @@ class AdminFeaturesOut(BaseModel):
     features: dict[str, Any]
 
 
+class AdminTenantPatch(BaseModel):
+    """Post-creation edits. Every field optional; only what is sent changes,
+    so two operators editing different fields cannot clobber each other."""
+
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    seats: int | None = Field(default=None, ge=1, le=100)
+    trial_ends_at: datetime | None = None
+    plan: str | None = Field(default=None, pattern="^(trial|core|pro|managed)$")
+    brand_accent: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+
+    def changes(self) -> dict[str, Any]:
+        return self.model_dump(exclude_unset=True)
+
+
+class AdminTenantOut(BaseModel):
+    """The tenant's own columns after an edit or a suspend/resume — the
+    console refetches the fleet listing for the derived counts."""
+
+    id: UUID
+    name: str
+    plan: str
+    seats: int
+    trial_ends_at: datetime | None
+    features: dict[str, Any]
+    brand: dict[str, Any]
+    suspended_at: datetime | None
+    suspended_reason: str | None
+
+
+class AdminSuspendIn(BaseModel):
+    """Reason is required on suspend so the fleet listing can say why — an
+    unexplained dark workspace is worse than no suspension at all."""
+
+    reason: str = Field(min_length=1, max_length=300)
+
+
 class AdminInviteOut(BaseModel):
     token: str
     email: str
@@ -118,6 +154,9 @@ class AdminTenantRow(BaseModel):
     trial_ends_at: datetime | None
     created_at: datetime
     features: dict[str, Any]
+    brand: dict[str, Any] = {}
+    suspended_at: datetime | None = None
+    suspended_reason: str | None = None
     member_count: int
     pending_invites: int
     month_cost_usd: float

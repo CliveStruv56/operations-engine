@@ -20,6 +20,9 @@ def like_contains(value: str) -> str:
 
 
 PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
+    # Operator-console edits only; tenant-facing PATCH /tenants/me still
+    # writes name/brand directly and never reaches this allowlist.
+    "tenants": frozenset({"name", "seats", "plan", "trial_ends_at", "soft_budget_usd", "brand"}),
     "projects": frozenset({"name", "description", "archived"}),
     "documents": frozenset({"project_id", "is_primary"}),
     "proj_projects": frozenset(

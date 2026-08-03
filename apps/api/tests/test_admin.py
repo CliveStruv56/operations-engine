@@ -4,6 +4,7 @@ owner handover, fleet listing, and the invite-only signup switch."""
 from uuid import uuid4
 
 from app.config import get_settings
+from app.db import db
 from tests.conftest import auth, make_token
 
 
@@ -23,6 +24,9 @@ async def test_admin_endpoints_reject_non_admins(client, two_tenants):
         ("POST", "/api/v1/admin/tenants", {"name": "X", "owner_email": "x@example.com"}),
         ("POST", f"/api/v1/admin/tenants/{a.id}/owner-invite", {"email": "x@example.com"}),
         ("PATCH", f"/api/v1/admin/tenants/{a.id}/features", {"features": {"contacts": True}}),
+        ("PATCH", f"/api/v1/admin/tenants/{a.id}", {"name": "X"}),
+        ("POST", f"/api/v1/admin/tenants/{a.id}/suspend", {"reason": "x"}),
+        ("POST", f"/api/v1/admin/tenants/{a.id}/resume", None),
     ]:
         resp = await client.request(method, path, json=body, headers=headers)
         assert resp.status_code == 403, f"{method} {path} -> {resp.status_code}"
@@ -195,6 +199,157 @@ async def test_features_change_is_audited_and_surfaces_to_the_team(client, two_t
     feed = (await client.get("/api/v1/activity", headers=auth(a.owner_id, a.id))).json()
     entry = next(i for i in feed if i["action"] == "tenant.features_change")
     assert entry["meta"]["changed"] == {"contacts": True}
+
+
+# -- editing a live workspace ------------------------------------------------
+
+
+async def test_admin_edits_workspace_fields(client, two_tenants):
+    """Name, seats, trial end, plan and accent were all create-only; each of
+    them had to be reachable without touching SQL."""
+    a, _ = two_tenants
+    operator = admin_auth(uuid4())
+
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}",
+        json={
+            "name": "Willow Housing Ltd",
+            "seats": 12,
+            "plan": "pro",
+            "trial_ends_at": "2026-12-31T00:00:00Z",
+            "brand_accent": "#1f6d53",
+        },
+        headers=operator,
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["name"] == "Willow Housing Ltd"
+    assert body["seats"] == 12
+    assert body["plan"] == "pro"
+    assert body["trial_ends_at"].startswith("2026-12-31")
+    assert body["brand"]["accent"] == "#1f6d53"
+
+    # Seats drive the gateway's fair-use ceiling, so the budget moves with them.
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        budget = await conn.fetchval("select soft_budget_usd from tenants where id = $1", a.id)
+    assert float(budget) == 12 * get_settings().default_soft_budget_per_seat_usd
+
+
+async def test_workspace_patch_is_partial_and_validated(client, two_tenants):
+    """Sending one field must not reset the others."""
+    a, _ = two_tenants
+    operator = admin_auth(uuid4())
+
+    await client.patch(
+        f"/api/v1/admin/tenants/{a.id}",
+        json={"name": "Original", "seats": 9, "brand_accent": "#112233"},
+        headers=operator,
+    )
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}", json={"name": "Renamed"}, headers=operator
+    )
+    body = resp.json()
+    assert body["name"] == "Renamed"
+    assert body["seats"] == 9  # untouched
+    assert body["brand"]["accent"] == "#112233"  # untouched
+
+    for payload, code in [
+        ({}, 400),  # nothing to do
+        ({"plan": "enterprise"}, 422),  # not a known plan
+        ({"seats": 0}, 422),
+        ({"brand_accent": "red"}, 422),
+    ]:
+        r = await client.patch(f"/api/v1/admin/tenants/{a.id}", json=payload, headers=operator)
+        assert r.status_code == code, f"{payload} -> {r.status_code}"
+
+    r = await client.patch(
+        f"/api/v1/admin/tenants/{uuid4()}", json={"name": "ghost"}, headers=operator
+    )
+    assert r.status_code == 404
+
+
+# -- suspend / resume --------------------------------------------------------
+
+
+async def test_suspend_takes_the_workspace_dark_and_resume_restores_it(client, two_tenants):
+    """Suspension is enforced at tenant resolution, so it covers every
+    tenant-scoped route — including chat, which is where spend happens."""
+    a, b = two_tenants
+    operator = admin_auth(uuid4())
+    member = auth(a.owner_id, a.id)
+
+    assert (await client.get("/api/v1/tenants/me", headers=member)).status_code == 200
+
+    resp = await client.post(
+        f"/api/v1/admin/tenants/{a.id}/suspend",
+        json={"reason": "Trial lapsed, awaiting payment"},
+        headers=operator,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["suspended_at"] is not None
+    assert resp.json()["suspended_reason"] == "Trial lapsed, awaiting payment"
+
+    for method, path in [
+        ("GET", "/api/v1/tenants/me"),
+        ("GET", "/api/v1/conversations"),
+        ("GET", "/api/v1/documents"),
+        ("POST", "/api/v1/conversations"),
+    ]:
+        r = await client.request(method, path, headers=member, json={})
+        assert r.status_code == 403, f"{method} {path} -> {r.status_code}"
+        assert r.json()["error"]["code"] == "tenant_suspended"
+
+    # The other tenant is unaffected.
+    assert (
+        await client.get("/api/v1/tenants/me", headers=auth(b.owner_id, b.id))
+    ).status_code == 200
+
+    resp = await client.post(f"/api/v1/admin/tenants/{a.id}/resume", headers=operator)
+    assert resp.status_code == 200
+    assert resp.json()["suspended_at"] is None
+    assert (await client.get("/api/v1/tenants/me", headers=member)).status_code == 200
+
+
+async def test_suspension_needs_a_reason_and_resume_is_idempotent(client, two_tenants):
+    a, _ = two_tenants
+    operator = admin_auth(uuid4())
+
+    r = await client.post(f"/api/v1/admin/tenants/{a.id}/suspend", json={}, headers=operator)
+    assert r.status_code == 422
+    r = await client.post(
+        f"/api/v1/admin/tenants/{a.id}/suspend", json={"reason": "  "}, headers=operator
+    )
+    assert r.status_code in (200, 422)  # whitespace-only is accepted or rejected, never a 500
+
+    # Resuming a workspace that was never suspended is a no-op, not an error.
+    r = await client.post(f"/api/v1/admin/tenants/{a.id}/resume", headers=operator)
+    assert r.status_code == 200
+    r = await client.post(f"/api/v1/admin/tenants/{a.id}/resume", headers=operator)
+    assert r.status_code == 200
+    assert r.json()["suspended_at"] is None
+
+    r = await client.post(
+        f"/api/v1/admin/tenants/{uuid4()}/suspend", json={"reason": "x"}, headers=operator
+    )
+    assert r.status_code == 404
+
+
+async def test_suspended_workspace_is_still_visible_and_editable_to_the_operator(
+    client, two_tenants
+):
+    """The console must not lose control of a workspace it just suspended."""
+    a, _ = two_tenants
+    operator = admin_auth(uuid4())
+    await client.post(
+        f"/api/v1/admin/tenants/{a.id}/suspend", json={"reason": "nonpayment"}, headers=operator
+    )
+
+    listing = (await client.get("/api/v1/admin/tenants", headers=operator)).json()
+    rows = {r["id"]: r for r in listing}
+    assert rows[str(a.id)]["suspended_reason"] == "nonpayment"
+
+    r = await client.patch(f"/api/v1/admin/tenants/{a.id}", json={"seats": 4}, headers=operator)
+    assert r.status_code == 200, "operator must still be able to edit a suspended workspace"
 
 
 # -- fleet listing -----------------------------------------------------------
