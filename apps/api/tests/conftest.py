@@ -97,6 +97,115 @@ class Tenant:
     invite_token: str
     company_id: UUID
     contact_id: UUID
+    funder_id: UUID
+    application_id: UUID
+
+
+async def _seed_grantwork(conn, tenant_id: UUID, owner_id: UUID, project_id: UUID, name: str):
+    """One row in every Grantwork tenant table, as a coherent chain.
+
+    `test_sql_level_rls_per_table` asserts a tenant context sees *some* of its
+    own rows in each listed table, so seeding is what turns the RLS check from
+    "no foreign rows leaked" into a real two-sided assertion. The application
+    carries `project_id` deliberately: the soft cross-module link is the one
+    place a Grantwork row points at a core table, so isolation must hold
+    across it too (ASSUMPTIONS #23).
+    """
+    funder_id = await conn.fetchval(
+        """
+        insert into grant_funders (tenant_id, name, kind, created_by)
+        values ($1, $2, 'trust', $3) returning id
+        """,
+        tenant_id,
+        f"{name} foundation",
+        owner_id,
+    )
+    application_id = await conn.fetchval(
+        """
+        insert into grant_applications (tenant_id, funder_id, project_id, title,
+                                        amount_requested, created_by)
+        values ($1, $2, $3, $4, 50000, $5) returning id
+        """,
+        tenant_id,
+        funder_id,
+        project_id,
+        f"{name} community fund bid",
+        owner_id,
+    )
+    await conn.execute(
+        """
+        insert into grant_stages (tenant_id, application_id, stage_key, label, position)
+        values ($1, $2, 'case', 'Case for support', 1)
+        """,
+        tenant_id,
+        application_id,
+    )
+    await conn.execute(
+        """
+        insert into grant_tasks (tenant_id, application_id, stage_key, title)
+        values ($1, $2, 'case', $3)
+        """,
+        tenant_id,
+        application_id,
+        f"Gather need evidence for {name}",
+    )
+    period_id = await conn.fetchval(
+        """
+        insert into grant_reporting_periods (tenant_id, application_id, label,
+                                             period_start, period_end, due_date)
+        values ($1, $2, 'Year 1', '2026-04-01', '2027-03-31', '2027-04-30') returning id
+        """,
+        tenant_id,
+        application_id,
+    )
+    await conn.execute(
+        """
+        insert into grant_documents (tenant_id, application_id, doc_type_key, title,
+                                     stage_key, reporting_period_id)
+        values ($1, $2, 'monitoring_report', $3, 'monitor', $4)
+        """,
+        tenant_id,
+        application_id,
+        f"{name} year 1 monitoring return",
+        period_id,
+    )
+    await conn.execute(
+        """
+        insert into grant_conditions (tenant_id, application_id, number, description)
+        values ($1, $2, '1', $3)
+        """,
+        tenant_id,
+        application_id,
+        f"Acknowledge the funder in all {name} publicity",
+    )
+    measure_id = await conn.fetchval(
+        """
+        insert into grant_impact_measures (tenant_id, application_id, name, unit, target)
+        values ($1, $2, 'Beneficiaries reached', 'people', 250) returning id
+        """,
+        tenant_id,
+        application_id,
+    )
+    await conn.execute(
+        """
+        insert into grant_outcomes (tenant_id, measure_id, reporting_period_id, value, narrative)
+        values ($1, $2, $3, 180, $4)
+        """,
+        tenant_id,
+        measure_id,
+        period_id,
+        f"Confidential outcome narrative for {name}",
+    )
+    await conn.execute(
+        """
+        insert into grant_draft_jobs (tenant_id, application_id, kind, created_by)
+        values ($1, $2, 'monitoring_report', $3)
+        """,
+        tenant_id,
+        application_id,
+        owner_id,
+    )
+    return funder_id, application_id
 
 
 async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
@@ -201,6 +310,9 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
             contact_id,
             project_id,
         )
+        funder_id, application_id = await _seed_grantwork(
+            conn, tenant_id, owner_id, project_id, name
+        )
     return Tenant(
         id=tenant_id,
         owner_id=owner_id,
@@ -212,6 +324,8 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         invite_token=invite["token"],
         company_id=company_id,
         contact_id=contact_id,
+        funder_id=funder_id,
+        application_id=application_id,
     )
 
 

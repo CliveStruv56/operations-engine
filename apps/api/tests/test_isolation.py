@@ -30,6 +30,16 @@ TENANT_TABLES = [
     "crm_companies",
     "crm_contacts",
     "crm_contact_projects",
+    "grant_funders",
+    "grant_applications",
+    "grant_stages",
+    "grant_tasks",
+    "grant_reporting_periods",
+    "grant_documents",
+    "grant_conditions",
+    "grant_impact_measures",
+    "grant_outcomes",
+    "grant_draft_jobs",
 ]
 
 
@@ -276,6 +286,84 @@ async def test_sql_level_rls_blocks_cross_tenant_writes(two_tenants):
             assert result == "UPDATE 0"
             deleted = await conn.execute("delete from doc_chunks where tenant_id = $1", b.id)
             assert deleted == "DELETE 0"
+    finally:
+        await conn.close()
+
+
+async def test_grantwork_cross_module_link_does_not_widen_visibility(two_tenants):
+    """`grant_applications.project_id` is the one place a Grantwork row points
+    at a core table (the soft Groundwork link, ASSUMPTIONS #23). Joining
+    through it must not become a read path into another tenant.
+
+    The second half documents the hazard the routers exist to close: Postgres
+    checks foreign keys with RLS bypassed, so under A's context A *can* store
+    B's `funder_id` on A's own row. The constraint is for cascade behaviour,
+    never for isolation — every referenced id is validated with an RLS-scoped
+    existence check instead (same ruling as the CRM, ASSUMPTIONS #19).
+    """
+    a, b = two_tenants
+    conn = await asyncpg.connect(APP_URL)
+    try:
+        async with conn.transaction():
+            await conn.execute(
+                "select set_config('app.current_user', $1, true),"
+                " set_config('app.current_tenant', $2, true)",
+                str(a.owner_id),
+                str(a.id),
+            )
+            joined = await conn.fetch(
+                """
+                select ga.id from grant_applications ga
+                join projects p on p.id = ga.project_id
+                """
+            )
+            assert {r["id"] for r in joined} == {a.application_id}
+
+            # Every downstream table is reachable only through A's own rows.
+            for table, column in [
+                ("grant_stages", "application_id"),
+                ("grant_tasks", "application_id"),
+                ("grant_documents", "application_id"),
+                ("grant_conditions", "application_id"),
+                ("grant_reporting_periods", "application_id"),
+                ("grant_impact_measures", "application_id"),
+                ("grant_draft_jobs", "application_id"),
+            ]:
+                foreign = await conn.fetchval(
+                    f"select count(*) from {table} where {column} = $1", b.application_id
+                )
+                assert foreign == 0, f"{table}: B's application visible under A's context"
+
+            with pytest.raises(asyncpg.InsufficientPrivilegeError):
+                await conn.execute(
+                    "insert into grant_funders (tenant_id, name) values ($1, 'smuggled')",
+                    b.id,
+                )
+
+        # The FK hazard, asserted rather than assumed — rolled back so the
+        # fixture data stays as the other tests expect it.
+        tr = conn.transaction()
+        await tr.start()
+        await conn.execute(
+            "select set_config('app.current_user', $1, true),"
+            " set_config('app.current_tenant', $2, true)",
+            str(a.owner_id),
+            str(a.id),
+        )
+        smuggled = await conn.fetchval(
+            """
+            insert into grant_applications (tenant_id, funder_id, title, created_by)
+            values ($1, $2, 'foreign funder', $3) returning id
+            """,
+            a.id,
+            b.funder_id,
+            a.owner_id,
+        )
+        assert smuggled is not None, (
+            "FK checks bypass RLS — if this ever fails the router existence"
+            " checks could be relaxed, so the assertion is deliberate"
+        )
+        await tr.rollback()
     finally:
         await conn.close()
 

@@ -227,3 +227,51 @@ and every divergence is recorded here.
     its docstring promises. `tenant.features_change` was added to the
     activity feed's `ALLOWED_ACTIONS`: a module appearing is
     team-relevant and the meta is flag names only.
+
+## Recorded during Grantwork build (3 Aug 2026)
+
+23. **Grantwork sits beside Groundwork, not inside it** (3 Aug 2026,
+    founder decision — the ruling `docs/modules/grantwork-prd.md` §4
+    requires before build, and the first real cross-module design
+    question the codebase has faced). Three parts:
+
+    - **Two funding surfaces, deliberately.** A tenant with both
+      `projects` and `grants` enabled sees Groundwork's funding tab
+      (the funding *stack* for one development project: sources,
+      drawdowns, match) and Grantwork's application portfolio (the
+      tenant-wide pipeline of bids and the multi-year reporting
+      obligations they create) as separate surfaces. Grantwork does
+      **not** absorb `proj_funding_sources`. Rationale: subsuming it
+      would mean editing Groundwork routes and UI plus a data
+      migration, breaking the additive-only rule that makes a module
+      cheap; the two answer different questions and only look alike
+      from a distance.
+    - **`grant_applications.project_id` is a nullable soft link** to
+      the **core** `projects` row (not `proj_projects`), matching the
+      CRM's choice in #19. That is what stops the acknowledged overlap
+      from being unmanaged: a CLT's NLHF bid and the development
+      project it funds can be joined without either module owning the
+      other, and the link gives Grantwork drafts vault scope-weighting
+      for free (`project_scope_weights` already takes a project id).
+    - **Applications are standalone rows, not core-project
+      extensions** — the opposite of #1's ruling for `proj_projects`.
+      A charity runs a rolling portfolio of twenty-plus applications;
+      making each a core `projects` row would flood the sidebar and
+      split the vault into twenty partitions, defeating the chat
+      scoping that extension pattern exists to provide. Groundwork
+      projects are few and long-lived; grant applications are many and
+      churn.
+
+    Two schema divergences from the PRD's §1 entity list, recorded
+    here rather than argued in code: `grant_tasks` is added (the
+    seeded library specifies "standard tasks" per application type,
+    which the listed entities have nowhere to live) and
+    `grant_draft_jobs` is added (the shared drafting engine takes a
+    per-module `job_table`, and #12's polling rationale is unchanged).
+    Migration 0013 therefore creates 10 tenant tables plus
+    `grant_ref_funders` / `grant_ref_templates`, the latter two
+    select-only per #5. `grant_ref_funders` extends the
+    `proj_ref_programmes` shape with `funder_type`, `deadlines`,
+    `typical_award` and `reporting_note` — the last matters most,
+    because what a funder demands back is the thing Grantwork
+    automates.

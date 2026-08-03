@@ -63,6 +63,23 @@ MODULES: tuple[Module, ...] = (
         feed_prefix="projects",
     ),
     Module(
+        flag="grants",
+        label="Grant funding",
+        tables=(
+            "grant_funders",
+            "grant_applications",
+            "grant_stages",
+            "grant_tasks",
+            "grant_reporting_periods",
+            "grant_documents",
+            "grant_conditions",
+            "grant_impact_measures",
+            "grant_outcomes",
+            "grant_draft_jobs",
+        ),
+        feed_prefix="grants",
+    ),
+    Module(
         flag="contacts",
         label="Contacts (CRM)",
         tables=("crm_companies", "crm_contacts", "crm_contact_projects"),

@@ -82,6 +82,7 @@ export type AdminTenantCreated = {
  *  drift into a flag that looks enabled here and 404s in the app. */
 export const FEATURE_FLAGS = [
   { key: "projects", label: "Development projects" },
+  { key: "grants", label: "Grant funding" },
   { key: "contacts", label: "Contacts (CRM)" },
   { key: "web_search", label: "Web search" },
 ] as const;

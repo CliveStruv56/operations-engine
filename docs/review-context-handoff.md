@@ -384,8 +384,10 @@ rationale: `docs/vertical-module-roadmap.md`.
 | `760df09` `30dc4d2` | Web: module flag guard; suspended-workspace screen |
 | `c62b6d7` | **Drafting pipeline extracted from Groundwork** — the thing Grantwork builds on |
 
-Suites: **API 195**, **worker 31**. `apps/web` has **no test tooling at all**
-— UI changes are verifiable only by running it.
+Suites: **API 195**, **worker 31**, **web 10** (`pnpm test` — vitest +
+Testing Library, added 3 Aug in `18c6f3d`; covers the module feature gate and
+the projects page). Web coverage is still thin — anything outside those two
+files is verifiable only by running the app.
 
 ### The drafting seam (read before writing any Grantwork drafting code)
 

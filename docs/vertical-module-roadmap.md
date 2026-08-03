@@ -54,8 +54,10 @@ recommended against rather than merely ranked low.
 
 Converts "another 5,500-LOC copy-paste" into "a manifest, a migration and a router".
 
-**Status: §1.1–1.4 shipped 3 August 2026.** §1.5 (drafting-pipeline generalisation) and §1.6
-(hygiene) remain, and the estimates in §3 still assume §1.5 is done first.
+**Status: §1.1–1.5 shipped 3 August 2026** (§1.5 in `c62b6d7` — `worker/drafting/` is the
+module-agnostic engine, `worker/drafts/` the Groundwork adapter). Only §1.6 (hygiene) partly
+remains: the web flag guard landed, the schema-location rule is recorded as ASSUMPTIONS #20
+but Groundwork's own split is deliberately left in place.
 
 | Item | Status |
 | --- | --- |
@@ -63,8 +65,8 @@ Converts "another 5,500-LOC copy-paste" into "a manifest, a migration and a rout
 | 1.2 `make_feature_gate(flag)` | ✅ both modules adopted it |
 | 1.3 RLS migration helper | ✅ `apps/api/migrations/rls.py` + `test_every_module_table_has_rls` |
 | 1.4 `PATCH .../features` | ✅ endpoint + operator-console editor |
-| 1.5 Generalised drafting pipeline | ⌛ not started — the biggest remaining lever |
-| 1.6 Hygiene (web flag guard, schema location) | ⌛ not started |
+| 1.5 Generalised drafting pipeline | ✅ `apps/worker/worker/drafting/` (engine) + `drafts/` (Groundwork adapter) |
+| 1.6 Hygiene (web flag guard, schema location) | ◑ flag guard shipped; schema rule recorded (ASSUMPTIONS #20), Groundwork's split left as-is |
 
 ### 1.1 Module manifest — replaces six hand-edited registration points ✅
 
