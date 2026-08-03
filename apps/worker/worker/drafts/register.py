@@ -17,9 +17,9 @@ from uuid import UUID
 
 import asyncpg
 
-from worker.drafts.assemble import AssembledDraft
+from worker.drafting.assemble import AssembledDraft
+from worker.drafting.llm import LlmLedger
 from worker.drafts.context import ContextPack
-from worker.drafts.llm import LlmLedger
 
 # Fallback stage for instance rows when the seeded launcher row is missing.
 _STAGE_FALLBACK = {"monthly_report": "build", "feasibility_study": "plan", "funding_bid": "plan"}
@@ -73,7 +73,7 @@ async def register_draft(
     conn: asyncpg.Connection,
     *,
     tenant_id: str,
-    project_id: str,
+    subject_id: str,
     user_id: str,
     job_id: str,
     pack: ContextPack,
@@ -81,7 +81,7 @@ async def register_draft(
     ledger: LlmLedger,
     draft: AssembledDraft,
 ) -> UUID:
-    doc = await _target_row(conn, tenant_id, project_id, pack)
+    doc = await _target_row(conn, tenant_id, subject_id, pack)
     versions = json.loads(doc["versions"])
     versions.append(
         {

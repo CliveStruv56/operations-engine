@@ -15,7 +15,17 @@ from uuid import UUID
 import asyncpg
 from pydantic import BaseModel, Field
 
+from worker.drafting.pack import DraftPackBase, VaultExcerpt
+
+__all__ = ["VaultExcerpt"]  # re-exported: this was its original home
+
 DRAFT_KINDS = ("monthly_report", "feasibility_study", "funding_bid", "health_card")
+
+DOC_TITLES = {
+    "monthly_report": "Monthly client report",
+    "feasibility_study": "Feasibility study",
+    "funding_bid": "Funding application",
+}
 
 
 class ProjectFacts(BaseModel):
@@ -136,18 +146,8 @@ class StakeholderFacts(BaseModel):
     last_contact: date | None = None
 
 
-class VaultExcerpt(BaseModel):
-    chunk_id: UUID
-    document_id: UUID
-    title: str
-    page_start: int | None = None
-    page_end: int | None = None
-    content: str
-
-
-class ContextPack(BaseModel):
+class ContextPack(DraftPackBase):
     kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid|health_card)$")
-    generated_on: date
     project: ProjectFacts
     stages: list[StageFacts]
     tasks: list[TaskFacts]
@@ -159,8 +159,6 @@ class ContextPack(BaseModel):
     risks: list[RiskFacts]
     conditions: list[ConditionFacts]
     stakeholders: list[StakeholderFacts]
-    excerpts: list[VaultExcerpt] = Field(default_factory=list)
-    instructions: str | None = None
     report_month: str | None = None  # 'YYYY-MM' for monthly reports
 
     def record_counts(self) -> dict[str, int]:
@@ -189,6 +187,60 @@ class ContextPack(BaseModel):
             if programme.key == source.programme_key:
                 return programme
         return None
+
+    # -- drafting hooks (worker/drafting/pack.py) ----------------------------
+
+    def doc_title(self) -> str:
+        title = DOC_TITLES[self.kind]
+        if self.kind == "monthly_report" and self.report_month:
+            title = f"{title} — {self.report_month}"
+        if self.kind == "funding_bid" and self.target_funding() is not None:
+            title = f"{title} — {self.target_funding().name}"
+        return title
+
+    def subject_lines(self) -> list[str]:
+        lines = [self.project.name]
+        if self.project.client_org:
+            lines.append(f"Prepared for {self.project.client_org}")
+        if self.project.site_address:
+            lines.append(self.project.site_address)
+        return lines
+
+    def prompt_notes(self) -> list[str]:
+        notes = []
+        if self.report_month:
+            notes.append(f"Reporting period: {self.report_month}.")
+        notes.extend(super().prompt_notes())
+        if self.kind == "funding_bid" and self.target_funding() is not None:
+            source = self.target_funding()
+            notes.append(
+                f'This bid targets the funding source "{source.name}" '
+                f"(programme key: {source.programme_key or 'none'}). Tailor the "
+                "section to that programme's eligibility and documentation notes "
+                "in the data."
+            )
+        return notes
+
+    def warning_block(self) -> str | None:
+        programme = self.target_programme()
+        if self.kind != "funding_bid" or programme is None or programme.status == "open":
+            return None
+        return (
+            f"Programme status was “{programme.status}” when last verified "
+            f"{programme.last_verified.isoformat()} — confirm before submitting."
+        )
+
+    def source_notes(self) -> list[str]:
+        notes = []
+        for programme in self.programmes:
+            note = (
+                f"Funding programme “{programme.name}” ({programme.funder}), "
+                f"catalogue facts last verified {programme.last_verified.isoformat()}."
+            )
+            if programme.stale:
+                note += " Warning: past its review date — confirm before relying on it."
+            notes.append(note)
+        return notes
 
 
 def _loads(value: Any) -> Any:
