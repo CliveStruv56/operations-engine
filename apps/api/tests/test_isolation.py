@@ -93,6 +93,9 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("DELETE", f"/api/v1/grants/funders/{b.funder_id}"),
         ("GET", "/api/v1/grants/funder-catalogue"),
         ("GET", "/api/v1/grants/reporting-calendar"),
+        ("POST", f"/api/v1/grants/applications/{b.application_id}/drafts"),
+        ("GET", f"/api/v1/grants/applications/{b.application_id}/drafts"),
+        ("POST", f"/api/v1/grants/applications/{b.application_id}/impact-card"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})

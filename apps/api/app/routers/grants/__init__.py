@@ -16,6 +16,7 @@ from app.routers.grants import (
     applications,
     conditions,
     documents,
+    drafts,
     funders,
     impact,
     reporting,
@@ -24,5 +25,15 @@ from app.routers.grants import (
 )
 
 router = APIRouter(tags=["grants"])
-for _module in (funders, reporting, applications, stages, tasks, documents, conditions, impact):
+for _module in (
+    funders,
+    reporting,
+    drafts,  # literal /grants/drafts/{id} ahead of the application matchers
+    applications,
+    stages,
+    tasks,
+    documents,
+    conditions,
+    impact,
+):
     router.include_router(_module.router)

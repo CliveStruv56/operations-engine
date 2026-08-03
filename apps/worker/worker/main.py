@@ -22,6 +22,8 @@ from worker.chunking import chunk_blocks
 from worker.db import tenant_tx
 from worker.drafts.job import draft_document
 from worker.embed import embed_texts
+from worker.grants.impact_card import generate_impact_card
+from worker.grants.job import grant_draft_document
 from worker.health_card import generate_health_card
 from worker.parsing import parse_file
 from worker.secrets import decrypt_llm_key
@@ -180,7 +182,13 @@ async def shutdown(ctx: dict) -> None:
 
 
 class WorkerSettings:
-    functions = [ingest_document, draft_document, generate_health_card]
+    functions = [
+        ingest_document,
+        draft_document,
+        generate_health_card,
+        grant_draft_document,
+        generate_impact_card,
+    ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)

@@ -457,3 +457,33 @@ class OutcomeOut(BaseModel):
     evidence_notes: str | None
     recorded_by: UUID | None
     recorded_at: datetime
+
+
+# -- draft jobs --------------------------------------------------------------
+
+DRAFT_KINDS = "^(case_for_support|funding_application|monitoring_report|impact_evaluation)$"
+
+
+class DraftIn(BaseModel):
+    kind: str = Field(pattern=DRAFT_KINDS)
+    #: Required for `monitoring_report` — which obligation the return answers.
+    reporting_period_id: UUID | None = None
+    instructions: str | None = Field(default=None, max_length=2_000)
+
+
+class DraftJobOut(BaseModel):
+    id: UUID
+    application_id: UUID
+    kind: str
+    status: str
+    error: str | None
+    document_id: UUID | None
+    file_key: str | None
+    to_confirm_count: int
+    llm_calls: int
+    tokens_in: int
+    tokens_out: int
+    cost_usd: float
+    created_at: datetime
+    updated_at: datetime
+    download_url: str | None = None

@@ -55,6 +55,32 @@ class IngestQueue:
             _job_id=f"draft:{job_id}",
         )
 
+    async def enqueue_grant_draft(
+        self, tenant_id: UUID, application_id: UUID, job_id: UUID, user_id: UUID
+    ) -> None:
+        pool = await self._conn()
+        await pool.enqueue_job(
+            "grant_draft_document",
+            str(tenant_id),
+            str(application_id),
+            str(job_id),
+            str(user_id),
+            _job_id=f"grantdraft:{job_id}",
+        )
+
+    async def enqueue_impact_card(
+        self, tenant_id: UUID, application_id: UUID, job_id: UUID, user_id: UUID
+    ) -> None:
+        pool = await self._conn()
+        await pool.enqueue_job(
+            "generate_impact_card",
+            str(tenant_id),
+            str(application_id),
+            str(job_id),
+            str(user_id),
+            _job_id=f"impactcard:{job_id}",
+        )
+
     async def enqueue_health_card(
         self, tenant_id: UUID, project_id: UUID, job_id: UUID, user_id: UUID
     ) -> None:

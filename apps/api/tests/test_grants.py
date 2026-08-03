@@ -719,3 +719,154 @@ async def test_reseeding_never_demotes_a_verified_row(client):
 
 def _fixture() -> dict:
     return json.loads((FIXTURES / "funders.json").read_text())
+
+
+# -- draft jobs --------------------------------------------------------------
+
+
+class _FakeQueue:
+    """Records enqueues instead of reaching Redis (which conftest disables)."""
+
+    def __init__(self):
+        self.jobs = []
+
+    async def enqueue_grant_draft(self, tenant_id, application_id, job_id, user_id):
+        self.jobs.append(("draft", str(application_id), str(job_id)))
+
+    async def enqueue_impact_card(self, tenant_id, application_id, job_id, user_id):
+        self.jobs.append(("impact_card", str(application_id), str(job_id)))
+
+
+@pytest.fixture
+def queue(monkeypatch):
+    fake = _FakeQueue()
+    monkeypatch.setattr("app.routers.grants.drafts.ingest_queue", fake)
+    return fake
+
+
+async def test_submitting_a_draft_queues_it_and_polls(client, queue):
+    tenant, headers = await make_tenant(client, "draft")
+    application_id = await create_application(client, headers)
+
+    resp = await client.post(
+        f"/api/v1/grants/applications/{application_id}/drafts",
+        json={"kind": "case_for_support", "instructions": "Emphasise the youth work."},
+        headers=headers,
+    )
+    assert resp.status_code == 202, resp.text
+    job = resp.json()
+    assert job["status"] == "queued"
+    assert job["kind"] == "case_for_support"
+    assert queue.jobs == [("draft", application_id, job["id"])]
+
+    polled = (await client.get(f"/api/v1/grants/drafts/{job['id']}", headers=headers)).json()
+    assert polled["id"] == job["id"]
+    assert polled["download_url"] is None  # nothing rendered yet
+
+    active = (
+        await client.get(f"/api/v1/grants/applications/{application_id}/drafts", headers=headers)
+    ).json()
+    assert [j["id"] for j in active] == [job["id"]]
+
+
+async def test_one_draft_per_kind_in_flight(client, queue):
+    """A second click mid-draft doubles the model spend for an identical
+    result, since the register would only version it."""
+    tenant, headers = await make_tenant(client, "inflight")
+    application_id = await create_application(client, headers)
+    url = f"/api/v1/grants/applications/{application_id}/drafts"
+
+    assert (
+        await client.post(url, json={"kind": "case_for_support"}, headers=headers)
+    ).status_code == 202
+    resp = await client.post(url, json={"kind": "case_for_support"}, headers=headers)
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "draft_in_flight"
+
+    # A different kind is unaffected.
+    assert (
+        await client.post(url, json={"kind": "impact_evaluation"}, headers=headers)
+    ).status_code == 202
+
+
+async def test_monitoring_report_requires_a_period_of_this_application(client, queue):
+    tenant, headers = await make_tenant(client, "mrperiod")
+    application_id = await create_application(client, headers)
+    other = await create_application(client, headers, title="Other bid")
+    url = f"/api/v1/grants/applications/{application_id}/drafts"
+
+    resp = await client.post(url, json={"kind": "monitoring_report"}, headers=headers)
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "period_required"
+
+    foreign = (
+        await client.post(
+            f"/api/v1/grants/applications/{other}/reporting-periods",
+            json={"label": "Year 1", "period_start": "2026-04-01", "period_end": "2027-03-31"},
+            headers=headers,
+        )
+    ).json()
+    resp = await client.post(
+        url,
+        json={"kind": "monitoring_report", "reporting_period_id": foreign["id"]},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+
+    own = (
+        await client.post(
+            f"/api/v1/grants/applications/{application_id}/reporting-periods",
+            json={"label": "Year 1", "period_start": "2026-04-01", "period_end": "2027-03-31"},
+            headers=headers,
+        )
+    ).json()
+    resp = await client.post(
+        url, json={"kind": "monitoring_report", "reporting_period_id": own["id"]}, headers=headers
+    )
+    assert resp.status_code == 202
+
+
+async def test_impact_card_is_its_own_job_kind(client, queue):
+    tenant, headers = await make_tenant(client, "card")
+    application_id = await create_application(client, headers)
+    resp = await client.post(
+        f"/api/v1/grants/applications/{application_id}/impact-card", headers=headers
+    )
+    assert resp.status_code == 202
+    assert resp.json()["kind"] == "impact_card"
+    assert queue.jobs == [("impact_card", application_id, resp.json()["id"])]
+
+
+async def test_the_card_is_not_a_draft_kind_clients_can_ask_for(client, queue):
+    """`impact_card` is a valid job row but not a valid DraftIn kind — it goes
+    through its own route, because it is an export rather than a draft."""
+    tenant, headers = await make_tenant(client, "cardkind")
+    application_id = await create_application(client, headers)
+    resp = await client.post(
+        f"/api/v1/grants/applications/{application_id}/drafts",
+        json={"kind": "impact_card"},
+        headers=headers,
+    )
+    assert resp.status_code == 422
+
+
+async def test_draft_jobs_are_tenant_scoped(client, queue):
+    a, a_headers = await make_tenant(client, "dja")
+    b, b_headers = await make_tenant(client, "djb")
+    b_application = await create_application(client, b_headers)
+    b_job = (
+        await client.post(
+            f"/api/v1/grants/applications/{b_application}/drafts",
+            json={"kind": "case_for_support"},
+            headers=b_headers,
+        )
+    ).json()
+
+    resp = await client.get(f"/api/v1/grants/drafts/{b_job['id']}", headers=a_headers)
+    assert resp.status_code == 404
+    resp = await client.post(
+        f"/api/v1/grants/applications/{b_application}/drafts",
+        json={"kind": "case_for_support"},
+        headers=a_headers,
+    )
+    assert resp.status_code == 404
