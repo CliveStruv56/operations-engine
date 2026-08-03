@@ -494,7 +494,7 @@ visibility` covers the soft link both ways — including asserting the
 FK-bypasses-RLS hazard outright, which is why step 2's routers must validate
 every referenced id with an RLS-scoped existence check (#19's ruling).
 
-Suites green: **API 228** (196 after step 1, 228 after step 2), worker 31,
+Suites green: **API 231** (196 / 228 / 231 after steps 1–3), worker 31,
 web 10; ruff + mypy clean.
 **Local dev DB upgraded to 0013.** Staging DB is still at **0012** — 0013 goes
 out with the Railway pre-deploy hook on the next api deploy.
@@ -521,8 +521,24 @@ Rulings taken in step 2, worth not re-litigating:
   (`grant_ref_funders`) is still step 3: those rows are external fact and
   every one carries a `last_verified` date somebody has to earn.
 
-**Next**: step 3 (funder catalogue seed data), then drafting (pack +
-skeletons + `DraftModule` + impact card), then web — per §6f.
+**Step 3 shipped** (`2b10a6a`): 13 `grant_ref_funders` rows +
+`seed_funder_catalogue()`. **Read ASSUMPTIONS #24 before touching this data.**
+The rows were compiled from model knowledge and verified by nobody, so every
+one ships `status='unverified'` with `next_review == last_verified` — stale on
+load, by design. Both existing safety mechanisms then fire: the UI badges the
+row, and any draft built from it gets the first-page warning block (the engine
+already warns on `status != 'open'`). The upsert never touches `status` /
+`last_verified` / `next_review`, and two tests guard the fixture file itself,
+because the tempting fix for a catalogue full of warnings is to edit the dates.
+**Promotion is an operator act**, not a code change: verify each field against
+the funder's own guidance, then set `status='open'` and
+`next_review = current_date + 90` in the database.
+
+Run the seeder with the owner connection: `uv run python -m app.grants.seeds`
+(templates + catalogue, idempotent). Dev DB is seeded; **staging is not**.
+
+**Next**: step 4 — drafting (`worker/grants/` pack + the four skeletons +
+`DraftModule` + the non-LLM impact card), then step 5 — web. Per §6f.
 
 Two schema divergences from the PRD's §1 entity list, both argued in #23:
 `grant_tasks` (the seeded library specifies standard tasks, which the listed
