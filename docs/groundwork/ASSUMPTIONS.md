@@ -275,3 +275,47 @@ and every divergence is recorded here.
     `typical_award` and `reporting_note` — the last matters most,
     because what a funder demands back is the thing Grantwork
     automates.
+
+24. **Seeded funder-catalogue rows ship unverified and stale** (3 Aug
+    2026, Grantwork step 3). `grant_ref_funders` is the first reference
+    table whose rows are **external fact about third parties** rather
+    than our own product decision. `proj_ref_programmes` had the same
+    property and the same `last_verified` / `next_review` contract, but
+    the point was never written down: **`last_verified` is only
+    meaningful if it records something a person actually did.** Typing a
+    recent date into a fixture is not verification, and a catalogue row
+    asserting a funder's eligibility criteria is exactly the kind of
+    claim a charity would act on.
+
+    So `app/grants/fixtures/funders.json` was compiled from model
+    knowledge (training boundary around May 2026, never checked by a
+    person) and every one of its 13 rows ships `status='unverified'`
+    with `next_review` equal to `last_verified`. That is deliberate, not
+    an oversight: it makes both pre-existing safety mechanisms fire on
+    day one — the catalogue badges the row (`stale` is derived in
+    `routers/grants/funders.py`, never stored) and any draft
+    parameterised by it carries the first-page warning block, because
+    the drafting engine already warns whenever `status != 'open'`
+    (`worker/drafts/context.py::warning_block`). Field text is
+    deliberately hedged toward "confirm with the funder" over asserted
+    specifics, and every row carries its own provenance in `notes`.
+
+    Two mechanical consequences worth keeping:
+
+    - **The upsert is narrow.** `seed_funder_catalogue()` refreshes
+      descriptive columns on conflict but never touches `status`,
+      `last_verified` or `next_review`. Correcting seed content is safe;
+      silently demoting a row an operator verified is not.
+    - **Two tests guard the data file itself**, not just the database:
+      one asserts every fixture row ships unverified with
+      `next_review == last_verified` and declares its provenance, the
+      other asserts re-seeding cannot reset a promoted row. They exist
+      because the tempting "fix" for a catalogue full of warnings is to
+      edit the dates.
+
+    Promotion is an operator act: check every field against the funder's
+    own current guidance, then set `status='open'` and `next_review =
+    current_date + 90` in the database. `local_community_foundation` is
+    a deliberate placeholder rather than a real programme — a local
+    community foundation is often a small charity's best first
+    application, so the row exists to prompt the question.

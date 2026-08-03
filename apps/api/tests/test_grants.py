@@ -2,6 +2,7 @@
 the reporting calendar, outcomes, and cross-tenant direct-object references.
 """
 
+import json
 from datetime import date, timedelta
 from uuid import uuid4
 
@@ -9,7 +10,12 @@ import asyncpg
 import pytest
 
 from app.db import db
-from app.grants.seeds import seed_reference_data
+from app.grants.seeds import (
+    FIXTURES,
+    SEED_STATUS,
+    seed_funder_catalogue,
+    seed_reference_data,
+)
 from tests.conftest import OWNER_URL, auth, seed_tenant
 
 pytestmark = pytest.mark.usefixtures("grant_ref_data")
@@ -34,7 +40,7 @@ async def grant_ref_data(test_database):
                                            eligibility, status, last_verified, next_review)
             values ('fresh_fund', 'Fresh Fund', 'Test Trust', 'trust', '{england}', 'revenue',
                     'Registered charities', 'open', current_date, current_date + 90),
-                   ('stale_fund', 'Stale Fund', 'Test Trust', 'trust', '{wales}', 'capital',
+                   ('stale_fund', 'Stale Fund', 'Test Trust', 'trust', '{testland}', 'capital',
                     'Registered charities', 'open', current_date - 200, current_date - 10)
             on conflict (key) do nothing
             """
@@ -520,8 +526,10 @@ async def test_catalogue_staleness_is_derived_from_the_review_date(client):
     assert by_key["fresh_fund"]["stale"] is False
     assert by_key["stale_fund"]["stale"] is True
 
+    # `testland` is a fixture-only nation, so this asserts the filter rather
+    # than the seeded catalogue's coverage.
     filtered = (
-        await client.get("/api/v1/grants/funder-catalogue?nation=wales", headers=headers)
+        await client.get("/api/v1/grants/funder-catalogue?nation=testland", headers=headers)
     ).json()
     assert [r["key"] for r in filtered] == ["stale_fund"]
 
@@ -630,3 +638,84 @@ async def _stage(client, headers, application_id: str, stage_key: str) -> dict:
         await client.get(f"/api/v1/grants/applications/{application_id}/stages", headers=headers)
     ).json()
     return next(s for s in stages if s["stage_key"] == stage_key)
+
+
+# -- the seeded funder catalogue ---------------------------------------------
+
+
+async def test_seeded_catalogue_rows_ship_unverified_and_stale(client):
+    """The catalogue is compiled from model knowledge, not checked by anyone.
+
+    So every seeded row must arrive in the state that makes both existing
+    safety mechanisms fire: `status='unverified'` puts the first-page warning
+    block on any draft built from it, and a `next_review` on or before today
+    badges it in the UI. A row that shipped `open` and fresh would present
+    unchecked funder facts to a charity with nothing attached saying so.
+    """
+    tenant, headers = await make_tenant(client, "seedcat")
+    rows = (await client.get("/api/v1/grants/funder-catalogue", headers=headers)).json()
+    seeded = {r["key"]: r for r in rows}
+    fixture_keys = {row["key"] for row in _fixture()["funders"]}
+    assert fixture_keys, "the catalogue fixture is empty"
+
+    for key in fixture_keys:
+        row = seeded[key]
+        assert row["status"] == SEED_STATUS, f"{key}: seeded rows must not claim to be open"
+        assert row["stale"] is True, f"{key}: seeded rows must arrive due for review"
+        assert row["notes"], f"{key}: a seeded row must say where it came from"
+        assert row["route_url"], f"{key}: verification needs somewhere to go"
+
+
+def test_the_fixture_itself_cannot_ship_as_verified():
+    """Guards the data file rather than the database.
+
+    `last_verified` is only meaningful if it records something a person did.
+    Raising it — or setting `status='open'` — in the fixture would be typing
+    a verification instead of performing one, which is exactly the failure
+    this catalogue's staleness machinery exists to prevent.
+    """
+    for row in _fixture()["funders"]:
+        assert row["status"] == SEED_STATUS, f"{row['key']}: fixture must ship unverified"
+        assert row["next_review"] == row["last_verified"], (
+            f"{row['key']}: a seeded row is due for review immediately"
+        )
+        assert "UNVERIFIED SEED" in row["notes"] or "PLACEHOLDER" in row["notes"], (
+            f"{row['key']}: the row must declare its own provenance"
+        )
+
+
+async def test_reseeding_never_demotes_a_verified_row(client):
+    """Re-running the seed refreshes descriptive text but must not reset the
+    verification an operator performed — otherwise every content correction
+    silently un-verifies the whole catalogue."""
+    key = "local_community_foundation"
+    conn = await asyncpg.connect(OWNER_URL)
+    try:
+        await conn.execute(
+            """
+            update grant_ref_funders
+            set status = 'open', next_review = current_date + 90, name = 'Operator edited'
+            where key = $1
+            """,
+            key,
+        )
+        await seed_funder_catalogue(conn)
+        row = await conn.fetchrow("select * from grant_ref_funders where key = $1", key)
+        assert row["status"] == "open", "re-seeding demoted a verified row"
+        assert row["next_review"] > date.today(), "re-seeding reset the review date"
+        # Descriptive columns *do* refresh — that is the point of re-seeding.
+        assert row["name"] != "Operator edited"
+    finally:
+        await conn.execute(
+            """
+            update grant_ref_funders set status = $2, next_review = last_verified
+            where key = $1
+            """,
+            key,
+            SEED_STATUS,
+        )
+        await conn.close()
+
+
+def _fixture() -> dict:
+    return json.loads((FIXTURES / "funders.json").read_text())
