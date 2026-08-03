@@ -49,6 +49,10 @@ type WorkspaceState = {
   loading: boolean;
   email: string | null;
   tenant: Tenant | null;
+  /** The selected workspace is suspended. Distinct from "no tenant": the
+   *  member has one, they just cannot use it, so offering them the
+   *  create-a-workspace onboarding would be wrong. */
+  suspended: boolean;
   memberships: MembershipRef[] | null;
   projects: Project[];
   conversations: Conversation[];
@@ -79,6 +83,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState<string | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
+  const [suspended, setSuspended] = useState(false);
   const [memberships, setMemberships] = useState<MembershipRef[] | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -115,6 +120,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         const me = await api<Tenant>("/tenants/me", {}, tenantId);
         setTenant(me);
         setMemberships(null);
+        setSuspended(false);
         setError(null);
         // Groundwork pages read the tenant from localStorage, so persist it
         // even when it was resolved by sole-membership fallback.
@@ -124,6 +130,12 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         if (e instanceof ApiError && e.code === "tenant_required") {
           const list = (e.payload as { memberships?: MembershipRef[] })?.memberships ?? [];
           setMemberships(list);
+        } else if (e instanceof ApiError && e.code === "tenant_suspended") {
+          // Not an error state to recover from in-app — the shell renders a
+          // dedicated screen, so no red banner on top of it.
+          setSuspended(true);
+          setTenant(null);
+          setError(null);
         } else {
           setError(e instanceof Error ? e.message : String(e));
         }
@@ -217,6 +229,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         loading,
         email,
         tenant,
+        suspended,
         memberships,
         projects,
         conversations,

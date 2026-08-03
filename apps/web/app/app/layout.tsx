@@ -69,6 +69,48 @@ function Onboarding() {
   );
 }
 
+/** A suspended workspace is not a missing one. Falling through to Onboarding
+ *  invited the member to create a second workspace, which is both confusing
+ *  and the opposite of what suspension is for. */
+function Suspended() {
+  const ws = useWorkspace();
+  return (
+    <main className="flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-md">
+        <p className="data mb-2 text-ink-faint uppercase">Flowgrid OS</p>
+        <section className="rounded-card border border-edge bg-surface p-6 shadow-sm">
+          <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">
+            This workspace is suspended
+          </h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            Access is paused for everyone in it. Nothing has been deleted — your documents,
+            chats and projects are all still here, and they come back as soon as it is
+            reinstated. Contact whoever provides your workspace.
+          </p>
+          <div className="mt-5 flex items-center gap-4">
+            <button
+              onClick={() => {
+                // Members of more than one workspace must not be stranded here.
+                localStorage.removeItem("tenantId");
+                ws.selectTenant();
+              }}
+              className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+            >
+              Use a different workspace
+            </button>
+            <button
+              onClick={() => ws.logout()}
+              className="text-xs text-ink-muted underline hover:text-ink"
+            >
+              Sign out
+            </button>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
 function WorkspaceShell({ children }: { children: React.ReactNode }) {
   const ws = useWorkspace();
   const [navOpen, setNavOpen] = useState(false);
@@ -81,6 +123,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
     );
   }
 
+  if (ws.suspended) return <Suspended />;
   if (!ws.tenant) return <Onboarding />;
 
   // Hearth: app chrome is fixed platform-wide — the tenant accent appears
