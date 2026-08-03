@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { gw } from "@/lib/groundwork";
 import { Spinner } from "@/components/activity";
 import { useWorkspace } from "../../workspace";
+import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../../module-gate";
 
 const TOGGLES = [
   { key: "wales", label: "In Wales", hint: "Adds the SAB drainage approval task" },
@@ -29,6 +30,7 @@ const TOGGLES = [
 export default function NewProjectPage() {
   const router = useRouter();
   const ws = useWorkspace();
+  const flagOn = useModuleEnabled("projects");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
@@ -77,6 +79,8 @@ export default function NewProjectPage() {
   }
 
   const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
+
+  if (flagOn === false) return <ModuleDisabled {...PROJECTS_DISABLED} />;
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto">

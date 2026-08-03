@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ApiError } from "@/lib/api";
 import {
   PortfolioRow,
   RAG_DOT,
@@ -12,6 +13,7 @@ import {
   gw,
   tenantId,
 } from "@/lib/groundwork";
+import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../module-gate";
 
 const RAG_HINT: Record<string, string> = {
   programme: "Programme: red = a milestone is more than 30 days overdue",
@@ -54,17 +56,26 @@ export default function PortfolioPage() {
   const router = useRouter();
   const [rows, setRows] = useState<PortfolioRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const flagOn = useModuleEnabled("projects");
+  // The flag is also checked server-side; a 404 here means it was switched
+  // off after this session loaded its workspace.
+  const [gone, setGone] = useState(false);
 
   useEffect(() => {
     if (!tenantId()) {
       router.push("/app");
       return;
     }
-     
+    if (flagOn !== true) return;
     gw<PortfolioRow[]>("/projects/portfolio")
       .then(setRows)
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
-  }, [router]);
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) setGone(true);
+        else setError(e instanceof Error ? e.message : String(e));
+      });
+  }, [router, flagOn]);
+
+  if (flagOn === false || gone) return <ModuleDisabled {...PROJECTS_DISABLED} />;
 
   return (
     <main className="min-h-0 flex-1 overflow-y-auto">

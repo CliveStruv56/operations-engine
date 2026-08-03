@@ -15,6 +15,8 @@ import { StakeholdersTab } from "./tabs/StakeholdersTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { input } from "./tabs/ui";
 import { useWorkspace } from "../../workspace";
+import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../../module-gate";
+import { ApiError } from "@/lib/api";
 
 const TABS = [
   "Overview",
@@ -35,6 +37,12 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
   const [detail, setDetail] = useState<Detail | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
   const [error, setError] = useState<string | null>(null);
+  const flagOn = useModuleEnabled("projects");
+  // The module gate and a missing project both 404 with `not_found`, so the
+  // client cannot tell them apart. The flag check below already covers the
+  // module case authoritatively, which leaves a stale or mistyped link as by
+  // far the likelier cause here — say that rather than blaming the module.
+  const [missing, setMissing] = useState(false);
   const tabs = TABS.filter(
     (t) => t !== "Contacts" || ws.tenant?.features?.contacts === true
   );
@@ -43,13 +51,16 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
     () =>
       gw<Detail>(`/projects/${id}/groundwork`)
         .then(setDetail)
-        .catch((e) => setError(e instanceof Error ? e.message : String(e))),
+        .catch((e) => {
+          if (e instanceof ApiError && e.status === 404) setMissing(true);
+          else setError(e instanceof Error ? e.message : String(e));
+        }),
     [id]
   );
   useEffect(() => {
-
+    if (flagOn !== true) return;
     refresh();
-  }, [refresh]);
+  }, [refresh, flagOn]);
 
   async function changeStatus(status: string) {
     let dormancy_reason: string | null = null;
@@ -66,6 +77,26 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
     refresh();
   }
 
+  if (flagOn === false) return <ModuleDisabled {...PROJECTS_DISABLED} />;
+  if (missing)
+    return (
+      <main className="min-h-0 flex-1 overflow-y-auto p-8">
+        <div className="mx-auto max-w-xl rounded-card border border-edge bg-surface p-6">
+          <h1 className="font-display text-[20px] font-medium tracking-[-0.01em]">
+            This project isn&rsquo;t here
+          </h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            It may have been deleted, or the link may be wrong.
+          </p>
+          <Link
+            href="/app/projects"
+            className="mt-4 inline-block text-sm text-ink-muted underline hover:text-ink"
+          >
+            Back to development projects
+          </Link>
+        </div>
+      </main>
+    );
   if (error)
     return (
       <main className="p-8">
