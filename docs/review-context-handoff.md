@@ -494,13 +494,35 @@ visibility` covers the soft link both ways — including asserting the
 FK-bypasses-RLS hazard outright, which is why step 2's routers must validate
 every referenced id with an RLS-scoped existence check (#19's ruling).
 
-Suites green: **API 196**, worker 31, web 10; ruff + mypy clean.
+Suites green: **API 228** (196 after step 1, 228 after step 2), worker 31,
+web 10; ruff + mypy clean.
 **Local dev DB upgraded to 0013.** Staging DB is still at **0012** — 0013 goes
 out with the Railway pre-deploy hook on the next api deploy.
 
-**Next**: step 2 (routers + `app/grants/schemas.py` + the `grants` gate +
-`sqlutil.PATCHABLE_COLUMNS` + cross-tenant attack-list entries), then seeds,
-drafting, web — the five-step sequence in §6f.
+**Step 2 shipped** (`e420de1`): **26 routes** under `/api/v1/grants` behind the
+`grants` gate — funders + catalogue, applications (create seeds the spine),
+stages/gates, tasks, document registry, conditions, reporting periods, the
+tenant-wide reporting calendar, impact measures and outcomes. All models in
+`app/grants/schemas.py` (#20). `app/grants/analytics.py` holds the §1.2
+derived figures as pure functions with their own unit tests.
+
+Rulings taken in step 2, worth not re-litigating:
+- **Award conditions seed on first award, never at creation** — an
+  application being written has no offer, so seeding obligations up front
+  invents them. Idempotent, so re-recording an award cannot duplicate them.
+- **`status` is not in `grant_applications`' `PATCHABLE_COLUMNS`** — the
+  pipeline moves through `POST .../status`, which seeds those conditions and
+  audits the transition; a bare PATCH would skip both.
+- **The reporting calendar is top-level, not a subresource** — the exposure
+  is the returns you forgot, across every application.
+- The **template library** (`grant_ref_templates`, `app/grants/fixtures/`)
+  landed here rather than in step 3 because application creation cannot be
+  tested without it. It is our own product decision. The **funder catalogue**
+  (`grant_ref_funders`) is still step 3: those rows are external fact and
+  every one carries a `last_verified` date somebody has to earn.
+
+**Next**: step 3 (funder catalogue seed data), then drafting (pack +
+skeletons + `DraftModule` + impact card), then web — per §6f.
 
 Two schema divergences from the PRD's §1 entity list, both argued in #23:
 `grant_tasks` (the seeded library specifies standard tasks, which the listed
