@@ -5,14 +5,14 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  brace-expansion@<=5.0.7: ^5.0.8
+  brace-expansion@<=5.0.8: ^5.0.9
   postcss@<8.5.10: ^8.5.10
   postcss@<=8.5.11: ^8.5.12
   postcss@<=8.5.17: ^8.5.18
   sharp@<0.35.0: ^0.35.0
 
 patchedDependencies:
-  brace-expansion@5.0.8: eb080ac434e4294f100c77ca0f5bf96d35bda29036f53ef94748364ff2c2d626
+  brace-expansion@5.0.9: e86462e5e18c622199acd9d26ef6eef442683ab7333b92f5eb98634e44ecb4c1
 
 importers:
 
@@ -1213,8 +1213,8 @@ packages:
   bidi-js@1.0.3:
     resolution: {integrity: sha512-RKshQI1R3YQ+n9YJz2QQ147P66ELpa1FQEg20Dk8oW9t2KgLbpDLLp9aGZ7y8WHSshDknG0bknqGw5/tyCs5tw==}
 
-  brace-expansion@5.0.8:
-    resolution: {integrity: sha512-JZyDyq3D4AUifKTPOB7DELf6XsB3WdPuNxCtob1vFXPsSXhdAiHBWJ/tJ8HAc9aH84BK+5JFZLNkJKx3G9kzQg==}
+  brace-expansion@5.0.9:
+    resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
     engines: {node: 20 || >=22}
 
   braces@3.0.3:
@@ -4019,7 +4019,7 @@ snapshots:
     dependencies:
       require-from-string: 2.0.2
 
-  brace-expansion@5.0.8(patch_hash=eb080ac434e4294f100c77ca0f5bf96d35bda29036f53ef94748364ff2c2d626):
+  brace-expansion@5.0.9(patch_hash=e86462e5e18c622199acd9d26ef6eef442683ab7333b92f5eb98634e44ecb4c1):
     dependencies:
       balanced-match: 4.0.4
 
@@ -5422,11 +5422,11 @@ snapshots:
 
   minimatch@10.2.5:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=eb080ac434e4294f100c77ca0f5bf96d35bda29036f53ef94748364ff2c2d626)
+      brace-expansion: 5.0.9(patch_hash=e86462e5e18c622199acd9d26ef6eef442683ab7333b92f5eb98634e44ecb4c1)
 
   minimatch@3.1.5:
     dependencies:
-      brace-expansion: 5.0.8(patch_hash=eb080ac434e4294f100c77ca0f5bf96d35bda29036f53ef94748364ff2c2d626)
+      brace-expansion: 5.0.9(patch_hash=e86462e5e18c622199acd9d26ef6eef442683ab7333b92f5eb98634e44ecb4c1)
 
   minimist@1.2.8: {}
 
