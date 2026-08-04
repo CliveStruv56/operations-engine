@@ -698,21 +698,103 @@ measures, 1 reporting period, 2 outcomes and 5 draft jobs. Disposable —
 `delete from grant_applications where id = '0e470acc-487a-4f65-b325-5ed932b941fb';`
 clears the lot, and the flag comes off in the operator console.
 
+## 6i. Drafting engine brief closed + a third bug of the same family (4 Aug 2026)
+
+DRAFT-001 (`35fedcc`) and DRAFT-002 (`b7a93b9`) are both done, and a review
+pass found a third instance of the 3 Aug reasoning-model bug (`0b19e07`).
+Suites now **API 247, worker 82, web 27**; ruff, mypy, typecheck, lint, build,
+`pip-audit` (api + worker) and `pnpm audit` all clean.
+
+### DRAFT-001 — metering moved into the engine
+
+`write_usage()` in the new `worker/drafting/usage.py` is now the only place a
+draft's cost is recorded, called on the success path and inside
+`_mark_failed()`; both `register_draft()`s lost their copy. The ledger is
+hoisted above the `try` as the brief advised.
+
+One decision the brief left open: `_mark_failed` writes the **failure status
+and the usage rows in two separate transactions**, status first. Same-tx would
+mean a usage-write failure rolls back the status — and since every call site
+suppresses exceptions, the job would silently stay `running` and the UI would
+poll it forever. An empty ledger skips the second transaction entirely, which
+also keeps the cancellation path as short as it was.
+
+Tested on both sides of the ASSUMPTIONS #13 line, because the API venv has no
+`python-docx` and so cannot import the engine at all:
+
+- `apps/worker/tests/test_drafting_usage.py` — drives `run_draft` against a
+  fake pool for control flow: failure mid-draft, cancellation, cost guard,
+  gather-level failure (bills nothing — no zero rows), success, embedding.
+- `apps/api/tests/test_worker_drafting_usage.py` — `write_usage` against the
+  migrated schema: column set, the `usage_events_kind_check` constraint, and
+  RLS refusing a write aimed at another tenant.
+
+### DRAFT-002 — and the same claim hiding in a pack note
+
+The table instruction moved into `section_prompt()`, where `section.table` is
+known, and the contract gained the prohibition instead. The generic label
+(`section.table.replace("_", " ")`) reads fine for all five renderer keys, so
+`Section` did not need a label field.
+
+**Not in the brief:** `GrantPack.prompt_notes()` carried the *same* blanket
+claim — "outcome figures are rendered as a table" — to all nine sections of a
+monitoring return, including *Financial position*, the section that invented
+the table. Fixing the contract alone would have left the bug live. It keeps
+the figures discipline and drops the table claim. If a third module ever says
+anything about tables outside `section_prompt()`, this is the failure to
+expect.
+
+### The third reasoning-model bug: document summaries (`0b19e07`)
+
+`worker/summarize.py` was never touched by the 3 Aug fix and had **no tests**.
+It asked `drafter` — gpt-oss-120b, 675–709 tokens of thinking before it writes
+— for 512 output tokens, so the budget went entirely on reasoning. Three
+silent failures followed: `content` is `None` on some gateways so `.strip()`
+raised `AttributeError`; ingest catches summary failures by design, so the
+document reached `ready` with no summary and no error; and where the gateway
+returned `""` instead, an empty summary was stored **and embedded as a summary
+chunk**, which is retrieval pollution rather than an absence.
+
+Any document ingested since the aliases became reasoning models probably has
+no usable summary — "what are the key messages of X?" is the feature that
+quietly stopped working. **Worth re-ingesting the staging/dev vault to check.**
+Now: `max_tokens` 1536, `reasoning_effort` low, an empty reply raises, and the
+summary's `usage_events` row is written even if embedding it fails.
+
+### Open, in priority order
+
+1. **Live confirmation of DRAFT-002** — one monitoring return whose prose no
+   longer refers to a financial table. Recipe in §6h; costs Groq quota.
+2. **`funding_application` end-to-end** (from §6g item 1) — still owed.
+3. **Chat is unmetered when a stream dies** — `app/routers/conversations.py`
+   returns from the generator on a stream error before the `usage_events`
+   write, and `StreamResult` only gets its numbers from the final usage chunk,
+   so there is nothing measured to record. Same constraint-5 class as
+   DRAFT-001 but on the busiest surface; the fix means billing an estimate,
+   which is a product decision, not a bug fix.
+4. **Chat sends no `max_tokens` and no `reasoning_effort`** — `workhorse` is
+   GLM-4.7-Flash and a reply that thinks its way through the provider default
+   is both expensive and, if it streams nothing, stored as an empty assistant
+   message. Drafting bounds both; chat does not.
+5. **Ingest is unmetered if the chunk write fails** — embedding is paid for
+   before the transaction that records it.
+6. **`packages/shared` is a README and nothing else** — no `types.ts`, no
+   drift check in CI, no import from `apps/web`, despite CLAUDE.md's layout
+   table. Either build it or correct the doc.
+
 ## 7. Read first in a new session
 
-**The active task is `docs/drafting-engine-brief.md`** — DRAFT-001 (a failed
-draft records no cost, breaking CLAUDE.md hard constraint 5) and DRAFT-002
-(the grounding contract names Groundwork's tables to every module, so drafts
-cite tables that do not exist). Both are in the **shared** engine, so both
-affect Groundwork and Grantwork. The brief is self-contained: problem,
-evidence, files, recommended approach, gotchas and acceptance criteria.
+**There is no active work brief.** `docs/drafting-engine-brief.md` closed on
+4 Aug 2026 with both its items fixed.
 
-1. `docs/drafting-engine-brief.md` — the task.
-2. This file — **§6h** for how those two were found and what the smoke test
-   already proved works; **§6g** for where Grantwork stands overall.
-3. `docs/groundwork/ASSUMPTIONS.md` (items 20–24 are the newest rulings; #24
+1. This file — **§6i** first (what just landed, and the six open items in
+   priority order), then **§6g** for where Grantwork stands overall.
+2. `docs/groundwork/ASSUMPTIONS.md` (items 20–24 are the newest rulings; #24
    governs the funder catalogue and is easy to break by accident).
-4. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
+3. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
+4. `docs/vertical-module-roadmap.md` if the next move is a new module rather
+   than the open items — Tenderhouse and Assurance are the researched
+   candidates (`docs/modules/`).
 
 Grantwork itself (§6f, `docs/modules/grantwork-prd.md`,
 `docs/vertical-module-roadmap.md` §1) is background now — all five of its

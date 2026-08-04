@@ -1,6 +1,16 @@
 # Drafting Engine Brief — cost telemetry + the grounding contract
 
-**Status:** Active. Two ordered FIX items, both found by the live Grantwork
+**Status: CLOSED 4 Aug 2026.** Both items are fixed on `main` — DRAFT-001 in
+`35fedcc`, DRAFT-002 in `b7a93b9`. What was actually built, and the one thing
+each item turned up that this brief did not predict, is recorded in
+`docs/review-context-handoff.md` §6i. The problem statements below are kept
+because they document *why* the code looks the way it does.
+
+Still owed on DRAFT-002: a live monitoring return confirming the prose no
+longer refers to a financial table. The offline prompt tests are the
+regression guard; the live run is confirmation, and costs Groq quota.
+
+**Originally:** two ordered FIX items, both found by the live Grantwork
 smoke test on 3–4 Aug 2026 (`docs/review-context-handoff.md` §6h).
 **Scope:** `apps/worker/worker/drafting/` — the *shared* engine, so both
 Groundwork and Grantwork are affected by each item.
