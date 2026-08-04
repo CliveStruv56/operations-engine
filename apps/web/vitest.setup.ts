@@ -23,3 +23,8 @@ vi.mock("next/navigation", () => ({
 afterEach(() => {
   Object.values(routerMock).forEach((fn) => fn.mockClear());
 });
+
+// jsdom implements no scrolling at all, so Element.scrollTo is simply absent.
+// The chat panel autoscrolls in an effect on every message change, which makes
+// it unrenderable in tests without this.
+Element.prototype.scrollTo = vi.fn();

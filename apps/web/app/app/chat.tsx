@@ -294,6 +294,23 @@ export default function ChatPanel({
   }, []);
 
   useEffect(() => discardDeltas, [discardDeltas]);
+
+  /** Workspace URL, with or without an open conversation. Omitting `convId`
+   *  is what returns someone to a usable, empty composer. Declared above the
+   *  effects that call it — as a `const` it is not hoisted the way the plain
+   *  function it replaced was, and a reference from an effect above this line
+   *  throws on first render. */
+  const convHref = useCallback(
+    (convId?: string) => {
+      const q = new URLSearchParams();
+      if (activeProjectId) q.set("project", activeProjectId);
+      if (convId) q.set("c", convId);
+      const s = q.toString();
+      return s ? `/app?${s}` : "/app";
+    },
+    [activeProjectId]
+  );
+
   // Ownership has to be established positively. Treating "absent from
   // ws.conversations" as writable fails open: the list is also empty when its
   // fetch failed, which would put a live composer on a teammate's shared chat
@@ -303,6 +320,27 @@ export default function ChatPanel({
   const createdHere = activeConversationId !== null && createdHereIds.includes(activeConversationId);
   const unknownConversation = activeConversationId !== null && !createdHere && activeConv === null;
   const readOnly = (activeConv !== null && !activeConv.is_mine) || unknownConversation;
+  // Absent from a list that *loaded successfully* means the conversation is
+  // gone — deleted here, or in another tab. Note the distinction from
+  // `unknownConversation` above, which is also true when the list failed to
+  // load and we genuinely know nothing; that case must keep failing closed.
+  const goneConversation = unknownConversation && ws.conversationsLoaded;
+
+  // Drop a dead conversation out of the URL instead of stranding the composer
+  // on it. Deleting the open chat used to leave `?c=<deleted-id>` in the
+  // address, and the read-only guard then reported it as somebody else's chat
+  // — a dead end with no way back to a usable composer, reachable by refresh,
+  // back button, bookmark or a second tab, not just by deleting.
+  useEffect(() => {
+    if (goneConversation) router.replace(convHref());
+  }, [goneConversation, router, convHref]);
+
+  useEffect(() => {
+    // A 404 from the conversation that was just closed must not follow the
+    // user into the next one.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setError(null);
+  }, [activeConversationId]);
 
   useEffect(() => {
     if (!activeConversationId) {
@@ -314,10 +352,14 @@ export default function ChatPanel({
       justCreatedRef.current = null;
       return;
     }
+    // Known-dead conversations are not requested at all: the redirect above is
+    // already under way, and the 404 would only paint an error banner over a
+    // screen the user is being moved off.
+    if (goneConversation) return;
     api<Message[]>(`/conversations/${activeConversationId}/messages`, {}, tenantId)
       .then(setMessages)
       .catch((e) => setError(String(e)));
-  }, [activeConversationId, tenantId]);
+  }, [activeConversationId, tenantId, goneConversation]);
 
   // Document metadata for the hero (context chip + title-derived suggestions)
   // — best-effort, the hero renders without it too.
@@ -330,13 +372,6 @@ export default function ChatPanel({
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, streamText]);
-
-  function convHref(convId: string) {
-    const q = new URLSearchParams();
-    if (activeProjectId) q.set("project", activeProjectId);
-    q.set("c", convId);
-    return `/app?${q.toString()}`;
-  }
 
   // useCallback so AssistantMessage's memo actually holds: a fresh arrow here
   // would change on every streamed frame and re-render every settled message.
@@ -538,8 +573,12 @@ export default function ChatPanel({
         <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
           <p className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge bg-sidebar px-5 py-3.5 text-center text-[13px] font-semibold text-subtle">
             {unknownConversation
-              ? ws.conversationsLoaded
-                ? "This chat isn't one of yours — read only"
+              ? // Only ever a flash now: the effect above is already moving
+                // the user to an empty composer. It read "this chat isn't one
+                // of yours", which was simply wrong for a chat they had just
+                // deleted themselves.
+                ws.conversationsLoaded
+                ? "This chat no longer exists — opening a new one…"
                 : "Couldn't check who owns this chat — refresh to reply"
               : `Shared by ${activeConv?.owner_email ?? "a teammate"} — read only`}
           </p>
