@@ -18,7 +18,7 @@ dependencies = [
     "httpx>=0.27",
     "boto3>=1.34",
     "arq>=0.26",
-    "cryptography>=42",
+    "cryptography>=50",
     "python-pptx>=1.0.2",
 ]
 
