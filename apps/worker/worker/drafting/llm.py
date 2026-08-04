@@ -6,12 +6,22 @@ Aliases only (`drafter`/`reasoner`), via the tenant's virtual key against the
 LiteLLM gateway; prices are the spec §4 alias rates (worker keeps its own
 copy, same as summarize.py)."""
 
+import logging
+import time
 from dataclasses import dataclass
 
 import httpx
 
 from worker.blocks import estimate_tokens
 from worker.settings import get_settings
+
+# Per-call timing. A draft is ~11 calls and has been measured at ~3 min/call
+# on `drafter`, which is far too slow to be generation on that provider — the
+# suspicion is rate-limit backoff on the Groq free tier (200k tokens/day
+# against ~51k per draft). Elapsed time per call settles it: backoff produces
+# a bimodal distribution, genuinely slow generation does not. Ids, aliases and
+# counts only — never prompt or document content.
+logger = logging.getLogger("worker.drafting.latency")
 
 MAX_LLM_CALLS = 15
 MAX_CONTEXT_TOKENS_PER_CALL = 24_000
@@ -68,6 +78,9 @@ class LlmCall:
     tokens_out: int
     #: The model hit the output ceiling — its prose stops mid-sentence.
     truncated: bool = False
+    #: Wall-clock seconds for the call, gateway retries included. Diagnostic
+    #: only: it is deliberately outside the cost guard, which meters spend.
+    elapsed_s: float = 0.0
 
     @property
     def cost_usd(self) -> float:
@@ -134,6 +147,7 @@ async def chat(
     """
     ledger.check_next_call(system, user)
     settings = get_settings()
+    started = time.perf_counter()
     async with httpx.AsyncClient(
         base_url=settings.litellm_base_url, timeout=httpx.Timeout(180.0)
     ) as client:
@@ -153,6 +167,7 @@ async def chat(
         )
         resp.raise_for_status()
         payload = resp.json()
+    elapsed = time.perf_counter() - started
     usage = payload.get("usage", {})
     choice = payload["choices"][0]
     ledger.calls.append(
@@ -161,7 +176,17 @@ async def chat(
             tokens_in=usage.get("prompt_tokens", 0),
             tokens_out=usage.get("completion_tokens", 0),
             truncated=choice.get("finish_reason") == "length",
+            elapsed_s=elapsed,
         )
+    )
+    logger.info(
+        "draft call=%d alias=%s elapsed_ms=%d tokens_in=%d tokens_out=%d finish=%s",
+        len(ledger.calls),
+        alias,
+        elapsed * 1000,
+        usage.get("prompt_tokens", 0),
+        usage.get("completion_tokens", 0),
+        choice.get("finish_reason"),
     )
     # `content` is None on some gateways when a reasoning model spends its
     # whole output budget thinking, and "" on others — both mean no prose.

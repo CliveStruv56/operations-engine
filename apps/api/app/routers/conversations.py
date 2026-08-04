@@ -9,8 +9,11 @@ SSE protocol:
   event: error   data: {"error": {code, message}}  (stream aborts)
 """
 
+import asyncio
 import json
+import logging
 import re
+import time
 from uuid import UUID
 
 import asyncpg
@@ -45,6 +48,12 @@ from app.secrets import decrypt_llm_key
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["conversations"])
+
+# Latency telemetry. Ids and counts only — never message, excerpt or contact
+# content (spec §9.5), so this is safe to leave on in production. Chat is the
+# busiest surface and had no timing at all; without these numbers any further
+# tuning is guesswork.
+logger = logging.getLogger("app.chat.latency")
 
 # 4–36 id chars: models routinely truncate long hex ids when echoing them
 # (staging saw [c:1a689315] for full UUIDs), so markers resolve by unique
@@ -291,6 +300,7 @@ async def post_message(
     ctx: TenantContext = Depends(require_role("member")),
 ):
     await rate_limiter.check_chat(ctx.tenant_id)
+    t_request = time.perf_counter()
 
     # Tx 1: validate, persist the user message, gather routing inputs.
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
@@ -351,6 +361,7 @@ async def post_message(
             str(conversation_id),
         )
 
+    tx1_s = time.perf_counter() - t_request
     virtual_key = decrypt_llm_key(tenant["litellm_key_encrypted"])
     if not virtual_key:
         raise ApiError(503, "llm_unavailable", "No model key is provisioned for this workspace")
@@ -370,16 +381,41 @@ async def post_message(
         if project_docs
         else None
     )
-    if body.use_vault:
-        embedding, embed_tokens = await litellm_client.embed_query(virtual_key, body.content)
+
+    # The embedding and the web search are independent network calls — the
+    # embedding feeds vault retrieval, the search feeds the prompt, and
+    # neither reads the other's result. They used to run back to back, so a
+    # research message paid both in series before the model saw anything;
+    # `exa_search` alone allows up to 15s. Overlapping them takes the shorter
+    # of the two off the critical path entirely.
+    web_sources: list[WebSource] = []
+    embed_task = (
+        asyncio.create_task(litellm_client.embed_query(virtual_key, body.content))
+        if body.use_vault
+        else None
+    )
+    search_task = (
+        asyncio.create_task(exa_search(body.content)) if body.task_kind == "research" else None
+    )
+    running = [t for t in (embed_task, search_task) if t is not None]
+    t_network = time.perf_counter()
+    if running:
+        # return_exceptions so one failure cannot leave the other task
+        # orphaned with an unretrieved exception; `.result()` below re-raises
+        # in the original order, so callers still see the embedding error
+        # first exactly as they did when these ran in sequence.
+        await asyncio.gather(*running, return_exceptions=True)
+    network_s = time.perf_counter() - t_network
+
+    retrieval_s = 0.0
+    if embed_task is not None:
+        embedding, embed_tokens = embed_task.result()
+        t_retrieval = time.perf_counter()
         async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
             chunks = await retrieve(conn, embedding, body.content, scope=scope)
-
-    # Research mode: web search runs between tenant transactions, like the
-    # embedding call — network never holds a DB connection.
-    web_sources: list[WebSource] = []
-    if body.task_kind == "research":
-        web_sources = await exa_search(body.content)
+        retrieval_s = time.perf_counter() - t_retrieval
+    if search_task is not None:
+        web_sources = search_task.result()
 
     soft_cap_hit = float(month_spend) >= float(tenant["soft_budget_usd"])
     system = SYSTEM_PROMPT
@@ -401,6 +437,37 @@ async def post_message(
     llm_messages.append({"role": "user", "content": body.content})
     context_tokens = sum(estimate_tokens(m["content"]) for m in llm_messages)
     alias = select_route(body.task_kind, context_tokens, soft_cap_hit=soft_cap_hit)
+    # Everything the user waits through before the model is even asked.
+    t_stream = time.perf_counter()
+
+    def _log_latency(result: StreamResult, outcome: str) -> None:
+        """One line per message: where the wait actually went.
+
+        `ttft` is the number that matters — everything before it is dead air
+        the user sits through. Logged on failures too, since a stream that
+        errors after twenty seconds is the case most worth seeing.
+        """
+        ttft = result.ttft_s
+        logger.info(
+            "chat outcome=%s alias=%s tenant=%s conversation=%s "
+            "tx1_ms=%d network_ms=%d retrieval_ms=%d prestream_ms=%d ttft_ms=%s total_ms=%d "
+            "context_tokens=%d tokens_in=%d tokens_out=%d vault_chunks=%d web_sources=%d",
+            outcome,
+            alias,
+            ctx.tenant_id,
+            conversation_id,
+            tx1_s * 1000,
+            network_s * 1000,
+            retrieval_s * 1000,
+            (t_stream - t_request) * 1000,
+            round(ttft * 1000) if ttft is not None else "none",
+            (time.perf_counter() - t_request) * 1000,
+            context_tokens,
+            result.tokens_in,
+            result.tokens_out,
+            len(chunks),
+            len(web_sources),
+        )
 
     async def stream():
         result = StreamResult()
@@ -408,11 +475,14 @@ async def post_message(
             async for delta in litellm_client.stream_chat(virtual_key, alias, llm_messages, result):
                 yield _sse("delta", {"content": delta})
         except ApiError as exc:
+            _log_latency(result, exc.code)
             yield _sse("error", {"error": {"code": exc.code, "message": exc.message}})
             return
         except Exception:  # network/parse failures: no payloads in the event
+            _log_latency(result, "llm_error")
             yield _sse("error", {"error": {"code": "llm_error", "message": "Stream failed"}})
             return
+        _log_latency(result, "ok")
 
         content, citations = _resolve_citations(result.text, chunks, web_sources)
         cost = estimate_cost_usd(alias, result.tokens_in, result.tokens_out)

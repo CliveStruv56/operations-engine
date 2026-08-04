@@ -809,23 +809,104 @@ provider. That is the cheap way to confirm any future prompt change.
    so there is nothing measured to record. Same constraint-5 class as
    DRAFT-001 but on the busiest surface; the fix means billing an estimate,
    which is a product decision, not a bug fix.
-4. **Chat sends no `max_tokens` and no `reasoning_effort`** — `workhorse` is
-   GLM-4.7-Flash and a reply that thinks its way through the provider default
-   is both expensive and, if it streams nothing, stored as an empty assistant
-   message. Drafting bounds both; chat does not.
+4. ~~**Chat sends no `max_tokens` and no `reasoning_effort`**~~ — **done in
+   §6j.** It turned out to be the largest single cause of felt chat latency,
+   not just a cost and empty-message risk.
 5. **Ingest is unmetered if the chunk write fails** — embedding is paid for
    before the transaction that records it.
 6. **`packages/shared` is a README and nothing else** — no `types.ts`, no
    drift check in CI, no import from `apps/web`, despite CLAUDE.md's layout
    table. Either build it or correct the doc.
 
+## 6j. LLM latency review, and the first six fixes (4 Aug 2026)
+
+Prompted by a plain report of "the site is fine, the LLM is slow". Full
+findings in `docs/performance-review-aug-2026.md`; this is what it concluded
+and what has landed.
+
+### There was no single bottleneck — there were three
+
+| Symptom | Cause |
+| --- | --- |
+| Long pause before *any* text appears | Chat sent no `reasoning_effort` and no `max_tokens`. Every chat alias is a reasoning model, and `stream_chat` forwards only `delta.content` — so the entire thinking phase rendered as a spinner on an open, billing connection. This is §6i open item 4, promoted from "risk" to "this is the cause". |
+| Text arrives, but the page stutters | Every token re-parsed the whole answer *and every prior answer* through `ReactMarkdown`, plus a forced scroll reflow. Quadratic over a reply; a ten-message conversation did eleven full parses per token. |
+| Drafts run 30+ min or die | Groq free tier — 200k tokens/day against ~51k per draft. `~3 min/call` is rate-limit backoff, not generation. |
+
+The third is a **billing change, not a code change**, and it is the reason the
+obvious-looking fix is wrong: parallelising sections against a quota-limited
+endpoint converts a slow job into a failing one, and `num_retries: 2`
+multiplies every 429 by three. **Do not parallelise `drafting/engine.py` until
+paid Groq is confirmed working.** If it is confirmed, expect ~3–4× on the
+section phase and it becomes worth doing.
+
+### What landed
+
+- **`app/litellm.py`** — `max_tokens: 4096` and `reasoning_effort: "low"` on
+  the chat completion. 4096 is deliberately generous: `reasoning_effort` is
+  what bounds the wait, `max_tokens` is only the runaway guard behind it, and
+  `report`/`analyse`/`slides` need the room. Plus `StreamResult.ttft_s`,
+  pinned to the first *renderable* delta.
+- **`app/routers/conversations.py`** — the query embedding and the Exa search
+  now overlap instead of running back to back (`exa_search` alone allows 15s).
+  `return_exceptions=True` then `.result()`, so one failure cannot orphan the
+  other task and the embedding error still surfaces first. Plus one log line
+  per message with the full phase split, on failures too.
+- **`worker/drafting/llm.py`** — `LlmCall.elapsed_s` and a per-call line.
+  Backoff and slow generation look different in the distribution; this is what
+  settles whether the Groq diagnosis was right.
+- **`web/app/app/chat.tsx`** — `AssistantMessage` memoised, and deltas
+  coalesced to one `requestAnimationFrame` instead of one `setState` per
+  token. **The memo needed `onExport` changed to take the message id**: it was
+  an inline arrow recreated every render, which would have defeated the memo
+  silently. Keep every prop on that component primitive or referentially
+  stable or it quietly stops working again.
+
+Logging is new to this repo — stdlib loggers (`app.chat.latency`,
+`worker.drafting.latency`), ids and counts only per spec §9.5, safe to leave
+on in production.
+
+### Tested
+
+`apps/api/tests/test_chat_latency.py`, 5 tests, API suite 247 → 252.
+`test_chat.py` stubs `stream_chat` wholesale and so can never see the request
+body, which is exactly how three reasoning-model bugs reached production; these
+drive the real client over `httpx.MockTransport` instead. Both load-bearing
+tests were **checked to fail without their fix** rather than passing
+vacuously — worth knowing that the first attempt to prove the overlap test was
+itself wrong (awaiting `create_task` results in a loop is still concurrent;
+the tasks are scheduled at creation).
+
+### Not done, in priority order
+
+1. **Upgrade Groq off the free tier**, then re-check the per-call figures
+   against the `~3 min/call` note in `worker/main.py`. Everything else in the
+   drafting path waits on this.
+2. **Cap chat history** — `conversations.py` fetches it with no `LIMIT` and
+   re-sends all of it every turn, so prompt cost grows without bound. Agreed
+   approach: a ~8k token budget keeping recent turns whole, using
+   `routing.estimate_tokens`.
+3. **Move retrieved excerpts off the prompt prefix.** They are concatenated
+   into the *system* message, so ~4–5k tokens of volatile content sit in front
+   of the stable part and no provider prefix cache can ever hit. Moving them
+   onto the final user turn makes the prefix cacheable.
+4. **Gateway caching** — no `cache` block in `config.yaml`. The higher-value
+   target is the proxy's virtual-key auth lookup, not response caching. This
+   is the one item in the report that is a **hypothesis, not a code-confirmed
+   finding** — measure before changing it.
+5. `--workers` on uvicorn (`apps/api/Dockerfile`) — single process today.
+
+Explicitly rejected: cutting embedder dimensions from 2048 (needs a full
+re-embed, a migration and a new index, degrades retrieval, and saves
+milliseconds on a path that is not the bottleneck).
+
 ## 7. Read first in a new session
 
 **There is no active work brief.** `docs/drafting-engine-brief.md` closed on
 4 Aug 2026 with both its items fixed.
 
-1. This file — **§6i** first (what just landed, and the six open items in
-   priority order), then **§6g** for where Grantwork stands overall.
+1. This file — **§6j** first (the latency work, and what is deliberately
+   waiting on paid Groq), then **§6i**, then **§6g** for where Grantwork
+   stands overall.
 2. `docs/groundwork/ASSUMPTIONS.md` (items 20–24 are the newest rulings; #24
    governs the funder catalogue and is easy to break by accident).
 3. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).

@@ -10,6 +10,7 @@ chat surface raises; chat tests inject a fake client instead.
 """
 
 import json
+import time
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
 from uuid import UUID
@@ -18,6 +19,26 @@ import httpx
 
 from app.config import get_settings
 from app.errors import ApiError
+
+#: Output ceiling and thinking bound for every chat completion.
+#:
+#: Chat used to send neither, and it is the single largest source of felt
+#: latency on this surface. Every current chat alias is a reasoning model that
+#: bills thinking against `completion_tokens` — `drafting/llm.py` measured
+#: `drafter` spending 675–709 tokens thinking before it writes a word, and
+#: `reasoner` filling an entire 4096-token budget with thought and returning
+#: no prose at all. Reasoning tokens arrive as `reasoning_content`, which
+#: `stream_chat` does not forward, so the whole thinking phase renders to the
+#: user as a spinner on an open connection.
+#:
+#: `reasoning_effort` is what bounds the wait; `max_tokens` is only the
+#: runaway guard behind it (a ceiling alone cannot bound a model that thinks
+#: to fill whatever it is given). 4096 is deliberately generous — `report`,
+#: `analyse` and `slides` modes produce full-length documents, and the point
+#: here is latency, not truncation. A provider that ignores either parameter
+#: is no worse off than before.
+MAX_OUTPUT_TOKENS = 4096
+REASONING_EFFORT = "low"
 
 # $/1M tokens (input, output) per alias — spec §4 table + live OpenRouter
 # pricing for longdoc. App-side cost estimate written to messages/usage_events;
@@ -45,6 +66,11 @@ class StreamResult:
     tokens_in: int = 0
     tokens_out: int = 0
     text_parts: list[str] = field(default_factory=list)
+    #: Seconds from issuing the request to the first *renderable* delta — the
+    #: dead air the user actually sits through. Distinct from total generation
+    #: time, and the number that tells us whether bounding the thinking above
+    #: worked. None if the stream produced no content.
+    ttft_s: float | None = None
 
     @property
     def text(self) -> str:
@@ -135,6 +161,7 @@ class LiteLLMClient:
         chunk (stream_options.include_usage)."""
         if not self.enabled:
             raise ApiError(503, "llm_unavailable", "Model gateway is not configured")
+        started = time.perf_counter()
         async with self._http().stream(
             "POST",
             "/v1/chat/completions",
@@ -144,6 +171,8 @@ class LiteLLMClient:
                 "messages": messages,
                 "stream": True,
                 "stream_options": {"include_usage": True},
+                "max_tokens": MAX_OUTPUT_TOKENS,
+                "reasoning_effort": REASONING_EFFORT,
             },
         ) as resp:
             if resp.status_code >= 400:
@@ -169,6 +198,8 @@ class LiteLLMClient:
                 for choice in chunk.get("choices", []):
                     delta = choice.get("delta", {}).get("content")
                     if delta:
+                        if result.ttft_s is None:
+                            result.ttft_s = time.perf_counter() - started
                         result.text_parts.append(delta)
                         yield delta
 
