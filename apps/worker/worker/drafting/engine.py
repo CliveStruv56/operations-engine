@@ -23,7 +23,7 @@ import asyncpg
 
 from worker.db import tenant_tx as _tenant_tx
 from worker.drafting.assemble import AssembledDraft, TableRenderer, assemble_docx
-from worker.drafting.llm import DraftBudgetExceeded, LlmLedger, chat
+from worker.drafting.llm import DraftBudgetExceeded, EmptySectionError, LlmLedger, chat
 from worker.drafting.pack import DraftPackBase
 from worker.drafting.prompts import outline_prompt, parse_outline, section_prompt
 from worker.drafting.retrieval import retrieve_excerpts
@@ -55,6 +55,24 @@ class DraftModule:
     scope_weights: Callable[..., Awaitable[dict[UUID, float]]]
     #: Writes the registry row, usage events, audit row and job completion.
     register: Callable[..., Awaitable[UUID]]
+
+
+async def _section_text(
+    ledger: LlmLedger, virtual_key: str, section: Section, system: str, user: str
+) -> str:
+    """Draft one section, retrying once if the model returns nothing.
+
+    Empty replies are intermittent — the same prompt succeeds on the next
+    attempt — so failing a whole job on the first one would make drafting
+    flaky for no safety gain. The retry is charged to the ledger like any
+    other call, because it really was two calls. If the second is empty too,
+    `EmptySectionError` propagates and the job fails: a document with a hole
+    in it is never the fallback.
+    """
+    try:
+        return await chat(ledger, virtual_key, section.alias, system, user)
+    except EmptySectionError:
+        return await chat(ledger, virtual_key, section.alias, system, user)
 
 
 async def _mark_failed(
@@ -116,14 +134,25 @@ async def run_draft(
 
         sections_spec = module.skeletons[kind]
         system, user = outline_prompt(pack, sections_spec, module.system_prompt)
-        outline = parse_outline(await chat(ledger, virtual_key, "drafter", system, user))
+        outline = parse_outline(
+            await chat(ledger, virtual_key, "drafter", system, user, allow_empty=True)
+        )
 
         sections: list[tuple[Section, str]] = []
         for section in sections_spec:
             system, user = section_prompt(
                 pack, section, outline.get(section.key, []), module.system_prompt
             )
-            text = await chat(ledger, virtual_key, section.alias, system, user)
+            text = await _section_text(ledger, virtual_key, section, system, user)
+            if ledger.calls[-1].truncated:
+                # The prose stops mid-sentence. Say so in the document rather
+                # than leaving a reader to notice: this rides the existing
+                # [TO CONFIRM] machinery, so it also lands in the job's
+                # to_confirm_count and the UI's "N items to confirm".
+                text += (
+                    "\n\n[TO CONFIRM: this section was cut short at the model's output "
+                    "limit — check the end of it and regenerate if needed]"
+                )
             sections.append((section, text))
 
         draft: AssembledDraft = assemble_docx(pack, sections, date.today(), tables=module.tables)
@@ -147,9 +176,9 @@ async def run_draft(
         with contextlib.suppress(Exception):
             await _mark_failed(pool, module, tenant_id, job_id, str(exc))
         raise
-    except ValueError as exc:
-        # Gather-level validation (missing subject, missing funding source) —
-        # the message is already user-safe.
+    except (ValueError, EmptySectionError) as exc:
+        # Gather-level validation (missing subject, missing funding source) and
+        # an empty model section — both messages are already user-safe.
         with contextlib.suppress(Exception):
             await _mark_failed(pool, module, tenant_id, job_id, str(exc))
         raise

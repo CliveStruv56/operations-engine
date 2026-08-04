@@ -18,6 +18,7 @@ from worker.drafts.llm import (
     DraftBudgetExceeded,
     LlmCall,
     LlmLedger,
+    chat,
 )
 from worker.drafts.prompts import SKELETONS, parse_outline, section_prompt
 from worker.drafts.register import registry_target
@@ -182,3 +183,147 @@ def test_registry_target_keys_and_titles():
 
     feasibility, _ = _assembly_pack(kind="feasibility_study", report_month=None)
     assert registry_target(feasibility) == ("feasibility_study", "Feasibility study")
+
+
+# -- reasoning-model output budget -------------------------------------------
+#
+# Found by the first live Grantwork draft (3 Aug 2026). Both drafting aliases
+# are reasoning models that bill thinking against `completion_tokens`. At the
+# old 1024 ceiling every section of a data-heavy document came back
+# `finish_reason=length`, and the ones that reasoned longest returned no
+# content at all — which the pipeline assembled into a document with six of
+# nine sections missing, filed as a clean draft with to_confirm_count 0.
+
+
+class _FakeResponse:
+    def __init__(self, payload):
+        self._payload = payload
+
+    def raise_for_status(self):
+        return None
+
+    def json(self):
+        return self._payload
+
+
+class _FakeClient:
+    """Stands in for httpx.AsyncClient, returning a canned completion."""
+
+    def __init__(self, payload):
+        self._payload = payload
+        self.sent = None
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, *exc):
+        return False
+
+    async def post(self, _url, headers=None, json=None):
+        self.sent = json
+        return _FakeResponse(self._payload)
+
+
+def _completion(content, finish_reason="stop", completion_tokens=200):
+    return {
+        "choices": [{"message": {"content": content}, "finish_reason": finish_reason}],
+        "usage": {"prompt_tokens": 100, "completion_tokens": completion_tokens},
+    }
+
+
+def _patch(monkeypatch, payload):
+    client = _FakeClient(payload)
+    monkeypatch.setattr("worker.drafting.llm.httpx.AsyncClient", lambda **kw: client)
+    monkeypatch.setattr(
+        "worker.drafting.llm.get_settings",
+        lambda: type("S", (), {"litellm_base_url": "http://gateway"})(),
+    )
+    return client
+
+
+async def test_output_budget_clears_reasoning_tokens(monkeypatch):
+    """The ceiling has to fit thinking plus prose, not prose alone."""
+    from worker.drafting.llm import MAX_OUTPUT_TOKENS
+
+    client = _patch(monkeypatch, _completion("Some prose."))
+    await chat(LlmLedger(), "key", "drafter", "sys", "usr")
+    assert client.sent["max_tokens"] == MAX_OUTPUT_TOKENS
+    assert MAX_OUTPUT_TOKENS >= 4096, "must clear ~700 reasoning tokens plus real prose"
+
+
+async def test_an_empty_section_fails_the_job_rather_than_shrinking_the_document(monkeypatch):
+    from worker.drafting.llm import EmptySectionError
+
+    _patch(monkeypatch, _completion("", finish_reason="length"))
+    with pytest.raises(EmptySectionError, match="empty section"):
+        await chat(LlmLedger(), "key", "drafter", "sys", "usr")
+
+
+async def test_a_null_content_is_treated_as_empty(monkeypatch):
+    """Some gateways return null rather than "" when a reasoning model spends
+    its whole budget thinking."""
+    from worker.drafting.llm import EmptySectionError
+
+    _patch(monkeypatch, _completion(None, finish_reason="length"))
+    with pytest.raises(EmptySectionError):
+        await chat(LlmLedger(), "key", "drafter", "sys", "usr")
+
+
+async def test_the_outline_call_may_come_back_empty(monkeypatch):
+    """The outline is an optimisation, designed to degrade to {} rather than
+    spend budget on retries — so it must not fail the job."""
+    _patch(monkeypatch, _completion(""))
+    assert await chat(LlmLedger(), "key", "drafter", "sys", "usr", allow_empty=True) == ""
+    assert parse_outline("") == {}
+
+
+async def test_truncation_is_recorded_on_the_ledger(monkeypatch):
+    _patch(monkeypatch, _completion("Cut off mid-", finish_reason="length"))
+    ledger = LlmLedger()
+    await chat(ledger, "key", "drafter", "sys", "usr")
+    assert ledger.calls[-1].truncated is True
+    assert ledger.truncated_calls == 1
+
+    _patch(monkeypatch, _completion("Complete."))
+    await chat(ledger, "key", "drafter", "sys", "usr")
+    assert ledger.calls[-1].truncated is False
+    assert ledger.truncated_calls == 1
+
+
+async def test_an_empty_section_is_retried_once_before_failing(monkeypatch):
+    """Empty replies are intermittent, so one retry turns a transient into a
+    non-event — without ever falling back to a document with a gap."""
+    from worker.drafting.engine import _section_text
+    from worker.drafting.llm import EmptySectionError
+    from worker.drafting.sections import Section
+
+    replies = iter([_completion(""), _completion("Recovered prose.")])
+    monkeypatch.setattr(
+        "worker.drafting.llm.httpx.AsyncClient", lambda **kw: _FakeClient(next(replies))
+    )
+    monkeypatch.setattr(
+        "worker.drafting.llm.get_settings",
+        lambda: type("S", (), {"litellm_base_url": "http://gateway"})(),
+    )
+    ledger = LlmLedger()
+    text = await _section_text(ledger, "key", Section("k", "T"), "sys", "usr")
+    assert text == "Recovered prose."
+    assert len(ledger.calls) == 2, "the retry is charged to the ledger, not hidden"
+
+    both_empty = iter([_completion(""), _completion("")])
+    monkeypatch.setattr(
+        "worker.drafting.llm.httpx.AsyncClient", lambda **kw: _FakeClient(next(both_empty))
+    )
+    with pytest.raises(EmptySectionError):
+        await _section_text(LlmLedger(), "key", Section("k", "T"), "sys", "usr")
+
+
+async def test_reasoning_effort_is_bounded_on_every_call(monkeypatch):
+    """A reasoning model given an unbounded budget will spend all of it
+    thinking and return no prose — measured live on the `reasoner` alias."""
+    from worker.drafting.llm import REASONING_EFFORT
+
+    client = _patch(monkeypatch, _completion("Prose."))
+    await chat(LlmLedger(), "key", "reasoner", "sys", "usr")
+    assert client.sent["reasoning_effort"] == REASONING_EFFORT
+    assert REASONING_EFFORT in ("none", "low", "medium")

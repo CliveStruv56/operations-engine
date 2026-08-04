@@ -141,6 +141,7 @@ async def register_draft(
                 "cost_usd": round(ledger.cost_usd, 6),
                 "to_confirm": draft.to_confirm_count,
                 "stripped_citations": draft.stripped_citations,
+                "truncated_sections": ledger.truncated_calls,
             }
         ),
     )
