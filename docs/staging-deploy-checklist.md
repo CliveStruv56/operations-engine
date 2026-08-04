@@ -66,6 +66,23 @@
 > shipped in *its* image, so it cannot apply a revision newer than itself.
 > That is the whole reason the hook exists rather than a manual step.
 >
+> **Seeding platform reference data on staging** (done 4 Aug 2026). The
+> seeders need the *owner* connection and their fixtures ship inside the api
+> image (`COPY app/ app/`, and `.dockerignore` does not strip json), so they
+> run in the container rather than from a laptop:
+>
+> ```sh
+> railway ssh --service api --environment production "python -m app.grants.seeds"
+> railway ssh --service api --environment production "python -m app.groundwork.seeds"
+> ```
+>
+> Both upsert by key, so re-running is safe. Grantwork's prints a warning that
+> all 13 catalogue rows are `status='unverified'` and stale — that is by
+> design (ASSUMPTIONS #24), not a failed seed.
+>
+> `railway ssh` may print a one-time "Railway agent tooling not detected"
+> notice instead of running; just issue the command again.
+>
 > **Railway does not consume the GHCR images** — it builds from the uploaded
 > source. The GHCR images serve the local dev stack and the future
 > self-hosted move; see the Images note below.

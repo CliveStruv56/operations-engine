@@ -597,10 +597,20 @@ pre-existing bug in the shared drafting engine.
    section now returns 541 tokens of prose where it returned nothing — but a
    full run is still owed, blocked only by Groq's **daily** token quota,
    which this testing exhausted (198.7k of 200k TPD).
-2. **Staging has nothing.** DB at **0012**; 0013 goes out with the Railway
-   pre-deploy hook on the next api deploy, and `uv run python -m
-   app.grants.seeds` must then be run there with the owner connection.
-   Worker and web both need redeploying too.
+2. **Staging: api done, worker and web are not.** ✅ 4 Aug — api deployed,
+   the pre-deploy hook took the DB to **0013** (12 grant tables, all with RLS
+   and a policy), the seeder ran (1 template, 13 catalogue rows, all
+   correctly `unverified`+stale), and the 29 grant routes are live and
+   returning 401 unauthenticated.
+   **Still outstanding:** the staging **worker** has no `worker.grants`
+   module (verified — `ModuleNotFoundError`), so any grant draft or impact
+   card would enqueue and fail; and **web** has no `/app/grants` pages. Both
+   need `railway up ./apps/worker --path-as-root --service worker
+   --environment production` and `vercel --prod` from `apps/web`.
+   This is currently harmless because **no staging tenant has the `grants`
+   flag** (only `Struvers2` exists, with projects/contacts/web_search), so
+   the module is invisible and nothing can enqueue a job. Deploy worker+web
+   *before* enabling the flag on anyone.
 3. **The funder catalogue is unverified** by design (#24). Until an operator
    promotes rows, every bid drafted from one carries a warning — correct, but
    it means the module does not look finished to a demo audience.
