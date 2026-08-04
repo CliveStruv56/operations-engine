@@ -10,6 +10,7 @@ worker exactly as it does to request handlers.
 
 import asyncio
 import contextlib
+import logging
 import tempfile
 from pathlib import Path
 
@@ -178,6 +179,12 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
 
 
 async def startup(ctx: dict) -> None:
+    # Same trap as the API (see app/main.py configure_logging): arq configures
+    # only its own `arq` logger, so without this the root logger stays at
+    # WARNING and the per-call drafting timings — the numbers that decide
+    # whether the Groq switch worked — are dropped before reaching a handler.
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s %(message)s")
+    logging.getLogger("worker").setLevel(logging.INFO)
     settings = get_settings()
     if settings.sentry_dsn:
         sentry_sdk.init(

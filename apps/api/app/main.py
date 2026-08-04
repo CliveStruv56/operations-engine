@@ -1,3 +1,4 @@
+import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -41,7 +42,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await db.close()
 
 
+def configure_logging() -> None:
+    """Make this app's own logs actually reach the container output.
+
+    Uvicorn installs handlers for its `uvicorn*` loggers and never calls
+    `basicConfig`, so the root logger keeps its WARNING default and every
+    `logger.info()` in `app.*` is discarded before it reaches a handler. The
+    chat latency line shipped to staging that way and emitted **nothing**,
+    which is indistinguishable from "the code never ran" — the failure mode
+    instrumentation must never have.
+
+    Safe alongside uvicorn: its loggers set `propagate = False`, so this adds
+    no duplicate access lines. `basicConfig` is a no-op when the root logger
+    already has handlers, so a host that configures logging itself still wins.
+    """
+    logging.basicConfig(level=logging.INFO, format="%(levelname)s:     %(name)s %(message)s")
+    logging.getLogger("app").setLevel(logging.INFO)
+
+
 def create_app() -> FastAPI:
+    configure_logging()
     settings = get_settings()
     if settings.litellm_base_url and not settings.litellm_key_encryption_key:
         # Fail at boot rather than write a tenant key to the DB in cleartext.
