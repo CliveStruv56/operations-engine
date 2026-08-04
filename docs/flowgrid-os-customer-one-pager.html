@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowgrid OS — Customer One-Pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --terracotta:#B14E2E;
+      --terracotta-dark:#8A3A22;
+      --cream:#F6F2ED;
+      --paper:#FFFFFF;
+      --ink:#2D2A26;
+      --ink-soft:#5B5752;
+      --line:#E3DDD4;
+      --sage:#6B8E6B;
+      --amber:#D4A017;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:9.6pt;}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+      color:var(--ink);
+      background:#EAE5DE;
+      line-height:1.4;
+      -webkit-font-smoothing:antialiased;
+    }
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto;
+      background:var(--paper);
+      padding:10mm 12mm;
+      display:flex;
+      flex-direction:column;
+      gap:2.4mm;
+    }
+    @media print{
+      html{font-size:9.2pt;}
+      body{background:none;}
+      .page{width:100%;min-height:100vh;margin:0;padding:8mm 10mm;}
+    }
+    @page{size:A4;margin:0;}
+
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;}
+    .eyebrow{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--terracotta);}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-bottom:1.5px solid var(--terracotta);padding-bottom:2.5mm;}
+    .brand{display:flex;align-items:center;gap:2.5mm;}
+    .brand-mark{width:8mm;height:8mm;background:var(--terracotta);border-radius:1.2mm;}
+    .brand-name{font-size:1.4rem;font-weight:700;color:var(--ink);font-family:'Fraunces',Georgia,serif;}
+    .brand-tag{font-size:0.68rem;color:var(--ink-soft);}
+    .meta{text-align:right;font-size:0.65rem;color:var(--ink-soft);line-height:1.35;}
+
+    .hero{background:var(--cream);border-radius:2.5mm;padding:3.5mm 4mm;}
+    .hero h1{font-size:1.45rem;line-height:1.12;margin:1.2mm 0 1.5mm;color:var(--terracotta-dark);}
+    .hero p{font-size:0.85rem;color:var(--ink-soft);max-width:95%;}
+
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+    .card{border:1px solid var(--line);border-radius:2.5mm;padding:3mm;break-inside:avoid;}
+    .card h2{font-size:0.88rem;margin-bottom:1.8mm;color:var(--terracotta-dark);}
+    .card ul{list-style:none;font-size:0.72rem;color:var(--ink-soft);}
+    .card li{padding-left:2.5mm;position:relative;margin-bottom:0.8mm;}
+    .card li::before{content:"•";position:absolute;left:0;color:var(--terracotta);font-weight:700;}
+
+    .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:1.8mm 3mm;margin-top:1.5mm;}
+    .feature{display:flex;align-items:flex-start;gap:1.5mm;font-size:0.7rem;}
+    .feature .icon{width:4mm;height:4mm;min-width:4mm;background:var(--terracotta);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:0.5rem;font-weight:700;}
+    .feature div{line-height:1.3;}
+    .feature strong{color:var(--ink);display:block;font-size:0.72rem;}
+
+    .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:2.2mm;}
+    .tier{border:1px solid var(--line);border-radius:2.5mm;padding:2.5mm;text-align:center;break-inside:avoid;}
+    .tier h3{font-size:0.8rem;color:var(--terracotta-dark);}
+    .tier .price{font-size:1.05rem;font-weight:700;color:var(--ink);margin:0.8mm 0;}
+    .tier .price span{font-size:0.62rem;font-weight:500;color:var(--ink-soft);}
+    .tier ul{list-style:none;font-size:0.66rem;color:var(--ink-soft);text-align:left;margin-top:1.2mm;}
+    .tier li{margin-bottom:0.5mm;padding-left:2.2mm;position:relative;}
+    .tier li::before{content:"✓";position:absolute;left:0;color:var(--sage);font-weight:700;}
+    .tier.pro{border-color:var(--terracotta);background:var(--cream);}
+
+    .trust{display:flex;gap:3mm;justify-content:space-between;font-size:0.68rem;color:var(--ink-soft);margin-top:1mm;}
+    .trust span{display:flex;align-items:center;gap:1.2mm;}
+
+    .cta{background:var(--terracotta);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:flex;align-items:center;justify-content:space-between;gap:4mm;}
+    .cta h2{font-size:1rem;color:#fff;}
+    .cta p{font-size:0.7rem;opacity:0.92;}
+    .cta a{display:inline-block;background:#fff;color:var(--terracotta);font-weight:700;text-decoration:none;padding:1.8mm 3.5mm;border-radius:1.5mm;font-size:0.75rem;white-space:nowrap;}
+
+    footer{font-size:0.62rem;color:var(--ink-soft);text-align:center;margin-top:auto;padding-top:1.5mm;border-top:1px solid var(--line);}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-name">Flowgrid OS</div>
+          <div class="brand-tag">AI workspace for UK small businesses</div>
+        </div>
+      </div>
+      <div class="meta">
+        White-label · Multi-tenant · Grounded in your documents<br>
+        flowgridos.co.uk
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">One workspace. Your brand. Your data.</div>
+      <h1>The AI assistant that actually knows your business.</h1>
+      <p>Stop stitching together chat, document, slide and research tools. Flowgrid OS gives every client a single branded workspace where answers cite your own files, tasks route to the cheapest capable AI model, and usage never surprises you.</p>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>Why it matters</h2>
+        <ul>
+          <li><strong>One bill, one login.</strong> Consolidate chat, vault, research, slides and projects into one workspace.</li>
+          <li><strong>Your brand, front and centre.</strong> Logo, accent colour and house tone are baked in from day one.</li>
+          <li><strong>No model lock-in.</strong> Open-weight models are routed by task, so you get frontier quality without the closed-model tax.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Built for privacy</h2>
+        <ul>
+          <li><strong>Tenant isolation at the database.</strong> Row-level security keeps your data separate from every other client.</li>
+          <li><strong>Zero-data-retention hosts by default.</strong> US/EU infrastructure; nothing trains on your files.</li>
+          <li><strong>Usage caps and audit logs.</strong> Soft caps nudge, hard caps protect; every action is logged.</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>What you get</h2>
+      <div class="feature-list">
+        <div class="feature"><div class="icon">✓</div><div><strong>Branded AI chat</strong>Streaming assistant with page-level citations.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Cited knowledge vault</strong>PDF, Word, Excel and Markdown parsed and searchable.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Research mode</strong>Web search with cited sources, gated per tenant.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Slide export</strong>Turn outlines into native PowerPoint decks.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>CRM contact book</strong>Companies, contacts and CSV import.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Project spine</strong>Stage-gated projects, risks, budget and AI-drafted reports.</div></div>
+        <div class="feature"><div class="icon">⌛</div><div><strong>Email & calendar sync</strong>Gmail and Microsoft 365 triage and drafting.</div></div>
+        <div class="feature"><div class="icon">⌛</div><div><strong>Meeting intelligence</strong>Bot joins calls; summaries and actions in minutes.</div></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow" style="margin-bottom:1.2mm;">Simple, per-seat pricing</div>
+      <div class="pricing">
+        <div class="tier">
+          <h3>Core</h3>
+          <div class="price">£29<span>/seat/mo · min 3</span></div>
+          <ul>
+            <li>Branded workspace & chat</li>
+            <li>Knowledge vault & citations</li>
+            <li>Research & slide export</li>
+            <li>CRM contacts</li>
+            <li>Standard support</li>
+          </ul>
+        </div>
+        <div class="tier pro">
+          <h3>Pro</h3>
+          <div class="price">£49<span>/seat/mo</span></div>
+          <ul>
+            <li>Everything in Core</li>
+            <li>Premium reasoning models</li>
+            <li>Deep research mode</li>
+            <li>Advanced project reporting</li>
+            <li>Priority support</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <h3>Managed</h3>
+          <div class="price">£799<span>/mo + £1,500 onboarding</span></div>
+          <ul>
+            <li>Includes 10 Pro seats</li>
+            <li>White-glove onboarding</li>
+            <li>Custom workflows & curation</li>
+            <li>Quarterly reviews & SLA</li>
+            <li>+£39/extra seat</li>
+          </ul>
+        </div>
+      </div>
+      <div class="trust">
+        <span><strong>No surprise invoices.</strong> Soft caps route you to cheaper models; hard caps stop spend.</span>
+        <span><strong>14-day trial.</strong> No card required.</span>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div>
+        <h2>See your workspace before you commit.</h2>
+        <p>Book a 20-minute demo and we’ll build a live workspace around your own documents.</p>
+      </div>
+      <a href="mailto:hello@flowgridos.co.uk?subject=Book a Flowgrid OS demo">Book a demo</a>
+    </section>
+
+    <footer>
+      Built for UK SMBs · Model costs and licences verified July 2026 · flowgridos.co.uk
+    </footer>
+  </div>
+</body>
+</html>

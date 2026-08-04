@@ -761,11 +761,48 @@ quietly stopped working. **Worth re-ingesting the staging/dev vault to check.**
 Now: `max_tokens` 1536, `reasoning_effort` low, an empty reply raises, and the
 summary's `usage_events` row is written even if embedding it fails.
 
+### Live confirmation, same day
+
+Run on tenant S45 E2E, monitoring return on the smoke-test application.
+
+**DRAFT-001 — proved by an accident.** The run died on a Groq **429** after
+eight model calls (the free tier's daily budget, exhausted again). Before the
+fix that is exactly the shape of job `4b09b714…`: `llm_calls 0, cost_usd 0`.
+After it, the failed job wrote **eight `usage_events` rows, $0.0138** —
+7 × `drafter` plus the `reasoner` section — while the job row's own counters
+stayed zero, because those belong to `register()` and register never ran.
+`usage_events` is the ledger of record and it is no longer blind.
+
+**DRAFT-002 — confirmed without spending the rest of the quota.** The 429 hit
+section 8, so no document was assembled; but the section that caused the bug,
+*Financial position*, is the module's only `reasoner` section and `reasoner`
+is DeepInfra, not Groq. Regenerating that one section (~4k tokens, no Groq)
+returned:
+
+> "The project budget has not yet been agreed [c: a2], and no budget
+> breakdown is available in the data to compare planned versus actual
+> spend. … [TO CONFIRM: the amount of grant income received in Year 1 …]"
+
+against the old "…are presented in the accompanying financial table." No
+table reference at all, and the gap is marked rather than papered over.
+Checking the prompts on the same real pack: the `finance` section (no table)
+contains **zero** standalone occurrences of the word — the only matches are
+`charitable` and `timetable` inside the tenant's own records, which is why the
+offline test asserts on the prompt rather than on a substring — and the
+`outcomes` section (`table=impact`) contains exactly one.
+
+Worth remembering: **a single section can be regenerated in isolation** for
+about a tenth of a draft, and picking a section by its alias picks the
+provider. That is the cheap way to confirm any future prompt change.
+
 ### Open, in priority order
 
-1. **Live confirmation of DRAFT-002** — one monitoring return whose prose no
-   longer refers to a financial table. Recipe in §6h; costs Groq quota.
-2. **`funding_application` end-to-end** (from §6g item 1) — still owed.
+1. **`funding_application` end-to-end** (from §6g item 1) — still owed, and
+   still blocked on the same Groq daily quota, which this run exhausted again.
+   It is the only kind never yet run to completion.
+2. **Re-ingest existing vault documents** — every document ingested since the
+   aliases became reasoning models has no usable summary (`0b19e07`). The fix
+   only helps new ingests; the back catalogue needs re-running.
 3. **Chat is unmetered when a stream dies** — `app/routers/conversations.py`
    returns from the generator on a stream error before the `usage_events`
    write, and `StreamResult` only gets its numbers from the final usage chunk,

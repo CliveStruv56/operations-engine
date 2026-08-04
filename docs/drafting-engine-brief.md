@@ -6,9 +6,12 @@ each item turned up that this brief did not predict, is recorded in
 `docs/review-context-handoff.md` §6i. The problem statements below are kept
 because they document *why* the code looks the way it does.
 
-Still owed on DRAFT-002: a live monitoring return confirming the prose no
-longer refers to a financial table. The offline prompt tests are the
-regression guard; the live run is confirmation, and costs Groq quota.
+**Both confirmed live on 4 Aug**, on tenant S45 E2E — see §6i. DRAFT-001: a
+monitoring return died on a provider 429 after eight calls and wrote **eight
+`usage_events` rows totalling $0.0138**, where the identical failure on 4 Aug
+(job `4b09b714…`) had recorded zero. DRAFT-002: *Financial position* — the
+section that invented the table — now says the budget breakdown is not in the
+data and marks the gap `[TO CONFIRM]`, referring to no table at all.
 
 **Originally:** two ordered FIX items, both found by the live Grantwork
 smoke test on 3–4 Aug 2026 (`docs/review-context-handoff.md` §6h).

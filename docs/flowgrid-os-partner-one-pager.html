@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowgrid OS — Partner One-Pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --terracotta:#B14E2E;
+      --terracotta-dark:#8A3A22;
+      --cream:#F6F2ED;
+      --paper:#FFFFFF;
+      --ink:#2D2A26;
+      --ink-soft:#5B5752;
+      --line:#E3DDD4;
+      --sage:#6B8E6B;
+      --amber:#D4A017;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:9.6pt;}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+      color:var(--ink);
+      background:#EAE5DE;
+      line-height:1.4;
+      -webkit-font-smoothing:antialiased;
+    }
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto;
+      background:var(--paper);
+      padding:10mm 12mm;
+      display:flex;
+      flex-direction:column;
+      gap:2.4mm;
+    }
+    @media print{
+      html{font-size:9.2pt;}
+      body{background:none;}
+      .page{width:100%;min-height:100vh;margin:0;padding:8mm 10mm;}
+    }
+    @page{size:A4;margin:0;}
+
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;}
+    .eyebrow{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--terracotta);}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-bottom:1.5px solid var(--terracotta);padding-bottom:2.5mm;}
+    .brand{display:flex;align-items:center;gap:2.5mm;}
+    .brand-mark{width:8mm;height:8mm;background:var(--terracotta);border-radius:1.2mm;}
+    .brand-name{font-size:1.4rem;font-weight:700;color:var(--ink);font-family:'Fraunces',Georgia,serif;}
+    .brand-tag{font-size:0.68rem;color:var(--ink-soft);}
+    .meta{text-align:right;font-size:0.65rem;color:var(--ink-soft);line-height:1.35;}
+
+    .hero{background:var(--cream);border-radius:2.5mm;padding:3.5mm 4mm;}
+    .hero h1{font-size:1.4rem;line-height:1.12;margin:1.2mm 0 1.5mm;color:var(--terracotta-dark);}
+    .hero p{font-size:0.85rem;color:var(--ink-soft);max-width:95%;}
+
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+    .card{border:1px solid var(--line);border-radius:2.5mm;padding:3mm;break-inside:avoid;}
+    .card h2{font-size:0.88rem;margin-bottom:1.8mm;color:var(--terracotta-dark);}
+    .card ul{list-style:none;font-size:0.72rem;color:var(--ink-soft);}
+    .card li{padding-left:2.5mm;position:relative;margin-bottom:0.8mm;}
+    .card li::before{content:"•";position:absolute;left:0;color:var(--terracotta);font-weight:700;}
+
+    .platform{display:grid;grid-template-columns:repeat(4,1fr);gap:1.8mm;margin-top:1.5mm;}
+    .plat{text-align:center;padding:2mm 1.5mm;border:1px solid var(--line);border-radius:2mm;break-inside:avoid;}
+    .plat .icon{width:5mm;height:5mm;margin:0 auto 1mm;background:var(--terracotta);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:0.55rem;font-weight:700;}
+    .plat strong{display:block;font-size:0.72rem;color:var(--ink);}
+    .plat span{font-size:0.65rem;color:var(--ink-soft);line-height:1.2;}
+
+    .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:2.2mm;}
+    .tier{border:1px solid var(--line);border-radius:2.5mm;padding:2.5mm;break-inside:avoid;}
+    .tier h3{font-size:0.8rem;color:var(--terracotta-dark);}
+    .tier .price{font-size:1.05rem;font-weight:700;color:var(--ink);margin:0.8mm 0;}
+    .tier .price span{font-size:0.62rem;font-weight:500;color:var(--ink-soft);}
+    .tier .margin{font-size:0.72rem;font-weight:700;color:var(--sage);margin-bottom:1.2mm;}
+    .tier ul{list-style:none;font-size:0.66rem;color:var(--ink-soft);}
+    .tier li{margin-bottom:0.5mm;padding-left:2.2mm;position:relative;}
+    .tier li::before{content:"✓";position:absolute;left:0;color:var(--sage);font-weight:700;}
+    .tier.pro{border-color:var(--terracotta);background:var(--cream);}
+
+    .steps{display:flex;gap:1.8mm;justify-content:space-between;margin-top:1.5mm;}
+    .step{flex:1;text-align:center;padding:1.8mm 1.2mm;border:1px solid var(--line);border-radius:2mm;break-inside:avoid;}
+    .step .num{width:5.5mm;height:5.5mm;margin:0 auto 0.8mm;background:var(--terracotta);color:#fff;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:0.68rem;}
+    .step strong{display:block;font-size:0.72rem;}
+    .step span{font-size:0.65rem;color:var(--ink-soft);line-height:1.2;}
+
+    .cta{background:var(--terracotta);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:flex;align-items:center;justify-content:space-between;gap:4mm;}
+    .cta h2{font-size:1rem;color:#fff;}
+    .cta p{font-size:0.7rem;opacity:0.92;}
+    .cta a{display:inline-block;background:#fff;color:var(--terracotta);font-weight:700;text-decoration:none;padding:1.8mm 3.5mm;border-radius:1.5mm;font-size:0.75rem;white-space:nowrap;}
+
+    footer{font-size:0.62rem;color:var(--ink-soft);text-align:center;margin-top:auto;padding-top:1.5mm;border-top:1px solid var(--line);}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-name">Flowgrid OS</div>
+          <div class="brand-tag">Partner programme</div>
+        </div>
+      </div>
+      <div class="meta">
+        White-label AI operations for your clients<br>
+        flowgridos.co.uk/partners
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">Recurring revenue · your brand · no platform rebuild</div>
+      <h1>Sell a branded AI workspace without building one.</h1>
+      <p>Flowgrid OS lets agencies, MSPs and consultancies offer a complete AI operations suite under their own label. You own the client relationship; we handle the infrastructure, model routing, security and updates.</p>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>Why partner</h2>
+        <ul>
+          <li><strong>High recurring margins.</strong> ~89% Core, ~88% Pro and ~70% Managed after support labour.</li>
+          <li><strong>Zero licensing overhang.</strong> MIT/Apache stack end-to-end — no surprise commercial fees.</li>
+          <li><strong>Sticky clients.</strong> Vault, projects and usage data increase switching costs.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>What your clients see</h2>
+        <ul>
+          <li><strong>Fully branded workspace</strong> with their logo, accent and domain-ready shell.</li>
+          <li><strong>AI chat with citations</strong> grounded in their documents, not generic web answers.</li>
+          <li><strong>Knowledge vault, research, slides and CRM</strong> in one monthly bill.</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>The platform you resell</h2>
+      <div class="platform">
+        <div class="plat"><div class="icon">1</div><strong>Brand layer</strong><span>Tenant logo, accent, white-label shell</span></div>
+        <div class="plat"><div class="icon">2</div><strong>Model router</strong><span>Cost-routed open weights + fallbacks</span></div>
+        <div class="plat"><div class="icon">3</div><strong>Vault & RAG</strong><span>Cited retrieval, per-tenant isolation</span></div>
+        <div class="plat"><div class="icon">4</div><strong>Modules</strong><span>Chat, research, slides, CRM, projects</span></div>
+      </div>
+    </section>
+
+    <section>
+      <div class="eyebrow" style="margin-bottom:1.2mm;">Partner economics (verified July 2026)</div>
+      <div class="pricing">
+        <div class="tier">
+          <h3>Core</h3>
+          <div class="price">£29<span>/seat/mo · min 3</span></div>
+          <div class="margin">~89% gross margin</div>
+          <ul>
+            <li>Workspace, vault & chat</li>
+            <li>Research & slide export</li>
+            <li>CRM contacts</li>
+            <li>Self-serve support</li>
+          </ul>
+        </div>
+        <div class="tier pro">
+          <h3>Pro</h3>
+          <div class="price">£49<span>/seat/mo</span></div>
+          <div class="margin">~88% gross margin</div>
+          <ul>
+            <li>Everything in Core</li>
+            <li>Premium reasoning models</li>
+            <li>Deep research mode</li>
+            <li>Advanced reporting</li>
+          </ul>
+        </div>
+        <div class="tier">
+          <h3>Managed</h3>
+          <div class="price">£799<span>/mo + £1,500 onboarding</span></div>
+          <div class="margin">~70% margin after labour</div>
+          <ul>
+            <li>Includes 10 Pro seats</li>
+            <li>White-glove onboarding</li>
+            <li>Quarterly reviews & SLA</li>
+            <li>+£39/extra seat</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>How it works</h2>
+      <div class="steps">
+        <div class="step"><div class="num">1</div><strong>Sign a client</strong><span>Pick tier & collect brand assets.</span></div>
+        <div class="step"><div class="num">2</div><strong>Provision workspace</strong><span>Operator console creates tenant, keys & invites.</span></div>
+        <div class="step"><div class="num">3</div><strong>Curate & train</strong><span>Upload docs, run onboarding, set caps.</span></div>
+        <div class="step"><div class="num">4</div><strong>Bill monthly</strong><span>You invoice client; we invoice you for COGS.</span></div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div>
+        <h2>Become a Flowgrid OS partner.</h2>
+        <p>Book a partner call and we’ll share the operator console, margin model and onboarding runbook.</p>
+      </div>
+      <a href="mailto:partners@flowgridos.co.uk?subject=Flowgrid OS partner enquiry">Partner enquiry</a>
+    </section>
+
+    <footer>
+      Built for UK SMBs · Model costs and licences verified July 2026 · flowgridos.co.uk/partners
+    </footer>
+  </div>
+</body>
+</html>

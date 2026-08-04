@@ -1,0 +1,440 @@
+
+
+Operations Engine — Product Plan, July 2026
+
+OPERATIONS ENGINE
+
+Product Plan · July 2026 · For Investors & Partners
+
+White-label AI operations SaaS for small business
+
+Every AI capability an SMB needs.
+One workspace. Their brand.
+
+Operations Engine consolidates office admin, document intelligence, reports, spreadsheets, slide decks,
+images, deep research, email, calendars and meetings into a single branded workspace per client —
+with every task routed to the cheapest capable open-weight model.
+Every number below was verified against live market sources in July 2026.
+
+~84%
+
+Blended gross margin at 50 tenants — verified, all costs in
+
+$0.35
+
+Blended AI inference cost per active user per month
+
+2–3
+
+Tenants to break even — fixed platform cost ~£200/mo
+
+16wks
+
+To a sellable platform — with revenue from week one
+
+01 — The Opportunity
+
+SMBs are buying AI in fragments. The margin is in the consolidation.
+
+A typical small business now runs one subscription for chat, another for slides, another for meeting
+notes, another for images — each with its own login, its own bill, and no knowledge of the company's
+documents. Three shifts make one consolidated, white-label workspace viable right now.
+
+A
+
+Open weights crossed the quality line
+
+GLM, DeepSeek, Qwen and GPT-OSS now ship under MIT and Apache licences at
+frontier-class quality for office work. For the everyday tasks SMBs actually run, the premium
+for closed models has collapsed to near zero.
+
+B
+
+Inference became a commodity spread
+
+Routine office tasks now clear at $0.06–0.40 per million tokens. Routing each task
+to the cheapest capable model prices the whole product at ~$0.35 per user per month —
+roughly a 50× spread against a £29 seat.
+
+C
+
+SMBs want one bill — and their own brand
+
+Each client gets the suite on their own domain, logo and house tone, grounded in their
+own documents. White-labelling also opens a reseller channel: agencies, MSPs and consultancies
+selling the platform as theirs.
+
+02 — The Product
+
+One workspace, nine jobs done.
+
+Everything runs against the client's knowledge vault, in the client's tone, behind the client's brand.
+Modules are per-tenant entitlements — the packaging lever for the two-tier model.
+
+Core
+
+Office admin
+
+Drafting, summarising, Q&A and everyday busywork in the company's tone and terminology.
+
+Core
+
+Knowledge vault
+
+Contracts, SOPs and handbooks parsed, chunked and embedded per tenant. Answers cite to the page.
+
+Core
+
+Report generation
+
+Multi-step drafting grounded in the vault — outline, sections, assembly — out to DOCX or PDF.
+
+Core
+
+Financial analysis
+
+Upload P&Ls, budgets or inventory sheets. Model-written Python runs in a sandbox — charts and variances back in chat.
+
+Core
+
+Slide decks
+
+One prompt to an editable PPTX. Self-hosted engine by default; designer-grade API tier on Pro.
+
+Core
+
+Image generation
+
+Marketing visuals and slide covers on open-weight image models — from $0.003 a draft image.
+
+Pro
+
+Deep research
+
+Multi-step web research with cited sources — market scans, competitor briefs, supplier checks.
+
+Core
+
+Email & calendar
+
+Triage, drafting and scheduling across Gmail and Microsoft 365. Sends always require user approval.
+
+Pro
+
+Meeting intelligence
+
+A bot joins Zoom, Teams or Meet. Summaries, actions and owners land in the workspace within minutes.
+
+03 — How It Works
+
+The margin is the router.
+
+Every request flows through a routing gateway that selects the cheapest capable open-weight model
+for the task, enforces per-tenant budgets, and fails over automatically. Models are configuration,
+not code — when the market reprices (it does, monthly), the routing table changes, not the product.
+
+Client-facing
+
+Branded workspace
+
+Per-client domain, logo, palette and house tone
+
+Isolation
+
+Tenant boundary
+
+Postgres row-level security on every tenant table
+
+The IP
+
+Model router
+
+Per-tenant budgets, task routing, fallbacks, metering
+
+Supply
+
+Open-weight hosts
+
+US/EU zero-data-retention APIs by default
+
+TaskRouted toVerified cost
+
+Everyday admin, email drafting, calendar parsingGLM 4.7-FlashMIT · US-hosted$0.06 / $0.40 per M tokens
+
+Document Q&A, RAG answers, summariesGLM 4.7-Flash → GPT-OSS-120BMIT / open licence$0.06–0.60 per M tokens
+
+Long documents — up to 1M-token contractsDeepSeek V4 FlashMIT · 1M context$0.14 / $0.28 per M tokens
+
+Reports & multi-step draftingGPT-OSS-120Bopen licence · US-hosted$0.15 / $0.60 per M tokens
+
+Financial reasoning & complex analysisGLM 5.2MIT · reasoning class$0.93 / $3.00 per M tokens
+
+Meeting transcriptionWhisper Large v3 Turboopen weights$0.04 per hour
+
+Images — drafts to finalsFLUX.1 schnell → FLUX.2 devApache 2.0 / open$0.003–0.008 per image
+
+Input / output prices per million tokens, verified against live provider listings, July 2026.
+All primary routes are open-weight models, satisfying the open-source mandate while staying entirely
+API-based — no GPUs owned, no local deployments.
+
+Privacy without the premium — verified, not assumed
+
+Diligence found the same open models on US zero-data-retention hosts cost the same or less
+than their Chinese home APIs (GLM 5.2: $0.93 vs $1.40 per M input — 33% cheaper on the Western host).
+Western ZDR routing is therefore the default for every tenant; anything else is explicit per-tenant
+opt-in. Client financial data is never trained on and never leaves US/EU infrastructure.
+
+Built entirely on permissively licensed components — zero licensing overhang, zero platform dependency:
+
+Next.jsFastAPILangGraph · MITLiteLLM gateway · Apache 2.0Postgres RLS + pgvectorDocling parsingPresenton slides · Apache 2.0Cloudflare for SaaS domains
+
+04 — Business Model
+
+Priced per seat, because costs scale per seat.
+
+The two largest variable costs — connected email accounts and model usage — grow with headcount,
+not with tenants. Per-seat pricing absorbs them structurally; the flat-fee competitors quietly bleed on both.
+A hybrid go-to-market pairs self-serve tiers with a white-glove managed tier.
+
+Core
+
+£29 / seat / month · min 3 seats
+
+Self-serve · SMBs of 3–15
+
+Workspace, knowledge vault & document analysis
+
+Reports, spreadsheets, slides & images
+
+Email & calendar across Gmail / Microsoft 365
+
+Standard web search
+
+~89% gross margin / seat
+
+Expansion tier
+
+Pro
+
+£49 / seat / month
+
+Self-serve · power SMBs of 5–30
+
+Everything in Core
+
+Meeting intelligence — 20 pooled hours / month
+
+Deep research mode with cited sources
+
+Premium reasoning models & designed decks
+
+~88% gross margin / seat
+
+Managed
+
+£799 / month + £1,500 onboarding
+
+White-glove · includes 10 Pro seats, +£39 / extra seat
+
+Curated vault ingestion & custom workflows
+
+Team training & quarterly reviews, SLA
+
+Data-sovereign RAG option
+
+The wedge for the reseller / agency channel
+
+~70% margin after support labour
+
+Per seat, per monthCorePro
+
+Revenue at ~$1.30 / ££29 · $37.70£49 · $63.70
+
+AI inference routed mix, padded 2×$0.70$1.50
+
+Email + calendar API$2.00$2.00
+
+Search / deep research$0.60$1.50
+
+Meeting bot + transcription pooled ÷ 10 seats—$1.10
+
+Images, slides, parsing, RAG, infra$0.70$1.20
+
+All-in COGS~$4.00~$7.30
+
+Gross margin~89%~88%
+
+Fair use without surprise invoices
+
+Soft token caps per seat are enforced at the gateway. When a tenant exceeds them, requests
+route to the cheapest model tier with an in-app nudge — graceful degradation,
+never an overage bill. Meeting hours and images carry hard pooled caps with self-serve top-ups.
+
+Meeting intelligence is deliberately gated to Pro: at ~$11 per tenant per month it is the single
+largest variable cost, and it is exactly where flat-fee competitor economics fail.
+
+Setup fees price in the labour. Managed onboarding (£1,500) covers vault curation,
+prompt tuning and training — the white-glove tier stays at ~70% margin including support hours.
+
+05 — Economics at Scale
+
+The P&L at fifty tenants.
+
+Illustrative mix: 30 Core tenants × 8 seats, 15 Pro × 10 seats, 5 Managed. All verified costs included —
+meeting bots, email APIs, search, parsing, media, hosting and support labour.
+
+Monthly recurring revenue£18,300
+
+All-in monthly COGS~£3,000
+
+~84%
+
+Blended gross margin
+
+Gross profit ≈ £15,300 / month at this scale — before founder time and freelance build spend,
+after every verified variable cost.
+
+~£200 / mo
+
+Total fixed platform cost — managed Postgres, hosting, tooling
+
+2–3 tenants
+
+Break-even point — the plan is default-alive almost immediately
+
+2× padded
+
+Inference costs carry a 100% safety factor against usage spikes and repricing
+
+A note on intellectual honesty: an earlier draft of this plan claimed 99.5% margins on
+$30/month of total cost. Line-by-line verification priced in meeting bots, email APIs, search, document
+parsing and support labour — and the business still clears ~84%. These are the numbers
+we would defend in diligence, because they came out of ours.
+
+06 — Diligence
+
+Every number on this page survived contact with a source.
+
+Four parallel research workstreams re-verified licensing terms, model pricing, vendor costs and RAG
+economics against live July 2026 sources before this plan was written. Four findings changed it materially.
+
+Finding 01 · Licensing
+
+The obvious build is illegal.
+
+The most-recommended off-the-shelf stack (Open WebUI + Dify) prohibits white-label,
+multi-tenant SaaS without unpublished-price commercial licences — and a popular workflow engine
+wants ~$50k/year to embed. Competitors assembling these tools carry a forced-rebuild risk they haven't priced.
+
+→ Chosen stack is MIT / Apache end-to-end. Zero licensing overhang.
+
+Finding 02 · Pricing
+
+The "free" model wasn't. The cheap one had expired.
+
+A workhorse model billed as free actually costs $0.06 / $0.40 per M tokens; a quoted
+premium-model price turned out to be promotional pricing that expired 31 May 2026 — real list is
+4× higher. This market reprices monthly.
+
+→ Economics rebuilt on list prices, padded 2×. Router re-verified monthly.
+
+Finding 03 · Privacy
+
+The privacy premium doesn't exist.
+
+The same open-weight models served from US zero-data-retention infrastructure cost
+0–33% less than their Chinese home APIs. The trade-off everyone assumes between
+cost and data protection largely isn't there — if you pick the right host.
+
+→ Privacy-safe routing is the default, at no margin cost. A sales weapon with SMBs.
+
+Finding 04 · Margins
+
+The 99.5% margin claim was fiction.
+
+A prior draft's "$30/month total cost at 50 tenants" omitted meeting bots (~$0.54/hr), email APIs
+($2/account), search, parsing and support. True COGS is ~80–100× that figure — and the model
+still holds ~84% blended margin.
+
+→ A plan that survives an investor's spreadsheet, because it already survived ours.
+
+Standing cadence: model prices, vendor terms and licence texts are re-verified monthly. The routing
+matrix is configuration — corrections ship without touching product code.
+
+07 — Execution
+
+Revenue in week one. Platform in sixteen.
+
+Capital-light by construction: a founder plus freelance developers, managed services over bespoke
+infrastructure, and design partners paying managed-tier rates before the product exists.
+
+Phase 0Weeks 1–2
+
+Concierge pilot
+
+2–3 design partners live on MIT-licensed tooling at Managed pricing. Real requirements, real revenue, before product code.
+
+Revenue from week 1
+
+Phase 1Weeks 3–8
+
+Product core
+
+Workspace, knowledge vault, model router, per-seat billing. Tenant isolation enforced at the database from day one.
+
+Phase 2Weeks 9–12
+
+White-label & modules
+
+Custom domains with auto-SSL, per-tenant theming, email & calendar, slides, images, search, usage metering.
+
+Phase 3Weeks 13–16
+
+Premium tier
+
+Meeting intelligence, report workflows, admin console. Pilot clients migrate onto the platform — Pro tier sellable.
+
+Phase 4Months 5–6
+
+Hardening
+
+Observability and evals, GDPR pack, onboarding automation. Scale-out only when the numbers demand it.
+
+Deliberately less optimistic than the 12-week plans circulating for this category — and
+unlike them, it starts paying for itself in week one. One strong full-stack freelancer from the start;
+a second joins for Phase 3.
+
+08 — Risk Register
+
+What could go wrong — and what's already in place.
+
+R1Model & price churn — monthly in this market
+
+The router makes models configuration, not code. Prices re-verified on a monthly cadence;
+unit economics already padded 2× against repricing and usage spikes.
+
+R2Runaway usage costs
+
+Per-tenant budgets enforced at the gateway, pooled caps on meeting hours and images,
+and graceful degradation to cheaper models instead of surprise invoices — protecting both margin and trust.
+
+R3Trust with sensitive financial data
+
+Database-enforced tenant isolation (row-level security), zero-data-retention hosts by default,
+draft-first approval on every outbound email, per-tenant audit logs, GDPR export and deletion from launch.
+
+R4Open-source licence exposure
+
+An MIT/Apache-only component policy, verified per component before adoption — the trap that
+invalidates the naive competitor build is structurally avoided.
+
+R5Managed-tier support burden
+
+Onboarding runbooks, a quarterly (not ad-hoc) review cadence, and a £1,500 setup fee that
+prices the labour in. If hours exceed the model, the fee moves — not the margin.
+
+OPERATIONS ENGINE
+
+Product plan · July 2026. Model prices, vendor costs and licence terms verified against live sources at
+publication; this market reprices monthly and the routing matrix is maintained on a standing verification
+cadence. Currency conversions assume ~$1.30/£. Prepared from the consolidated recommendations analysis.
