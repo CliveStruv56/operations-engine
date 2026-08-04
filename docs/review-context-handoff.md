@@ -876,11 +876,51 @@ vacuously — worth knowing that the first attempt to prove the overlap test was
 itself wrong (awaiting `create_task` results in a loop is still concurrent;
 the tasks are scheduled at creation).
 
+### The Groq quota, solved without a Groq account
+
+Paid Groq upgrades were closed to new accounts, so the billing fix in the
+review was unavailable. **`drafter` now routes through OpenRouter instead**
+(`openrouter/openai/gpt-oss-120b`), which resells the same Groq capacity —
+provider order `["Groq", "Together", "Nebius"]`, `allow_fallbacks: false`,
+`data_collection: deny`, the same shape `longdoc` already used. No new
+account: `OPENROUTER_API_KEY` was already wired through both compose files
+and both env examples.
+
+Three things worth keeping straight:
+
+- **All three pinned providers bill $0.15/$0.60**, which is exactly what
+  `ALIAS_PRICES_PER_MTOK` already claims `drafter` costs in *both*
+  `app/litellm.py` and `worker/drafting/llm.py`. That is why this specific
+  order was chosen: cost telemetry and the spec §11 5%-reconciliation stay
+  correct with no code change. **Adding a provider without checking its rate
+  silently breaks §11.** Cerebras is ~4x faster than Groq (1,963 t/s vs 479)
+  but bills $0.35/$0.75 — a ~64% understatement per draft — so it needs both
+  price tables updated before it goes in the order list.
+- **Direct-Groq numbers no longer apply.** The `~3 min/call` note in
+  `worker/main.py` was free-tier backoff. Expect roughly 40s for a full draft
+  at Groq's 479 t/s; the new `worker.drafting.latency` line is how to confirm
+  it. Only once that is confirmed is parallelising sections worth doing.
+- **`GROQ_API_KEY` is now unused** by any alias but left wired in compose and
+  the env examples, so reverting is a one-line change.
+
+Retries were split at the same time: `router_settings.num_retries: 2` still
+suits the worker, and the API now overrides it per request with
+`x-litellm-num-retries: 1` (`CHAT_NUM_RETRIES`) on both chat and query
+embedding. Per-request rather than per-alias because **`drafter` serves both
+surfaces** — analyse/report/slides/research route to it from chat as well as
+from the drafting engine — so there is no alias-level split to make.
+
+A correction to the review itself: §4 suggested DeepInfra as the fallback host
+for `drafter`, calling it "slower per token". It is **48 t/s against Groq's
+479** — a 10x gap that would have made drafts ~6 min rather than ~40s. The
+advice stands only as a last resort, not as the recommended swap.
+
 ### Not done, in priority order
 
-1. **Upgrade Groq off the free tier**, then re-check the per-call figures
-   against the `~3 min/call` note in `worker/main.py`. Everything else in the
-   drafting path waits on this.
+1. **Confirm the new drafting numbers**, then decide on parallelising
+   sections. `funding_application` end-to-end (§6g item 1, §6i item 1) has
+   never run to completion and was blocked on the old quota — it should be the
+   first thing tried now that the cliff is gone.
 2. **Cap chat history** — `conversations.py` fetches it with no `LIMIT` and
    re-sends all of it every turn, so prompt cost grows without bound. Agreed
    approach: a ~8k token budget keeping recent turns whole, using

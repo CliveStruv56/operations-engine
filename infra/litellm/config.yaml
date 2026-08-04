@@ -1,8 +1,8 @@
 # LiteLLM proxy config — spec §4. App code references aliases only.
-# Slugs verified against live catalogues 27 Jul 2026:
+# Slugs verified against live catalogues 27 Jul 2026, drafter re-verified
+# against the OpenRouter endpoints API 4 Aug 2026:
 #   deepinfra: zai-org/GLM-4.7-Flash, zai-org/GLM-5.2, Qwen/Qwen3-Embedding-4B
-#   groq: openai/gpt-oss-120b
-#   openrouter: deepseek/deepseek-v4-flash
+#   openrouter: openai/gpt-oss-120b, deepseek/deepseek-v4-flash
 # Deviation from spec draft: longdoc provider order was ["Together","DeepInfra"],
 # but Together no longer hosts deepseek-v4-flash on OpenRouter — pinned to
 # DeepInfra + Fireworks (both US) instead.
@@ -12,10 +12,29 @@ model_list:
       model: deepinfra/zai-org/GLM-4.7-Flash
       api_key: os.environ/DEEPINFRA_API_KEY
 
+  # Through OpenRouter rather than Groq directly (4 Aug 2026). Groq's own free
+  # tier is 200k tokens/day against ~51k per draft — the daily cliff behind the
+  # measured ~3 min/call, which is backoff, not generation — and paid upgrades
+  # were closed to new accounts. OpenRouter resells the same Groq capacity at
+  # $0.15/$0.60, which is *exactly* what ALIAS_PRICES_PER_MTOK already claims
+  # `drafter` costs in both app/litellm.py and worker/drafting/llm.py, so cost
+  # telemetry and the spec §11 reconciliation stay correct with no other edit.
+  #
+  # Together and Nebius bill identically and stand in when Groq is saturated.
+  # allow_fallbacks stays false so a request can only ever land on one of these
+  # three vetted Western hosts — the same discipline as `longdoc` below. Adding
+  # a provider here without checking its rate silently breaks the §11 5% rule;
+  # Cerebras is ~4x faster but bills $0.35/$0.75 and would need the price tables
+  # updated in both files first.
   - model_name: drafter
     litellm_params:
-      model: groq/openai/gpt-oss-120b
-      api_key: os.environ/GROQ_API_KEY
+      model: openrouter/openai/gpt-oss-120b
+      api_key: os.environ/OPENROUTER_API_KEY
+      extra_body:
+        provider:
+          order: ["Groq", "Together", "Nebius"]
+          allow_fallbacks: false
+          data_collection: deny
 
   - model_name: reasoner
     litellm_params:
@@ -51,6 +70,10 @@ router_settings:
     - drafter: [workhorse]
     - reasoner: [longdoc]
     - longdoc: [reasoner]
+  # Suits the worker, where a draft is already minutes long and a retry is
+  # cheap insurance. It is the wrong default for chat, where each retry can
+  # add two minutes in front of someone watching a spinner — so the API
+  # overrides it per request with `x-litellm-num-retries` (app/litellm.py).
   num_retries: 2
   timeout: 120
 

@@ -40,6 +40,19 @@ from app.errors import ApiError
 MAX_OUTPUT_TOKENS = 4096
 REASONING_EFFORT = "low"
 
+#: Retry budget for the interactive path, overriding the gateway default.
+#:
+#: `router_settings.num_retries: 2` at a 120s timeout is right for the worker —
+#: a draft already runs for minutes and a retry is cheap insurance. On chat it
+#: is the wrong trade: each retry can add two minutes in front of someone
+#: watching a spinner, and a user who has waited that long has already given
+#: up. One retry still absorbs a transient blip without compounding.
+#:
+#: Sent per request rather than set per alias because `drafter` serves both
+#: surfaces — analyse/report/slides/research route to it from chat, and the
+#: drafting engine uses it too — so there is no alias-level split to make.
+CHAT_NUM_RETRIES = "1"
+
 # $/1M tokens (input, output) per alias — spec §4 table + live OpenRouter
 # pricing for longdoc. App-side cost estimate written to messages/usage_events;
 # LiteLLM's own spend log is the reconciliation source (must agree within 5%,
@@ -130,13 +143,21 @@ class LiteLLMClient:
 
     # -- embeddings (tenant virtual key) ---------------------------------------
 
+    def _tenant_headers(self, virtual_key: str) -> dict[str, str]:
+        """Auth plus the interactive retry budget. Both surfaces this covers —
+        query embedding and chat — sit in front of a waiting user."""
+        return {
+            "Authorization": f"Bearer {virtual_key}",
+            "x-litellm-num-retries": CHAT_NUM_RETRIES,
+        }
+
     async def embed_query(self, virtual_key: str, text: str) -> tuple[list[float], int]:
         """Embed one retrieval query; returns (vector, prompt_tokens)."""
         if not self.enabled:
             raise ApiError(503, "llm_unavailable", "Model gateway is not configured")
         resp = await self._http().post(
             "/v1/embeddings",
-            headers={"Authorization": f"Bearer {virtual_key}"},
+            headers=self._tenant_headers(virtual_key),
             json={"model": "embedder", "input": [text]},
         )
         if resp.status_code >= 400:
@@ -165,7 +186,7 @@ class LiteLLMClient:
         async with self._http().stream(
             "POST",
             "/v1/chat/completions",
-            headers={"Authorization": f"Bearer {virtual_key}"},
+            headers=self._tenant_headers(virtual_key),
             json={
                 "model": alias,
                 "messages": messages,

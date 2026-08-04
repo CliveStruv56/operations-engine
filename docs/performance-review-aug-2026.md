@@ -1,9 +1,16 @@
 # LLM latency review — 4 Aug 2026
 
-> **Status.** Items 1, 2, 4, 5 and 6 of §6 landed the same day — see
-> `review-context-handoff.md` §6j for what changed and what is still open.
-> Item 3 (paid Groq) is an account change and gates item 10. Items 7–9 are
-> untouched. The findings below are the review as written, kept intact.
+> **Status.** Items 1, 2, 4, 5 and 6 of §6 landed the same day, and item 3
+> was then solved a different way: paid Groq upgrades were closed to new
+> accounts, so `drafter` routes through **OpenRouter** to the same Groq
+> capacity instead. Items 7–9 are untouched. See
+> `review-context-handoff.md` §6j.
+>
+> **One correction to §4 below:** it offers DeepInfra as the fallback host for
+> `drafter`, described as "slower per token". Measured, it is **48 t/s against
+> Groq's 479** — a 10x gap that would mean ~6 min drafts rather than ~40s.
+> Treat that suggestion as a last resort, not the recommended swap. The rest
+> of the review is kept as written.
 
 Scope: every path where a user waits on a model. Chat (`apps/api`), drafting
 and ingest (`apps/worker`), the gateway (`infra/litellm`), and the chat UI
