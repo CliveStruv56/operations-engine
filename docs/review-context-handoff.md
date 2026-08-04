@@ -915,12 +915,60 @@ for `drafter`, calling it "slower per token". It is **48 t/s against Groq's
 479** — a 10x gap that would have made drafts ~6 min rather than ~40s. The
 advice stands only as a last resort, not as the recommended swap.
 
+### Measured live, and it worked (4 Aug 2026, staging)
+
+Chat went from **30–40s to under 2s**. Two real messages on staging, straight
+from `app.chat.latency`:
+
+| | Vault-backed | Plain chat |
+| --- | --- | --- |
+| `prestream_ms` (our work) | 1,305 | 115 |
+| `ttft_ms` (wait for first word) | **356** | **166** |
+| `total_ms` | **1,801** | **399** |
+| `tx1_ms` / `retrieval_ms` | 74 / 78 | 115 / 0 |
+
+Three things this settles, so nobody re-litigates them:
+
+1. **`reasoning_effort` *is* honoured by GLM-4.7-Flash via DeepInfra.** The
+   review flagged, twice, that it might not be — it is an OpenAI-family
+   parameter and chat's own alias had never been tested with it. A 356ms TTFT
+   disproves that. **No GLM-shaped `chat_template_kwargs` workaround is
+   needed**; do not add one speculatively.
+2. **The gateway adds no meaningful overhead**, so the key-auth caching idea
+   in review §3.7 — explicitly labelled a hypothesis — is not worth chasing.
+   A chat request reaches its first token in 166ms through the same hop.
+3. **The shape of the problem inverted.** On a vault question more time now
+   goes on our side (1.3s) than waiting for the model (0.36s), and 1,151ms of
+   that is the *single* query-embedding round trip. DB work is 74ms and the
+   hybrid search 78ms — neither is worth touching. If chat latency is ever
+   revisited, that one embedding call is the only target left.
+
+### Instrumentation shipped blind first — read this before adding any
+
+The latency line was deployed and **emitted nothing**. Uvicorn installs
+handlers only for its own `uvicorn*` loggers and never calls `basicConfig`, so
+the root logger keeps its WARNING default and every `logger.info()` under
+`app.*` was dropped before reaching a handler. Uvicorn's own INFO access lines
+kept appearing throughout, so the absence looked exactly like code that had
+never run. `arq` has the same shape and would have silently swallowed the
+drafting timings too.
+
+Fixed in `app/main.py:configure_logging()` and `worker/main.py:startup()`,
+with `tests/test_logging_config.py`. One of those tests asserts a record
+actually lands in a handler — `isEnabledFor()` alone still passes when nothing
+is attached, and a record reaching no handler is just as lost. The tests reset
+logging to uvicorn's default first, because `conftest` builds the app and would
+otherwise leave the state under test already applied.
+
 ### Not done, in priority order
 
-1. **Confirm the new drafting numbers**, then decide on parallelising
-   sections. `funding_application` end-to-end (§6g item 1, §6i item 1) has
-   never run to completion and was blocked on the old quota — it should be the
-   first thing tried now that the cliff is gone.
+1. **Confirm the new drafting numbers** now that `litellm` and `worker` carry
+   the OpenRouter change, then decide on parallelising sections. The
+   `~3 min/call` note in `worker/main.py` describes the *old* free-tier
+   backoff and is now misleading — replace it with a measured figure rather
+   than trusting it. `funding_application` end-to-end (§6g item 1, §6i item 1)
+   has never run to completion and was blocked on the old quota; it is the
+   obvious first thing to try.
 2. **Cap chat history** — `conversations.py` fetches it with no `LIMIT` and
    re-sends all of it every turn, so prompt cost grows without bound. Agreed
    approach: a ~8k token budget keeping recent turns whole, using

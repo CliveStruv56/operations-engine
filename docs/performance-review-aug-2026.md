@@ -1,10 +1,17 @@
 # LLM latency review — 4 Aug 2026
 
-> **Status.** Items 1, 2, 4, 5 and 6 of §6 landed the same day, and item 3
-> was then solved a different way: paid Groq upgrades were closed to new
+> **Status — measured, and it worked.** Chat went from 30–40s to **under 2s**
+> on staging (`ttft_ms` 166–356). Items 1, 2, 4, 5 and 6 of §6 landed; item 3
+> was solved a different way, since paid Groq upgrades were closed to new
 > accounts, so `drafter` routes through **OpenRouter** to the same Groq
-> capacity instead. Items 7–9 are untouched. See
-> `review-context-handoff.md` §6j.
+> capacity. Items 7–9 are untouched and now optional. Numbers and the three
+> hypotheses they settle are in `review-context-handoff.md` §6j.
+>
+> **Two claims below are now disproven by measurement, not argument:**
+> §3.1's worry that `reasoning_effort` might not reach a GLM model — it does;
+> and §3.7's gateway key-auth caching hypothesis — the gateway adds no
+> meaningful overhead. Both were flagged as unverified at the time; neither
+> should be acted on now.
 >
 > **One correction to §4 below:** it offers DeepInfra as the fallback host for
 > `drafter`, described as "slower per token". Measured, it is **48 t/s against

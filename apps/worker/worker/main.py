@@ -210,8 +210,12 @@ class WorkerSettings:
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(get_settings().redis_url)
-    # Drafts make ~11 sequential LLM calls; live proof measured ~3 min/call
-    # on the drafter alias, so a full draft can run past 30 minutes.
+    # Drafts make ~11 sequential LLM calls. The ~3 min/call measured on 3 Aug
+    # was Groq free-tier backoff, not generation, and no longer applies:
+    # `drafter` now reaches Groq through OpenRouter (handoff §6j). The ceiling
+    # stays generous until a real figure replaces it — `worker.drafting.
+    # latency` logs elapsed per call, so measure before trusting any number
+    # written here, including this sentence.
     job_timeout = 3600
     max_tries = 1  # failures surface as status=failed; users reprocess explicitly
     keep_result = 0  # frees the job id so reprocess can requeue immediately
