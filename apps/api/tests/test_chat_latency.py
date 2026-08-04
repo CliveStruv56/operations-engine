@@ -22,6 +22,7 @@ import pytest
 from app.config import get_settings
 from app.errors import ApiError
 from app.litellm import (
+    CHAT_NUM_RETRIES,
     MAX_OUTPUT_TOKENS,
     REASONING_EFFORT,
     LiteLLMClient,
@@ -53,9 +54,11 @@ async def test_chat_bounds_thinking_and_output():
     """Without these two parameters the model may think for as long as the
     provider default allows, emitting nothing the stream can render."""
     captured: dict = {}
+    headers: dict = {}
 
     def handler(request: httpx.Request) -> httpx.Response:
         captured.update(json.loads(request.content))
+        headers.update(request.headers)
         return httpx.Response(
             200,
             content=sse_body(
@@ -87,6 +90,9 @@ async def test_chat_bounds_thinking_and_output():
     assert captured["model"] == "workhorse"
     assert result.tokens_in == 11
     assert result.tokens_out == 2
+    # The gateway default of 2 retries at a 120s timeout belongs to the
+    # worker; chat overrides it per request because `drafter` serves both.
+    assert headers["x-litellm-num-retries"] == CHAT_NUM_RETRIES
 
 
 async def test_ttft_measures_first_renderable_delta():
