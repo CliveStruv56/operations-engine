@@ -1,9 +1,12 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-02 (§6c is the latest state; §1–6b are the 1 Aug history)
-**Prepared by:** UI-overhaul session, extended through the 1–2 Aug QA/rename sessions
+**Handoff date:** 2026-08-04 (**§6h is the latest state**; §1–6g are history,
+oldest first)
+**Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
+rename, module-kit, Grantwork and smoke-test sessions
 **Purpose:** Resume in a new context window without re-deriving this work.
+**Start at §7** — it names the active task and the order to read things in.
 
 ---
 
@@ -179,7 +182,7 @@ Follow-ups landed 1 Aug evening (user-reviewed live on :3000):
   chat retrieval is vault-only, so Groundwork structured facts render as
   UI, never as suggested chat prompts.
 
-## 6c. Current state (2 Aug 2026) — read this first when resuming
+## 6c. Current state (2 Aug 2026) — superseded; see §7 for what to read first
 
 **Product renamed to "Flowgrid OS"** (commit `bc9aaf6`): sidebar platform
 tag, page title, auth/onboarding kickers, API title, README/CLAUDE.md.
@@ -365,10 +368,10 @@ tests**. ⚠️ **Local dev DB is still at 0010** — run
 `cd apps/api && uv run alembic upgrade head` before working on audit/feed
 code.
 
-## 6f. Module kit + drafting-engine extraction (3 Aug 2026) — NEXT UP: Grantwork
+## 6f. Module kit + drafting-engine extraction (3 Aug 2026) — Grantwork's foundation (built, see §6g)
 
-**The next task is building the Grantwork module.** Everything below is the
-ground it stands on. Spec: `docs/modules/grantwork-prd.md`. Sequencing and
+**Grantwork is built** (§6g); everything below is the ground it stood on, and
+is still the reference for how any future module is wired. Spec: `docs/modules/grantwork-prd.md`. Sequencing and
 rationale: `docs/vertical-module-roadmap.md`.
 
 ### What shipped today (all on `main`, pushed, CI green)
@@ -471,7 +474,7 @@ isolation test**:
 4. Drafting: pack + skeletons + registry via `DraftModule`. Commit.
 5. Web: client, pages, nav, flag guard. Commit.
 
-## 6g. Grantwork build — step 1 done (3 Aug 2026)
+## 6g. Grantwork build — all five steps done (3 Aug 2026)
 
 **Rulings taken before any code** (founder, recorded as ASSUMPTIONS **#23**):
 two funding surfaces rather than one — Grantwork does not absorb Groundwork's
@@ -576,7 +579,7 @@ Three UI decisions that carry a backend guarantee — don't "simplify" them:
 - An unverified/stale catalogue row **badges** on the application header and
   the create form, saying the drafted bid carries the same page-one warning.
 
-## Grantwork: what is done, and what is not
+### Grantwork: what is done, and what is not
 
 **Done** — all five steps, on `main`, **not pushed**: migration 0013 + RLS +
 isolation; 29 routes + schemas + analytics; template library + funder
@@ -611,14 +614,7 @@ Two schema divergences from the PRD's §1 entity list, both argued in #23:
 entities had nowhere to hold) and `grant_draft_jobs` (the shared engine takes
 a per-module `job_table`).
 
-## 7. Read first in a new session
-
-1. This file — **§6f first**, it is the current state.
-2. `docs/modules/grantwork-prd.md` (the task) and
-   `docs/vertical-module-roadmap.md` §1 (why the kit looks like this).
-3. `docs/groundwork/ASSUMPTIONS.md` (items 20–22 are the newest rulings).
-4. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
-
+---
 
 ## 6h. Live smoke test + a drafting-engine bug (3–4 Aug 2026)
 
@@ -685,3 +681,23 @@ Tenant **S45 E2E** has the `grants` flag on and one application, *Smoke test
 measures, 1 reporting period, 2 outcomes and 5 draft jobs. Disposable —
 `delete from grant_applications where id = '0e470acc-487a-4f65-b325-5ed932b941fb';`
 clears the lot, and the flag comes off in the operator console.
+
+## 7. Read first in a new session
+
+**The active task is `docs/drafting-engine-brief.md`** — DRAFT-001 (a failed
+draft records no cost, breaking CLAUDE.md hard constraint 5) and DRAFT-002
+(the grounding contract names Groundwork's tables to every module, so drafts
+cite tables that do not exist). Both are in the **shared** engine, so both
+affect Groundwork and Grantwork. The brief is self-contained: problem,
+evidence, files, recommended approach, gotchas and acceptance criteria.
+
+1. `docs/drafting-engine-brief.md` — the task.
+2. This file — **§6h** for how those two were found and what the smoke test
+   already proved works; **§6g** for where Grantwork stands overall.
+3. `docs/groundwork/ASSUMPTIONS.md` (items 20–24 are the newest rulings; #24
+   governs the funder catalogue and is easy to break by accident).
+4. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
+
+Grantwork itself (§6f, `docs/modules/grantwork-prd.md`,
+`docs/vertical-module-roadmap.md` §1) is background now — all five of its
+build steps are done. Its own remaining items are listed at the end of §6g.

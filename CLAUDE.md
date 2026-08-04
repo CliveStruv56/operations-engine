@@ -80,7 +80,8 @@ relevant app's commands pass locally.
 | `docs/groundwork/ASSUMPTIONS.md` | Divergence log — repo-vs-spec rulings |
 | `docs/vertical-module-roadmap.md` | Which vertical module to build next, and the "module kit" that makes each one cheaper |
 | `docs/modules/*.md` | Mini-PRDs for researched-but-unbuilt modules (Grantwork, Tenderhouse, Assurance) |
-| `docs/next-phase-brief.md` | Active work brief (ordered FIX-IDs) |
+| `docs/drafting-engine-brief.md` | **Active work brief** — DRAFT-001/002 on the shared drafting engine |
+| `docs/next-phase-brief.md` | Earlier work brief, closed 1 Aug 2026 |
 | `docs/review-context-handoff.md` | Session-resume context |
 | `docs/review-report.md` | Last full project review |
 
