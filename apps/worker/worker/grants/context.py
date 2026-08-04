@@ -281,10 +281,13 @@ class GrantPack(DraftPackBase):
                 "requirement that is not there."
             )
         if self.kind == "monitoring_report":
+            # Figures discipline only — which sections carry a rendered table
+            # is said per section (`drafting/prompts.section_prompt`). Saying
+            # it here reached "Financial position", which has no table, and the
+            # draft duly referred a funder to one (DRAFT-002).
             notes.append(
-                "Outcome figures are rendered as a table from recorded data. Comment "
-                "on what the figures show; never restate or estimate them, and mark a "
-                "missing figure [TO CONFIRM: …] rather than inferring it."
+                "Comment on what the recorded figures show; never restate or estimate "
+                "them, and mark a missing figure [TO CONFIRM: …] rather than inferring it."
             )
         return notes
 

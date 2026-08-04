@@ -72,6 +72,35 @@ def test_section_prompt_vault_variants():
     assert "No vault excerpts were found" in empty_user
 
 
+# -- the table instruction (DRAFT-002) ---------------------------------------
+#
+# The contract used to tell every module that "budget and funding figures are
+# rendered as tables", which is Groundwork's shape. On a Grantwork monitoring
+# return there is no budget table, and a live draft duly closed section 7 by
+# pointing a funder at "the accompanying financial table" — which does not
+# exist. The instruction now lives where `section.table` is known.
+
+
+def test_only_a_section_with_a_table_is_told_about_one():
+    pack = _pack(kind="monthly_report")
+    with_table = next(s for s in SKELETONS["monthly_report"] if s.table == "budget")
+    without_table = next(s for s in SKELETONS["monthly_report"] if s.table is None)
+
+    _, tabled = section_prompt(pack, with_table, [])
+    assert "budget table is rendered" in tabled
+
+    _, plain = section_prompt(pack, without_table, [])
+    assert "table" not in plain.lower(), "a section with no table must not hear about one"
+
+
+def test_the_contract_forbids_inventing_a_table():
+    """Saying nothing is not enough — the model filled the silence once."""
+    from worker.drafts.prompts import GROUNDING_PROMPT
+
+    assert "Never refer to a table, appendix, figure or annex" in GROUNDING_PROMPT
+    assert "Budget and funding figures are rendered as tables" not in GROUNDING_PROMPT
+
+
 def _assembly_pack(**overrides):
     excerpt = VaultExcerpt(
         chunk_id=uuid4(),

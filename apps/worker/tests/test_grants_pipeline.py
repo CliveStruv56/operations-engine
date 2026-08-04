@@ -113,6 +113,24 @@ def test_the_four_prd_document_kinds_exist():
     }
 
 
+def test_no_grantwork_section_is_told_about_a_table_it_does_not_have():
+    """The bug this closes, live on 4 Aug 2026: the shared contract told every
+    module that budget and funding figures were tabled, and a monitoring
+    return closed by referring a funder to "the accompanying financial table".
+    Grantwork has no financial table, and section 7 has no table at all."""
+    from worker.drafting.prompts import section_prompt
+    from worker.grants.prompts import GROUNDING_PROMPT
+
+    financial = next(s for s in SKELETONS["monitoring_report"] if s.key == "finance")
+    assert financial.table is None
+    _, user = section_prompt(_pack(), financial, [], GROUNDING_PROMPT)
+    assert "table" not in user.lower()
+
+    tabled = next(s for s in SKELETONS["monitoring_report"] if s.table == "impact")
+    _, with_table = section_prompt(_pack(), tabled, [], GROUNDING_PROMPT)
+    assert "impact table is rendered" in with_table
+
+
 def test_monitoring_reports_do_not_touch_the_vault():
     """A monitoring return accounts for what this grant did, and those facts
     are module rows. No queries means the engine skips the embedding call."""
