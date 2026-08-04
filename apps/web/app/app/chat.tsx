@@ -319,12 +319,22 @@ export default function ChatPanel({
   // writability must not blink off under a reply that is still streaming.
   const createdHere = activeConversationId !== null && createdHereIds.includes(activeConversationId);
   const unknownConversation = activeConversationId !== null && !createdHere && activeConv === null;
-  const readOnly = (activeConv !== null && !activeConv.is_mine) || unknownConversation;
   // Absent from a list that *loaded successfully* means the conversation is
   // gone — deleted here, or in another tab. Note the distinction from
   // `unknownConversation` above, which is also true when the list failed to
   // load and we genuinely know nothing; that case must keep failing closed.
   const goneConversation = unknownConversation && ws.conversationsLoaded;
+  // A conversation that is gone counts as no conversation at all: the composer
+  // works, and the next message opens a fresh chat.
+  //
+  // Deliberately *not* driven by the URL. Clearing `?c=` is attempted below,
+  // but when that navigation does not land the panel used to sit forever on
+  // "opening a new one…" — the redirect was the only thing standing between
+  // the user and a usable screen. Recovery now happens in render and the URL
+  // is merely tidied after it.
+  const conversationId = goneConversation ? null : activeConversationId;
+  const readOnly =
+    (activeConv !== null && !activeConv.is_mine) || (unknownConversation && !goneConversation);
 
   // Drop a dead conversation out of the URL instead of stranding the composer
   // on it. Deleting the open chat used to leave `?c=<deleted-id>` in the
@@ -343,23 +353,21 @@ export default function ChatPanel({
   }, [activeConversationId]);
 
   useEffect(() => {
-    if (!activeConversationId) {
+    // Null covers the gone case too, so a dead conversation is never fetched
+    // and its 404 never paints an error banner.
+    if (!conversationId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setMessages([]);
       return;
     }
-    if (justCreatedRef.current === activeConversationId) {
+    if (justCreatedRef.current === conversationId) {
       justCreatedRef.current = null;
       return;
     }
-    // Known-dead conversations are not requested at all: the redirect above is
-    // already under way, and the 404 would only paint an error banner over a
-    // screen the user is being moved off.
-    if (goneConversation) return;
-    api<Message[]>(`/conversations/${activeConversationId}/messages`, {}, tenantId)
+    api<Message[]>(`/conversations/${conversationId}/messages`, {}, tenantId)
       .then(setMessages)
       .catch((e) => setError(String(e)));
-  }, [activeConversationId, tenantId, goneConversation]);
+  }, [conversationId, tenantId]);
 
   // Document metadata for the hero (context chip + title-derived suggestions)
   // — best-effort, the hero renders without it too.
@@ -377,12 +385,12 @@ export default function ChatPanel({
   // would change on every streamed frame and re-render every settled message.
   const exportSlides = useCallback(
     async (messageId: string) => {
-      if (!activeConversationId) return;
+      if (!conversationId) return;
       setExportingId(messageId);
       setError(null);
       try {
         const out = await api<{ download_url: string }>(
-          `/conversations/${activeConversationId}/messages/${messageId}/slides`,
+          `/conversations/${conversationId}/messages/${messageId}/slides`,
           { method: "POST" },
           tenantId
         );
@@ -393,7 +401,7 @@ export default function ChatPanel({
         setExportingId(null);
       }
     },
-    [activeConversationId, tenantId]
+    [conversationId, tenantId]
   );
 
   function stopStreaming() {
@@ -408,7 +416,9 @@ export default function ChatPanel({
     setDraft("");
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    let convId = activeConversationId;
+    // Null when the previous chat was deleted, so the first message after that
+    // opens a fresh one rather than posting into a conversation that is gone.
+    let convId = conversationId;
     try {
       if (!convId) {
         const created = await api<{ id: string }>(
@@ -573,13 +583,10 @@ export default function ChatPanel({
         <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
           <p className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge bg-sidebar px-5 py-3.5 text-center text-[13px] font-semibold text-subtle">
             {unknownConversation
-              ? // Only ever a flash now: the effect above is already moving
-                // the user to an empty composer. It read "this chat isn't one
-                // of yours", which was simply wrong for a chat they had just
-                // deleted themselves.
-                ws.conversationsLoaded
-                ? "This chat no longer exists — opening a new one…"
-                : "Couldn't check who owns this chat — refresh to reply"
+              ? // Reachable only when the list itself failed to load — a
+                // deleted chat no longer lands here at all, it opens an empty
+                // composer instead.
+                "Couldn't check who owns this chat — refresh to reply"
               : `Shared by ${activeConv?.owner_email ?? "a teammate"} — read only`}
           </p>
         </div>

@@ -35,10 +35,23 @@ describe("an open conversation that no longer exists", () => {
     apiFn.mockResolvedValue([]);
   });
 
-  it("drops it from the URL instead of stranding the composer", async () => {
-    // Deleting the open chat left `?c=<deleted-id>` in the address. The
-    // read-only guard then called it somebody else's chat and offered no way
-    // back — a dead end also reachable by refresh, back button or a bookmark.
+  it("gives back a working composer without waiting on any navigation", async () => {
+    // The load-bearing assertion. Recovery must happen in render, not via the
+    // URL: the first fix only called router.replace(), and when that
+    // navigation did not land the panel sat on "opening a new one…" forever.
+    // Nothing here mocks a URL change, so a redirect-dependent fix fails.
+    render(
+      withWorkspace(
+        <ChatPanel activeProjectId={null} activeConversationId={GONE} />,
+        afterDelete()
+      )
+    );
+    expect(await screen.findByPlaceholderText(/ask/i)).toBeEnabled();
+    expect(screen.queryByText(/read only/i)).toBeNull();
+    expect(screen.queryByText(/no longer exists/i)).toBeNull();
+  });
+
+  it("also tidies the dead conversation out of the URL", async () => {
     render(
       withWorkspace(
         <ChatPanel activeProjectId={null} activeConversationId={GONE} />,
