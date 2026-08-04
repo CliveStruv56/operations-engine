@@ -6,6 +6,10 @@ last — a failure anywhere (including the cost guard) marks the job failed and
 leaves no orphaned rows. Network calls (LiteLLM, S3) always happen outside
 tenant transactions.
 
+Cost telemetry is the engine's, not a module's: every terminal outcome —
+success, budget guard, empty section, timeout, provider error — writes the
+ledger to `usage_events` exactly once (`drafting/usage.py`).
+
 A vertical supplies a `DraftModule`: where its job rows live, how to gather
 its facts, what its documents look like, and how to register the result.
 Everything else here is the same work for every module.
@@ -28,6 +32,7 @@ from worker.drafting.pack import DraftPackBase
 from worker.drafting.prompts import outline_prompt, parse_outline, section_prompt
 from worker.drafting.retrieval import retrieve_excerpts
 from worker.drafting.sections import Section
+from worker.drafting.usage import write_usage
 from worker.embed import embed_texts
 from worker.secrets import decrypt_llm_key
 from worker.storage import DOCX_MIME, upload_bytes
@@ -53,7 +58,8 @@ class DraftModule:
     queries_for: Callable[[str, DraftPackBase], list[str]]
     #: (conn, subject_id) -> per-document fusion boosts.
     scope_weights: Callable[..., Awaitable[dict[UUID, float]]]
-    #: Writes the registry row, usage events, audit row and job completion.
+    #: Writes the registry row, audit row and job completion. Usage events are
+    #: the engine's job, not a module's — see `drafting/usage.py`.
     register: Callable[..., Awaitable[UUID]]
 
 
@@ -76,8 +82,22 @@ async def _section_text(
 
 
 async def _mark_failed(
-    pool: asyncpg.Pool, module: DraftModule, tenant_id: str, job_id: str, error: str
+    pool: asyncpg.Pool,
+    module: DraftModule,
+    tenant_id: str,
+    job_id: str,
+    error: str,
+    user_id: str,
+    ledger: LlmLedger,
 ) -> None:
+    """Fail the job row, then bill whatever it already spent.
+
+    Two transactions on purpose. A failure that has already made nine model
+    calls must still be metered (hard constraint 5), but a usage write that
+    itself fails must not roll back the failure status — the UI polls that row
+    and would otherwise wait on 'running' forever. Every call site wraps this
+    in `contextlib.suppress`, so an exception here is invisible.
+    """
     async with _tenant_tx(pool, tenant_id) as conn:
         # Table name comes from the frozen module definition, never a request.
         await conn.execute(
@@ -86,6 +106,11 @@ async def _mark_failed(
             UUID(job_id),
             error[:500],
         )
+    # Nothing spent, nothing to write — and on the cancellation path there may
+    # be no time for a second transaction anyway.
+    if ledger.calls or ledger.embed_tokens:
+        async with _tenant_tx(pool, tenant_id) as conn:
+            await write_usage(conn, tenant_id, user_id, ledger)
 
 
 async def run_draft(
@@ -98,6 +123,10 @@ async def run_draft(
 ) -> str:
     pool: asyncpg.Pool = ctx["pool"]
     loop = asyncio.get_running_loop()
+    # Hoisted above the try so every failure path can bill what was spent — a
+    # gather-level failure then correctly reports zero calls rather than
+    # crashing `_mark_failed` on an unbound name.
+    ledger = LlmLedger()
 
     async with _tenant_tx(pool, tenant_id) as conn:
         job = await conn.fetchrow(f"select * from {module.job_table} where id = $1", UUID(job_id))
@@ -122,7 +151,6 @@ async def run_draft(
         async with _tenant_tx(pool, tenant_id) as conn:
             pack = await module.gather(conn, UUID(subject_id), kind, params, date.today())
 
-        ledger = LlmLedger()
         queries = module.queries_for(kind, pack)
         if queries:
             embedded = await embed_texts(virtual_key, queries)  # network — outside tx
@@ -171,16 +199,17 @@ async def run_draft(
                 ledger=ledger,
                 draft=draft,
             )
+            await write_usage(conn, tenant_id, user_id, ledger)
         return f"succeeded:{doc_id}"
     except DraftBudgetExceeded as exc:
         with contextlib.suppress(Exception):
-            await _mark_failed(pool, module, tenant_id, job_id, str(exc))
+            await _mark_failed(pool, module, tenant_id, job_id, str(exc), user_id, ledger)
         raise
     except (ValueError, EmptySectionError) as exc:
         # Gather-level validation (missing subject, missing funding source) and
         # an empty model section — both messages are already user-safe.
         with contextlib.suppress(Exception):
-            await _mark_failed(pool, module, tenant_id, job_id, str(exc))
+            await _mark_failed(pool, module, tenant_id, job_id, str(exc), user_id, ledger)
         raise
     except BaseException as exc:
         # BaseException on purpose: arq's job_timeout cancellation raises
@@ -193,5 +222,5 @@ async def run_draft(
             else f"Draft generation failed ({type(exc).__name__}: {str(exc)[:160]})"
         )
         with contextlib.suppress(BaseException):
-            await _mark_failed(pool, module, tenant_id, job_id, reason)
+            await _mark_failed(pool, module, tenant_id, job_id, reason, user_id, ledger)
         raise

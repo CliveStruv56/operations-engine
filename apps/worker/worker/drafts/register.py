@@ -1,7 +1,9 @@
 """Draft registration (PRD §5 step 5): find or create the registry row,
 append an append-only version entry, set status 'drafting' (draft-first —
-nothing ever advances further without a human), write usage_events per LLM
-call, audit-log the job, and mark the job row succeeded.
+nothing ever advances further without a human), audit-log the job, and mark
+the job row succeeded. Metering is the engine's (`drafting/usage.py`), so a
+failed job is billed too; the `ledger` here only feeds the audit meta and the
+job row's totals.
 
 Runs entirely inside one tenant transaction after the DOCX is already in
 storage — an abort anywhere earlier leaves no orphaned registry rows.
@@ -102,28 +104,6 @@ async def register_draft(
         json.dumps(versions),
         file_key,
     )
-
-    await conn.executemany(
-        """
-        insert into usage_events (tenant_id, user_id, kind, model, tokens_in, tokens_out, cost_usd)
-        values ($1, $2, 'draft', $3, $4, $5, $6)
-        """,
-        [
-            (UUID(tenant_id), UUID(user_id), c.alias, c.tokens_in, c.tokens_out, c.cost_usd)
-            for c in ledger.calls
-        ],
-    )
-    if ledger.embed_tokens:
-        await conn.execute(
-            """
-            insert into usage_events (tenant_id, user_id, kind, model, tokens_in, cost_usd)
-            values ($1, $2, 'embed', 'embedder', $3, $4)
-            """,
-            UUID(tenant_id),
-            UUID(user_id),
-            ledger.embed_tokens,
-            ledger.embed_cost_usd,
-        )
 
     await conn.execute(
         """
