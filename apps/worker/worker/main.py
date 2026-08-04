@@ -88,9 +88,17 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
             summary = await summarize_document(
                 virtual_key, doc["title"], [c.content for c in chunks]
             )
-            summary_vec = (await embed_texts(virtual_key, [summary.text])).vectors[0]
         except Exception:
             summary = None
+        if summary is not None:
+            # Its own try: a summary that was generated has already been paid
+            # for, so a failure embedding it must not throw the call away
+            # unmetered (hard constraint 5). The document keeps the summary
+            # text and simply has no retrievable summary chunk.
+            try:
+                summary_vec = (await embed_texts(virtual_key, [summary.text])).vectors[0]
+            except Exception:
+                summary_vec = None
 
         async with tenant_tx(pool, tenant_id) as conn:
             await conn.execute("delete from doc_chunks where document_id = $1", document_id)
@@ -139,6 +147,9 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
                     estimate_tokens(summary.text),
                     "[" + ",".join(f"{x:.7g}" for x in summary_vec) + "]",
                 )
+            # Billed on the summary call, not on the chunk: the tokens were
+            # spent either way.
+            if summary is not None:
                 await conn.execute(
                     """
                     insert into usage_events (tenant_id, user_id, kind, model,
