@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, apiStream } from "@/lib/api";
 import { openPresigned } from "@/lib/groundwork";
@@ -125,7 +125,8 @@ function SourceCard({ c }: { c: Citation }) {
   );
 }
 
-function AssistantMessage({
+/** Wrapped in `memo` below — see the note there before changing these props. */
+function AssistantMessageInner({
   m,
   scope,
   onExport,
@@ -134,7 +135,10 @@ function AssistantMessage({
 }: {
   m: Message;
   scope: string | undefined;
-  onExport: () => void;
+  /** Takes the message id rather than closing over it, so the parent can pass
+   *  one stable callback instead of a fresh arrow per render (which would
+   *  defeat the memo). */
+  onExport: (id: string) => void;
   exporting: boolean;
   readOnly: boolean;
 }) {
@@ -194,7 +198,7 @@ function AssistantMessage({
         )}
         {!readOnly && isSlideDeck(m.content) && !m.id.startsWith("local-") && (
           <button
-            onClick={onExport}
+            onClick={() => onExport(m.id)}
             disabled={exporting}
             className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
           >
@@ -212,6 +216,14 @@ function AssistantMessage({
     </article>
   );
 }
+
+/** Settled messages never change, but the panel re-renders on every streamed
+ *  frame — and each of these runs a full `ReactMarkdown` parse plus the
+ *  recursive `injectCites` walk. Unmemoized, a ten-message conversation
+ *  re-parsed all ten answers on every delta of the eleventh, which is what
+ *  made long replies stutter. Keep every prop here primitive or referentially
+ *  stable or this silently stops working. */
+const AssistantMessage = memo(AssistantMessageInner);
 
 export default function ChatPanel({
   activeProjectId,
@@ -247,6 +259,41 @@ export default function ChatPanel({
   // Set when this panel just created the conversation itself: the URL update
   // that follows must not refetch (and clobber) the in-flight local state.
   const justCreatedRef = useRef<string | null>(null);
+  // Streamed deltas are coalesced and applied once per animation frame rather
+  // than once per token. A token-per-setState re-parsed the whole accumulated
+  // answer through ReactMarkdown every time — quadratic work over a reply,
+  // which made the stream *look* slower than it arrived. A frame is the
+  // fastest cadence a display can show anyway, so nothing is lost, and the
+  // scroll effect below drops to frame rate with it.
+  const pendingRef = useRef("");
+  const frameRef = useRef<number | null>(null);
+
+  const flushDeltas = useCallback(() => {
+    frameRef.current = null;
+    const pending = pendingRef.current;
+    if (!pending) return;
+    pendingRef.current = "";
+    setStreamText((t) => (t ?? "") + pending);
+  }, []);
+
+  const pushDelta = useCallback(
+    (delta: string) => {
+      pendingRef.current += delta;
+      frameRef.current ??= requestAnimationFrame(flushDeltas);
+    },
+    [flushDeltas]
+  );
+
+  // Drop anything buffered without applying it. Every stream ending clears
+  // streamText, so a queued frame would otherwise fire afterwards and revive
+  // the bubble with a stray fragment of the reply that just finished.
+  const discardDeltas = useCallback(() => {
+    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
+    frameRef.current = null;
+    pendingRef.current = "";
+  }, []);
+
+  useEffect(() => discardDeltas, [discardDeltas]);
   // Ownership has to be established positively. Treating "absent from
   // ws.conversations" as writable fails open: the list is also empty when its
   // fetch failed, which would put a live composer on a teammate's shared chat
@@ -291,23 +338,28 @@ export default function ChatPanel({
     return `/app?${q.toString()}`;
   }
 
-  async function exportSlides(messageId: string) {
-    if (!activeConversationId) return;
-    setExportingId(messageId);
-    setError(null);
-    try {
-      const out = await api<{ download_url: string }>(
-        `/conversations/${activeConversationId}/messages/${messageId}/slides`,
-        { method: "POST" },
-        tenantId
-      );
-      openPresigned(out.download_url);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setExportingId(null);
-    }
-  }
+  // useCallback so AssistantMessage's memo actually holds: a fresh arrow here
+  // would change on every streamed frame and re-render every settled message.
+  const exportSlides = useCallback(
+    async (messageId: string) => {
+      if (!activeConversationId) return;
+      setExportingId(messageId);
+      setError(null);
+      try {
+        const out = await api<{ download_url: string }>(
+          `/conversations/${activeConversationId}/messages/${messageId}/slides`,
+          { method: "POST" },
+          tenantId
+        );
+        openPresigned(out.download_url);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setExportingId(null);
+      }
+    },
+    [activeConversationId, tenantId]
+  );
 
   function stopStreaming() {
     abortRef.current?.abort();
@@ -367,8 +419,12 @@ export default function ChatPanel({
       { content, use_vault: useVault, task_kind: mode },
       tenantId,
       {
-        onDelta: (delta) => setStreamText((t) => (t ?? "") + delta),
+        onDelta: pushDelta,
         onDone: (message) => {
+          // The persisted message replaces the streamed text wholesale, so
+          // anything still buffered is redundant — drop it rather than let a
+          // queued frame land after the bubble has gone.
+          discardDeltas();
           setSoftCap(Boolean(message.soft_cap));
           setStreamText(null);
           const done = message as unknown as Message & { scope_used?: string | null };
@@ -377,11 +433,13 @@ export default function ChatPanel({
           ws.refreshConversations();
         },
         onError: (_code, msg) => {
+          discardDeltas();
           setStreamText(null);
           setError(msg);
         },
         onAbort: () => {
           // The server may still have persisted the reply — converge on its state.
+          discardDeltas();
           setStreamText(null);
           if (convId) {
             api<Message[]>(`/conversations/${convId}/messages`, {}, tenantId)
@@ -444,7 +502,7 @@ export default function ChatPanel({
                     key={m.id}
                     m={m}
                     scope={scopes[m.id]}
-                    onExport={() => exportSlides(m.id)}
+                    onExport={exportSlides}
                     exporting={exportingId === m.id}
                     readOnly={readOnly}
                   />
