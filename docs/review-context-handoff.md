@@ -597,20 +597,26 @@ pre-existing bug in the shared drafting engine.
    section now returns 541 tokens of prose where it returned nothing — but a
    full run is still owed, blocked only by Groq's **daily** token quota,
    which this testing exhausted (198.7k of 200k TPD).
-2. **Staging: api done, worker and web are not.** ✅ 4 Aug — api deployed,
-   the pre-deploy hook took the DB to **0013** (12 grant tables, all with RLS
-   and a policy), the seeder ran (1 template, 13 catalogue rows, all
-   correctly `unverified`+stale), and the 29 grant routes are live and
-   returning 401 unauthenticated.
-   **Still outstanding:** the staging **worker** has no `worker.grants`
-   module (verified — `ModuleNotFoundError`), so any grant draft or impact
-   card would enqueue and fail; and **web** has no `/app/grants` pages. Both
-   need `railway up ./apps/worker --path-as-root --service worker
-   --environment production` and `vercel --prod` from `apps/web`.
-   This is currently harmless because **no staging tenant has the `grants`
-   flag** (only `Struvers2` exists, with projects/contacts/web_search), so
-   the module is invisible and nothing can enqueue a job. Deploy worker+web
-   *before* enabling the flag on anyone.
+2. ~~**Staging has nothing.**~~ ✅ **Fully deployed 4 Aug** — all three
+   services carry Grantwork:
+   - **api**: pre-deploy hook took the DB to **0013** (12 grant tables, every
+     one with RLS and a `tenant_isolation` policy); seeder run in-container
+     (1 template, 13 catalogue rows, all correctly `unverified` + stale); 29
+     grant routes live, 401 unauthenticated.
+   - **worker**: 5 arq functions registered including `grant_draft_document`
+     and `generate_impact_card`; carries the 3 Aug drafting fix
+     (`MAX_OUTPUT_TOKENS` 4096, `REASONING_EFFORT` low); WeasyPrint present,
+     so the impact card can render.
+   - **web**: `/app/grants`, `/app/grants/[id]` and `/app/grants/new` all in
+     the deployed production build.
+
+   **Nothing is switched on yet**: no staging tenant has the `grants` flag
+   (only `Struvers2`, with projects/contacts/web_search), so the module stays
+   invisible until an operator enables it via
+   `PATCH /admin/tenants/{id}/features`. Enabling it is now safe — the whole
+   path is deployed — but see item 3: every catalogue row on staging is
+   deliberately unverified, so any bid drafted from one carries the
+   first-page warning.
 3. **The funder catalogue is unverified** by design (#24). Until an operator
    promotes rows, every bid drafted from one carries a warning — correct, but
    it means the module does not look finished to a demo audience.
