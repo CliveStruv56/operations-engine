@@ -584,13 +584,16 @@ catalogue; the drafting adapter + impact card; the web layer.
 Suites: **API 244, worker 61, web 27**; ruff, mypy, typecheck, lint, build
 all clean. Local dev DB at 0013 and seeded.
 
+**Live smoke test run 3–4 Aug** (see §6h) — it found and fixed a serious
+pre-existing bug in the shared drafting engine.
+
 **Not done, in priority order:**
-1. **No end-to-end run of a real draft.** Nothing has exercised
-   `grant_draft_document` against a live worker + LiteLLM gateway. Every
-   piece is unit-tested and the pipeline is the one Groundwork already uses
-   in anger, but the Grantwork path itself has never produced a DOCX.
-   Same for the impact card PDF (WeasyPrint is absent locally, so
-   `test_pdf_is_one_page` skips).
+1. **`funding_application` has not completed end-to-end.** Its `budget`
+   section (the only `reasoner`-alias section in the module) was the one that
+   exposed the bug in §6h. The fix is verified at call level — the same
+   section now returns 541 tokens of prose where it returned nothing — but a
+   full run is still owed, blocked only by Groq's **daily** token quota,
+   which this testing exhausted (198.7k of 200k TPD).
 2. **Staging has nothing.** DB at **0012**; 0013 goes out with the Railway
    pre-deploy hook on the next api deploy, and `uv run python -m
    app.grants.seeds` must then be run there with the owner connection.
@@ -615,3 +618,70 @@ a per-module `job_table`).
    `docs/vertical-module-roadmap.md` §1 (why the kit looks like this).
 3. `docs/groundwork/ASSUMPTIONS.md` (items 20–22 are the newest rulings).
 4. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
+
+
+## 6h. Live smoke test + a drafting-engine bug (3–4 Aug 2026)
+
+First real Grantwork drafts, run against the local worker and the LiteLLM
+gateway on tenant **S45 E2E** (`7888931f…`, disposable). It found a
+**pre-existing bug in the shared engine that affected Groundwork too** —
+fixed in `2bd3f05`.
+
+### What the bug was
+
+Both drafting aliases are now reasoning models that bill thinking against
+`completion_tokens`; the pipeline was written when they were not.
+`drafter` (gpt-oss-120b) spends 675–709 tokens thinking, so against the old
+1024 ceiling every section of a data-heavy document hit
+`finish_reason=length` — and the ones that reasoned longest returned **no
+content at all**. `reasoner` (GLM-5.2) is worse: it thinks to fill whatever
+budget it is given, and spent an entire 4096 on one real section, returning
+zero prose.
+
+**The consequence, not the cause, is the thing to remember.** An empty
+section added no paragraphs, and the pipeline assembled, uploaded and
+registered the document anyway. A monitoring return reached the registry
+with **six of its nine sections missing**, marked `succeeded` with
+`to_confirm_count: 0` — which reads as a clean draft. Nothing noticed.
+
+### What changed
+
+`MAX_OUTPUT_TOKENS` 1024 → 4096; `REASONING_EFFORT = "low"` on every call
+(the ceiling alone cannot bound a model that thinks to fill it);
+`EmptySectionError` fails the job rather than filing a document with a gap
+(the outline call opts out via `allow_empty`, since it is designed to
+degrade to `{}`); one retry per section before that failure; truncation
+tracked on the ledger, marked `[TO CONFIRM]` in the document so it reaches
+the UI count, and recorded as `truncated_sections` in the audit meta.
+
+### What the smoke test proved works, live
+
+| Path | Result |
+| --- | --- |
+| `monitoring_report` | **9/9 sections** after the fix (3/9 before). Impact table rendered real recorded figures, **"not recorded"** for the blank measure, 107% over-delivery uncapped. Conditions table correct. |
+| `case_for_support` | 8/8 sections, vault retrieval + resolved citations, **0 stripped citations** |
+| `impact_card` | PDF in 0.7s, **0 LLM calls** |
+| Registry | per-period key `monitoring_report_<id8>` carrying `reporting_period_id`; one-offs versioned onto seeded rows |
+| Side effects | period auto-moved to `drafting`; `usage_events` per call (drafter + reasoner + embed); audit meta carried to_confirm / stripped_citations |
+| Failure paths | `EmptySectionError`, cancellation, `ReadTimeout` and a provider 429 all recorded cleanly, **no orphan rows, no partial documents** |
+
+### Known gaps this surfaced (not fixed)
+
+1. **A failed draft is unmetered.** `usage_events` are written only in
+   `register()`, which runs on success, so a job that fails after nine model
+   calls records **zero** cost. That contradicts CLAUDE.md's "cost telemetry
+   on every LLM call" and understates real spend.
+2. **The grounding contract is Groundwork-shaped.** It tells every module
+   that "budget and funding figures are rendered as tables" — on a Grantwork
+   monitoring return there is no budget table, and the model duly referred to
+   "the accompanying financial table", which does not exist.
+3. **Groq free tier is 200k tokens/day**, which one afternoon of drafting
+   exhausts. A single draft is ~35k in / ~16k out.
+
+### Test data left behind
+
+Tenant **S45 E2E** has the `grants` flag on and one application, *Smoke test
+— community garden* (`0e470acc…`), with its funder, 6 conditions, 3
+measures, 1 reporting period, 2 outcomes and 5 draft jobs. Disposable —
+`delete from grant_applications where id = '0e470acc-487a-4f65-b325-5ed932b941fb';`
+clears the lot, and the flag comes off in the operator console.
