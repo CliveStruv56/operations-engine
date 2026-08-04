@@ -69,6 +69,8 @@
     .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:1.8mm 3mm;margin-top:1.5mm;}
     .feature{display:flex;align-items:flex-start;gap:1.5mm;font-size:0.7rem;}
     .feature .icon{width:4mm;height:4mm;min-width:4mm;background:var(--terracotta);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:0.5rem;font-weight:700;}
+    .feature .icon.soon{background:var(--paper);border:0.4mm solid var(--amber);color:var(--amber);}
+    .feature .soon-tag{font-weight:600;color:var(--amber);}
     .feature div{line-height:1.3;}
     .feature strong{color:var(--ink);display:block;font-size:0.72rem;}
 
@@ -81,6 +83,13 @@
     .tier li{margin-bottom:0.5mm;padding-left:2.2mm;position:relative;}
     .tier li::before{content:"✓";position:absolute;left:0;color:var(--sage);font-weight:700;}
     .tier.pro{border-color:var(--terracotta);background:var(--cream);}
+
+    .modules{display:grid;grid-template-columns:repeat(3,1fr);gap:2.2mm;margin-top:1.5mm;}
+    .mod{border:1px solid var(--line);border-radius:2mm;padding:2.2mm;}
+    .mod h3{font-size:0.75rem;color:var(--terracotta-dark);display:flex;align-items:center;gap:1.5mm;}
+    .mod .tag{font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.3mm 1.2mm;border-radius:0.8mm;background:var(--sage);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:0.06em;}
+    .mod .tag.soon{background:var(--amber);color:#3A2A05;}
+    .mod p{font-size:0.64rem;color:var(--ink-soft);margin-top:0.8mm;line-height:1.3;}
 
     .trust{display:flex;gap:3mm;justify-content:space-between;font-size:0.68rem;color:var(--ink-soft);margin-top:1mm;}
     .trust span{display:flex;align-items:center;gap:1.2mm;}
@@ -142,9 +151,28 @@
         <div class="feature"><div class="icon">✓</div><div><strong>Research mode</strong>Web search with cited sources, gated per tenant.</div></div>
         <div class="feature"><div class="icon">✓</div><div><strong>Slide export</strong>Turn outlines into native PowerPoint decks.</div></div>
         <div class="feature"><div class="icon">✓</div><div><strong>CRM contact book</strong>Companies, contacts and CSV import.</div></div>
-        <div class="feature"><div class="icon">✓</div><div><strong>Project spine</strong>Stage-gated projects, risks, budget and AI-drafted reports.</div></div>
-        <div class="feature"><div class="icon">⌛</div><div><strong>Email & calendar sync</strong>Gmail and Microsoft 365 triage and drafting.</div></div>
-        <div class="feature"><div class="icon">⌛</div><div><strong>Meeting intelligence</strong>Bot joins calls; summaries and actions in minutes.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Cost telemetry</strong>Every AI call metered, visible on your usage page.</div></div>
+        <div class="feature"><div class="icon soon">+</div><div><strong>Email &amp; calendar sync <span class="soon-tag">· on the roadmap</span></strong>Gmail and Microsoft 365 triage and drafting.</div></div>
+        <div class="feature"><div class="icon soon">+</div><div><strong>Meeting intelligence <span class="soon-tag">· on the roadmap</span></strong>Bot joins calls; summaries and actions in minutes.</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Built for your sector — optional modules</h2>
+      <p style="font-size:0.68rem;color:var(--ink-soft);">Switch on the module that matches your work and the workspace gains a records spine and the client documents that assemble themselves from it — every figure traceable to your own data. <strong>Ask us for the one-pager on any of these.</strong></p>
+      <div class="modules">
+        <div class="mod">
+          <h3>Groundwork <span class="tag">Live</span></h3>
+          <p>Community-led development projects: stage-gated spine, funding, budget, risk and planning registers, AI-drafted monthly client reports, feasibility studies and funding bids.</p>
+        </div>
+        <div class="mod">
+          <h3>Grantwork <span class="tag">Live</span></h3>
+          <p>Grant funding and impact reporting: funder pipeline, award conditions, outcome measures, and monitoring returns drafted from the outcomes you recorded.</p>
+        </div>
+        <div class="mod">
+          <h3>Tenderhouse <span class="tag soon">In development</span></h3>
+          <p>Bids and tenders: an answer library that keeps its claims traceable, question-by-question drafting and a bid/no-bid scorecard. Design partners wanted.</p>
+        </div>
       </div>
     </section>
 

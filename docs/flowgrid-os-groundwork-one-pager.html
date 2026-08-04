@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowgrid OS — Groundwork Module One-Pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --terracotta:#B14E2E;
+      --terracotta-dark:#8A3A22;
+      --cream:#F6F2ED;
+      --paper:#FFFFFF;
+      --ink:#2D2A26;
+      --ink-soft:#5B5752;
+      --line:#E3DDD4;
+      --sage:#6B8E6B;
+      --amber:#D4A017;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:9.6pt;}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+      color:var(--ink);
+      background:#EAE5DE;
+      line-height:1.4;
+      -webkit-font-smoothing:antialiased;
+    }
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto;
+      background:var(--paper);
+      padding:10mm 12mm;
+      display:flex;
+      flex-direction:column;
+      gap:2.4mm;
+    }
+    @media print{
+      html{font-size:9.2pt;}
+      body{background:none;}
+      .page{width:100%;min-height:100vh;margin:0;padding:8mm 10mm;}
+    }
+    @page{size:A4;margin:0;}
+
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;}
+    .eyebrow{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--terracotta);}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-bottom:1.5px solid var(--terracotta);padding-bottom:2.5mm;}
+    .brand{display:flex;align-items:center;gap:2.5mm;}
+    .brand-mark{width:8mm;height:8mm;background:var(--terracotta);border-radius:1.2mm;}
+    .brand-name{font-size:1.4rem;font-weight:700;color:var(--ink);font-family:'Fraunces',Georgia,serif;}
+    .brand-tag{font-size:0.68rem;color:var(--ink-soft);}
+    .meta{text-align:right;font-size:0.65rem;color:var(--ink-soft);line-height:1.35;}
+    .badge{display:inline-block;background:var(--sage);color:#fff;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:0.6mm 2mm;border-radius:1mm;}
+
+    .hero{background:var(--cream);border-radius:2.5mm;padding:3.5mm 4mm;}
+    .hero h1{font-size:1.45rem;line-height:1.12;margin:1.2mm 0 1.5mm;color:var(--terracotta-dark);}
+    .hero p{font-size:0.85rem;color:var(--ink-soft);max-width:95%;}
+
+    .stages{display:flex;align-items:center;gap:1mm;margin-top:2.5mm;flex-wrap:wrap;}
+    .stage{background:var(--paper);border:1px solid var(--line);border-radius:1.5mm;padding:1mm 2mm;font-size:0.65rem;font-weight:600;color:var(--ink);}
+    .stage small{display:block;font-weight:400;color:var(--ink-soft);font-size:0.56rem;}
+    .arrow{color:var(--terracotta);font-weight:700;font-size:0.7rem;}
+
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+    .card{border:1px solid var(--line);border-radius:2.5mm;padding:3mm;break-inside:avoid;}
+    .card h2{font-size:0.88rem;margin-bottom:1.8mm;color:var(--terracotta-dark);}
+    .card ul{list-style:none;font-size:0.72rem;color:var(--ink-soft);}
+    .card li{padding-left:2.5mm;position:relative;margin-bottom:0.8mm;}
+    .card li::before{content:"•";position:absolute;left:0;color:var(--terracotta);font-weight:700;}
+    .card li strong{color:var(--ink);}
+
+    .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:1.8mm 3mm;margin-top:1.5mm;}
+    .feature{display:flex;align-items:flex-start;gap:1.5mm;font-size:0.7rem;}
+    .feature .icon{width:4mm;height:4mm;min-width:4mm;background:var(--terracotta);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:0.5rem;font-weight:700;}
+    .feature div{line-height:1.3;}
+    .feature strong{color:var(--ink);display:block;font-size:0.72rem;}
+
+    .docs{display:grid;grid-template-columns:repeat(4,1fr);gap:2.2mm;margin-top:1.5mm;}
+    .doc{border:1px solid var(--line);border-radius:2mm;padding:2.2mm;text-align:center;}
+    .doc h3{font-size:0.72rem;color:var(--terracotta-dark);line-height:1.2;}
+    .doc p{font-size:0.62rem;color:var(--ink-soft);margin-top:0.8mm;line-height:1.3;}
+    .doc.pdf{border-color:var(--sage);background:#F4F7F4;}
+
+    .proof{background:var(--ink);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;}
+    .proof div{font-size:0.66rem;opacity:0.85;line-height:1.35;}
+    .proof strong{display:block;font-family:'Fraunces',Georgia,serif;font-size:1.05rem;opacity:1;margin-bottom:0.5mm;}
+
+    .cta{background:var(--terracotta);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:flex;align-items:center;justify-content:space-between;gap:4mm;}
+    .cta h2{font-size:1rem;color:#fff;}
+    .cta p{font-size:0.7rem;opacity:0.92;}
+    .cta a{display:inline-block;background:#fff;color:var(--terracotta);font-weight:700;text-decoration:none;padding:1.8mm 3.5mm;border-radius:1.5mm;font-size:0.75rem;white-space:nowrap;}
+
+    footer{font-size:0.62rem;color:var(--ink-soft);text-align:center;margin-top:auto;padding-top:1.5mm;border-top:1px solid var(--line);}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-name">Groundwork</div>
+          <div class="brand-tag">A Flowgrid OS module for community-led development</div>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">Live</span><br>
+        Enabled per client workspace<br>
+        flowgridos.co.uk
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">For consultants running community-led development projects</div>
+      <h1>Keep the project spine current. The monthly client report writes itself.</h1>
+      <p>Affordable housing schemes for CLTs and cohousing groups run six to twelve years across five sector-standard stages, and today they live in spreadsheets and Word. Groundwork gives every project a stage-gated spine — then drafts the client documents from it, with every figure traceable to the record it came from.</p>
+      <div class="stages">
+        <div class="stage">Group<small>RIBA 0–1</small></div><span class="arrow">→</span>
+        <div class="stage">Site<small>RIBA 2–4</small></div><span class="arrow">→</span>
+        <div class="stage">Plan<small>RIBA 2–4</small></div><span class="arrow">→</span>
+        <div class="stage">Build<small>RIBA 5</small></div><span class="arrow">→</span>
+        <div class="stage">Live<small>RIBA 6–7</small></div>
+        <span style="font-size:0.62rem;color:var(--ink-soft);margin-left:2mm;">Gates carry criteria and a named sign-off.</span>
+      </div>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>The registers behind the reports</h2>
+        <ul>
+          <li><strong>Funding.</strong> Sources, amounts sought and secured, drawdowns, and a programme catalogue that flags when a funder's terms were last verified.</li>
+          <li><strong>Budget.</strong> Line-by-line budget, forecast and actual, with variance calculated rather than typed.</li>
+          <li><strong>Risk.</strong> Likelihood, impact, owner, mitigation and review date.</li>
+          <li><strong>Planning conditions.</strong> Pre-commencement flags, discharge status and dates.</li>
+          <li><strong>Stakeholders &amp; tasks.</strong> Who holds what, milestones, and statutory-tagged obligations.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Why the drafts are trustworthy</h2>
+        <ul>
+          <li><strong>Figures come from rows, never the model.</strong> Budget and funding tables render from your records; the AI writes the narrative around them.</li>
+          <li><strong>Gaps are marked, not filled.</strong> Missing facts appear as <em>[TO CONFIRM]</em> rather than a plausible invention.</li>
+          <li><strong>Claims from your documents cite the page</strong> they came from, resolvable back to the source.</li>
+          <li><strong>Draft-first, always.</strong> Every document lands watermarked DRAFT with a human review step. Nothing sends itself.</li>
+          <li><strong>Stale programme terms warn on page one</strong> of any bid built on them.</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>What it drafts</h2>
+      <div class="docs">
+        <div class="doc">
+          <h3>Monthly client report</h3>
+          <p>Ten sections: position, programme, cost, risk, planning, contract, funding, statutory, decisions, next period.</p>
+        </div>
+        <div class="doc">
+          <h3>Feasibility study</h3>
+          <p>Site, need, planning context, design capacity, viability and delivery route — grounded in your vault.</p>
+        </div>
+        <div class="doc">
+          <h3>Funding bid</h3>
+          <p>Written to the target programme's own criteria, with the full funding stack and match.</p>
+        </div>
+        <div class="doc pdf">
+          <h3>Project health card</h3>
+          <p>One-page PDF in your client's brand colour. No AI involved — pure calculation.</p>
+        </div>
+      </div>
+      <div class="feature-list" style="margin-top:2.5mm;">
+        <div class="feature"><div class="icon">✓</div><div><strong>Editable Word output</strong>Native DOCX with references and a data-sources appendix.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Version history per document</strong>Append-only; nothing is overwritten.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Project-scoped chat</strong>Ask questions of one project's documents and records.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Every draft costed</strong>Model spend recorded per document, visible on your usage page.</div></div>
+      </div>
+    </section>
+
+    <section class="proof">
+      <div><strong>10 / 10</strong>figures in the first live client report traced back to a source record — no invented numbers</div>
+      <div><strong>~1.5p</strong>of model spend per drafted report, metered per call</div>
+      <div><strong>1–2 sec</strong>to render a branded project health card</div>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>Who it's for</h2>
+        <ul>
+          <li><strong>Development consultants and enablers</strong> running 3–15 concurrent community-led schemes — CLTs, cohousing groups, community buildings.</li>
+          <li><strong>Community Land Trusts and housing co-ops</strong> managing their own scheme and reporting to a board.</li>
+          <li><strong>Consultancies serving several clients:</strong> one branded workspace per client, each one sealed off from the others at the database, with your practice's name on it rather than ours.</li>
+        </ul>
+        <p style="font-size:0.68rem;color:var(--ink-soft);margin-top:1.5mm;"><strong style="color:var(--ink);">Pricing.</strong> Modules switch on per client workspace — there is no separate module licence. Core is £29/seat/month, Pro £49, and Managed £799/month for consultancies who want the workspaces run for them.</p>
+      </section>
+      <section class="card">
+        <h2>What it deliberately does not do</h2>
+        <ul>
+          <li><strong>No Gantt chart.</strong> Milestones and dates, not a scheduling tool competing with the one you already have.</li>
+          <li><strong>No development appraisal engine.</strong> A flat budget table with variance — appraisals stay in your spreadsheet, which is better at them.</li>
+          <li><strong>No community-facing portal.</strong> This is consultant-facing; what the client sees is the document you send them.</li>
+          <li><strong>No automatic submissions.</strong> Nothing is filed, sent or lodged on your behalf.</li>
+        </ul>
+        <p style="font-size:0.68rem;color:var(--ink-soft);margin-top:1.5mm;">Narrow on purpose. The module earns its place on one loop — spine current, report drafts itself — rather than by replacing tools that already work.</p>
+      </section>
+    </div>
+
+    <section class="cta">
+      <div>
+        <h2>Bring one real project. See the report it writes.</h2>
+        <p>Enter a live project with us in under 90 minutes, and take away the first client report it drafts.</p>
+      </div>
+      <a href="mailto:hello@flowgridos.co.uk?subject=Groundwork module demo">Book a working session</a>
+    </section>
+
+    <footer>
+      Groundwork is a per-client module of Flowgrid OS — the branded AI workspace, knowledge vault and chat come as standard. Ask about <strong>Grantwork</strong> (grant funding) and <strong>Tenderhouse</strong> (bids and tenders). · flowgridos.co.uk
+    </footer>
+  </div>
+</body>
+</html>

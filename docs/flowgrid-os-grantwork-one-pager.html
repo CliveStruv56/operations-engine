@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowgrid OS — Grantwork Module One-Pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --terracotta:#B14E2E;
+      --terracotta-dark:#8A3A22;
+      --cream:#F6F2ED;
+      --paper:#FFFFFF;
+      --ink:#2D2A26;
+      --ink-soft:#5B5752;
+      --line:#E3DDD4;
+      --sage:#6B8E6B;
+      --amber:#D4A017;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:9.6pt;}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+      color:var(--ink);
+      background:#EAE5DE;
+      line-height:1.4;
+      -webkit-font-smoothing:antialiased;
+    }
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto;
+      background:var(--paper);
+      padding:10mm 12mm;
+      display:flex;
+      flex-direction:column;
+      gap:2.4mm;
+    }
+    @media print{
+      html{font-size:9.2pt;}
+      body{background:none;}
+      .page{width:100%;min-height:100vh;margin:0;padding:8mm 10mm;}
+    }
+    @page{size:A4;margin:0;}
+
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;}
+    .eyebrow{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--terracotta);}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-bottom:1.5px solid var(--terracotta);padding-bottom:2.5mm;}
+    .brand{display:flex;align-items:center;gap:2.5mm;}
+    .brand-mark{width:8mm;height:8mm;background:var(--terracotta);border-radius:1.2mm;}
+    .brand-name{font-size:1.4rem;font-weight:700;color:var(--ink);font-family:'Fraunces',Georgia,serif;}
+    .brand-tag{font-size:0.68rem;color:var(--ink-soft);}
+    .meta{text-align:right;font-size:0.65rem;color:var(--ink-soft);line-height:1.35;}
+    .badge{display:inline-block;background:var(--sage);color:#fff;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:0.6mm 2mm;border-radius:1mm;}
+
+    .hero{background:var(--cream);border-radius:2.5mm;padding:3.5mm 4mm;}
+    .hero h1{font-size:1.45rem;line-height:1.12;margin:1.2mm 0 1.5mm;color:var(--terracotta-dark);}
+    .hero p{font-size:0.85rem;color:var(--ink-soft);max-width:95%;}
+
+    .stages{display:flex;align-items:center;gap:1mm;margin-top:2.5mm;flex-wrap:wrap;}
+    .stage{background:var(--paper);border:1px solid var(--line);border-radius:1.5mm;padding:1mm 2mm;font-size:0.65rem;font-weight:600;color:var(--ink);}
+    .arrow{color:var(--terracotta);font-weight:700;font-size:0.7rem;}
+
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+    .card{border:1px solid var(--line);border-radius:2.5mm;padding:3mm;break-inside:avoid;}
+    .card h2{font-size:0.88rem;margin-bottom:1.8mm;color:var(--terracotta-dark);}
+    .card ul{list-style:none;font-size:0.72rem;color:var(--ink-soft);}
+    .card li{padding-left:2.5mm;position:relative;margin-bottom:0.8mm;}
+    .card li::before{content:"•";position:absolute;left:0;color:var(--terracotta);font-weight:700;}
+    .card li strong{color:var(--ink);}
+
+    .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:1.8mm 3mm;margin-top:1.5mm;}
+    .feature{display:flex;align-items:flex-start;gap:1.5mm;font-size:0.7rem;}
+    .feature .icon{width:4mm;height:4mm;min-width:4mm;background:var(--terracotta);border-radius:50%;display:grid;place-items:center;color:#fff;font-size:0.5rem;font-weight:700;}
+    .feature div{line-height:1.3;}
+    .feature strong{color:var(--ink);display:block;font-size:0.72rem;}
+
+    .docs{display:grid;grid-template-columns:repeat(5,1fr);gap:2mm;margin-top:1.5mm;}
+    .doc{border:1px solid var(--line);border-radius:2mm;padding:2.2mm;text-align:center;}
+    .doc h3{font-size:0.7rem;color:var(--terracotta-dark);line-height:1.2;}
+    .doc p{font-size:0.6rem;color:var(--ink-soft);margin-top:0.8mm;line-height:1.3;}
+    .doc.pdf{border-color:var(--sage);background:#F4F7F4;}
+
+    .callout{border-left:2.5mm solid var(--amber);background:#FDF8EC;border-radius:2mm;padding:2.5mm 3mm;font-size:0.72rem;color:var(--ink-soft);}
+    .callout strong{color:var(--ink);}
+
+    .proof{background:var(--ink);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:grid;grid-template-columns:repeat(3,1fr);gap:3mm;}
+    .proof div{font-size:0.66rem;opacity:0.85;line-height:1.35;}
+    .proof strong{display:block;font-family:'Fraunces',Georgia,serif;font-size:1.05rem;opacity:1;margin-bottom:0.5mm;}
+
+    .cta{background:var(--terracotta);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:flex;align-items:center;justify-content:space-between;gap:4mm;}
+    .cta h2{font-size:1rem;color:#fff;}
+    .cta p{font-size:0.7rem;opacity:0.92;}
+    .cta a{display:inline-block;background:#fff;color:var(--terracotta);font-weight:700;text-decoration:none;padding:1.8mm 3.5mm;border-radius:1.5mm;font-size:0.75rem;white-space:nowrap;}
+
+    footer{font-size:0.62rem;color:var(--ink-soft);text-align:center;margin-top:auto;padding-top:1.5mm;border-top:1px solid var(--line);}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-name">Grantwork</div>
+          <div class="brand-tag">A Flowgrid OS module for grant funding &amp; impact reporting</div>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">Live</span><br>
+        Enabled per client workspace<br>
+        flowgridos.co.uk
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">For charities, CICs and the consultants who fundraise for them</div>
+      <h1>Keep the application current. The funder's monitoring return assembles itself.</h1>
+      <p>Winning the grant is the easy half. What follows is years of reporting against outcomes on someone else's schedule — today held in a spreadsheet, a drive of past bids, and one person's memory of what each funder wants. Grantwork holds the portfolio and the obligations, then drafts the returns from the outcomes you actually recorded.</p>
+      <div class="stages">
+        <div class="stage">Case for support</div><span class="arrow">→</span>
+        <div class="stage">Prospect</div><span class="arrow">→</span>
+        <div class="stage">Apply</div><span class="arrow">→</span>
+        <div class="stage">Decision</div><span class="arrow">→</span>
+        <div class="stage">Deliver</div><span class="arrow">→</span>
+        <div class="stage">Monitor</div><span class="arrow">→</span>
+        <div class="stage">Evaluate</div>
+      </div>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>What it keeps hold of</h2>
+        <ul>
+          <li><strong>Funders and a seeded UK catalogue</strong> — lottery funds, trusts, community foundations — each row carrying the date its criteria were last verified.</li>
+          <li><strong>Applications</strong> through the pipeline, with amounts requested and awarded, restricted or unrestricted.</li>
+          <li><strong>Award conditions</strong> — including which must be discharged before you can draw down.</li>
+          <li><strong>Impact measures</strong> with baseline, target and unit, and the outcomes recorded against each reporting period.</li>
+          <li><strong>The obligation calendar</strong> — every reporting period, its due date, and what is overdue.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>Numbers a funder can trust</h2>
+        <ul>
+          <li><strong>Every figure comes from a recorded outcome.</strong> The impact table renders from your rows; the AI writes only the narrative around it.</li>
+          <li><strong>An unmeasured outcome says "not recorded"</strong> — never a zero, and never a plausible estimate. Absence must not read as failure, or as success.</li>
+          <li><strong>Over-delivery is shown as achieved</strong>, uncapped, rather than quietly rounded to target.</li>
+          <li><strong>Unverified funder criteria warn on page one</strong> of any bid built on them.</li>
+          <li><strong>Draft-first with a DRAFT watermark.</strong> Nothing reaches a funder without a human sending it.</li>
+        </ul>
+      </section>
+    </div>
+
+    <section class="card">
+      <h2>What it drafts</h2>
+      <div class="docs">
+        <div class="doc">
+          <h3>Case for support</h3>
+          <p>The anchor document, grounded in your own need evidence and beneficiary stories.</p>
+        </div>
+        <div class="doc">
+          <h3>Funding application</h3>
+          <p>Written to the funder's own criteria as recorded in the catalogue.</p>
+        </div>
+        <div class="doc">
+          <h3>Monitoring return</h3>
+          <p>Nine sections built from the period's recorded outcomes and conditions.</p>
+        </div>
+        <div class="doc">
+          <h3>Impact evaluation</h3>
+          <p>End of grant, aggregating every reporting period.</p>
+        </div>
+        <div class="doc pdf">
+          <h3>Impact card</h3>
+          <p>One-page funder-facing PDF in your brand colour. No AI — pure calculation.</p>
+        </div>
+      </div>
+      <div class="feature-list" style="margin-top:2.5mm;">
+        <div class="feature"><div class="icon">✓</div><div><strong>Success rate by funder</strong>And pipeline value weighted by stage.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Funder concentration risk</strong>What share of income rests on your largest funder.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Restricted vs unrestricted split</strong>Calculated, not tracked by hand.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Works alongside Groundwork</strong>A CLT building homes is also a grant-funded charity.</div></div>
+      </div>
+    </section>
+
+    <section class="callout">
+      <strong>Why this matters commercially.</strong> The sector spends on the order of <strong>£900m a year applying for grants</strong>, and charities in the £100k–£1m band spend around <strong>35% of their grant income</strong> on the applications themselves. Every hour returned to delivery is the product.
+    </section>
+
+    <section class="proof">
+      <div><strong>9 / 9</strong>sections of a live monitoring return drafted from recorded data, with the impact table built from real figures</div>
+      <div><strong>0</strong>invented citations in a live case for support — every source claim resolved to its page</div>
+      <div><strong>0.7 sec</strong>to render a funder-facing impact card, with no model call at all</div>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>Who it's for</h2>
+        <ul>
+          <li><strong>Charities, CICs and community organisations</strong> with roughly £100k–£3m income, running a rolling portfolio of applications and the reporting that follows.</li>
+          <li><strong>Fundraising consultancies and freelance bid writers</strong> — one branded workspace per client, each sealed off from the others at the database, carrying your name rather than ours.</li>
+          <li><strong>Infrastructure bodies</strong> — CVSs, community foundations and networks supporting many small organisations at once.</li>
+        </ul>
+        <p style="font-size:0.68rem;color:var(--ink-soft);margin-top:1.5mm;"><strong style="color:var(--ink);">Pricing.</strong> Modules switch on per client workspace — no separate module licence. Core is £29/seat/month direct; Managed at £799/month suits consultancies running workspaces on behalf of several charities.</p>
+      </section>
+      <section class="card">
+        <h2>What it deliberately does not do</h2>
+        <ul>
+          <li><strong>No donor fundraising.</strong> Individual giving, direct debits and Gift Aid stay in your CRM — this is the institutional grant side only.</li>
+          <li><strong>No restricted-fund accounting.</strong> It records what was awarded and reported, not your ledger.</li>
+          <li><strong>No funder portal or auto-submission.</strong> Returns are drafted for a human to send, never filed for you.</li>
+          <li><strong>No impact framework beyond measures against targets.</strong> Deliberately simple, because the figures have to be defensible to a funder.</li>
+        </ul>
+        <p style="font-size:0.68rem;color:var(--ink-soft);margin-top:1.5mm;">Narrow on purpose. One loop — application current, return assembles itself — done properly, rather than a second CRM.</p>
+      </section>
+    </div>
+
+    <section class="cta">
+      <div>
+        <h2>Bring one live grant. See the return it writes.</h2>
+        <p>We will set up one real application with its outcomes, and draft the next monitoring return with you.</p>
+      </div>
+      <a href="mailto:hello@flowgridos.co.uk?subject=Grantwork module demo">Book a working session</a>
+    </section>
+
+    <footer>
+      Grantwork is a per-client module of Flowgrid OS — the branded AI workspace, knowledge vault and chat come as standard. Ask about <strong>Groundwork</strong> (development projects) and <strong>Tenderhouse</strong> (bids and tenders). · Sector figures verified August 2026 · flowgridos.co.uk
+    </footer>
+  </div>
+</body>
+</html>

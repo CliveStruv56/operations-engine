@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Flowgrid OS — Tenderhouse Module One-Pager</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,600;700&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --terracotta:#B14E2E;
+      --terracotta-dark:#8A3A22;
+      --cream:#F6F2ED;
+      --paper:#FFFFFF;
+      --ink:#2D2A26;
+      --ink-soft:#5B5752;
+      --line:#E3DDD4;
+      --sage:#6B8E6B;
+      --amber:#D4A017;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    html{font-size:9.6pt;}
+    body{
+      font-family:'Plus Jakarta Sans',system-ui,-apple-system,sans-serif;
+      color:var(--ink);
+      background:#EAE5DE;
+      line-height:1.4;
+      -webkit-font-smoothing:antialiased;
+    }
+    .page{
+      width:210mm;
+      min-height:297mm;
+      margin:0 auto;
+      background:var(--paper);
+      padding:10mm 12mm;
+      display:flex;
+      flex-direction:column;
+      gap:2.4mm;
+    }
+    @media print{
+      html{font-size:9.2pt;}
+      body{background:none;}
+      .page{width:100%;min-height:100vh;margin:0;padding:8mm 10mm;}
+    }
+    @page{size:A4;margin:0;}
+
+    h1,h2,h3{font-family:'Fraunces',Georgia,serif;letter-spacing:-0.01em;}
+    .eyebrow{font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.12em;color:var(--terracotta);}
+
+    header{display:flex;align-items:center;justify-content:space-between;gap:4mm;border-bottom:1.5px solid var(--terracotta);padding-bottom:2.5mm;}
+    .brand{display:flex;align-items:center;gap:2.5mm;}
+    .brand-mark{width:8mm;height:8mm;background:var(--terracotta);border-radius:1.2mm;}
+    .brand-name{font-size:1.4rem;font-weight:700;color:var(--ink);font-family:'Fraunces',Georgia,serif;}
+    .brand-tag{font-size:0.68rem;color:var(--ink-soft);}
+    .meta{text-align:right;font-size:0.65rem;color:var(--ink-soft);line-height:1.35;}
+    .badge{display:inline-block;background:var(--amber);color:#3A2A05;font-size:0.6rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;padding:0.6mm 2mm;border-radius:1mm;}
+
+    .hero{background:var(--cream);border-radius:2.5mm;padding:3.5mm 4mm;}
+    .hero h1{font-size:1.45rem;line-height:1.12;margin:1.2mm 0 1.5mm;color:var(--terracotta-dark);}
+    .hero p{font-size:0.85rem;color:var(--ink-soft);max-width:95%;}
+
+    .stages{display:flex;align-items:center;gap:1mm;margin-top:2.5mm;flex-wrap:wrap;}
+    .stage{background:var(--paper);border:1px solid var(--line);border-radius:1.5mm;padding:1mm 2mm;font-size:0.65rem;font-weight:600;color:var(--ink);}
+    .arrow{color:var(--terracotta);font-weight:700;font-size:0.7rem;}
+
+    .status{border:1.5px solid var(--amber);border-radius:2.5mm;padding:3mm 4mm;background:#FDF8EC;}
+    .status h2{font-size:0.88rem;color:#7A5C00;margin-bottom:1.5mm;}
+    .status-grid{display:grid;grid-template-columns:1fr 1fr;gap:3mm;font-size:0.7rem;color:var(--ink-soft);}
+    .status-grid strong{color:var(--ink);display:block;margin-bottom:0.6mm;}
+
+    .split{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
+    .card{border:1px solid var(--line);border-radius:2.5mm;padding:3mm;break-inside:avoid;}
+    .card h2{font-size:0.88rem;margin-bottom:1.8mm;color:var(--terracotta-dark);}
+    .card ul{list-style:none;font-size:0.72rem;color:var(--ink-soft);}
+    .card li{padding-left:2.5mm;position:relative;margin-bottom:0.8mm;}
+    .card li::before{content:"•";position:absolute;left:0;color:var(--terracotta);font-weight:700;}
+    .card li strong{color:var(--ink);}
+
+    .numbers{display:grid;grid-template-columns:repeat(4,1fr);gap:2.2mm;margin-top:1mm;}
+    .num{border:1px solid var(--line);border-radius:2mm;padding:2.2mm;text-align:center;}
+    .num strong{display:block;font-family:'Fraunces',Georgia,serif;font-size:1rem;color:var(--terracotta-dark);}
+    .num span{font-size:0.62rem;color:var(--ink-soft);line-height:1.25;display:block;margin-top:0.5mm;}
+
+    .cta{background:var(--terracotta);color:#fff;border-radius:2.5mm;padding:3mm 4mm;display:flex;align-items:center;justify-content:space-between;gap:4mm;}
+    .cta h2{font-size:1rem;color:#fff;}
+    .cta p{font-size:0.7rem;opacity:0.92;}
+    .cta a{display:inline-block;background:#fff;color:var(--terracotta);font-weight:700;text-decoration:none;padding:1.8mm 3.5mm;border-radius:1.5mm;font-size:0.75rem;white-space:nowrap;}
+
+    footer{font-size:0.62rem;color:var(--ink-soft);text-align:center;margin-top:auto;padding-top:1.5mm;border-top:1px solid var(--line);}
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">
+        <div class="brand-mark"></div>
+        <div>
+          <div class="brand-name">Tenderhouse</div>
+          <div class="brand-tag">A planned Flowgrid OS module for bids &amp; tenders</div>
+        </div>
+      </div>
+      <div class="meta">
+        <span class="badge">In development</span><br>
+        Seeking design partners<br>
+        flowgridos.co.uk
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="eyebrow">For UK SMBs bidding into the public sector — and the bid writers who serve them</div>
+      <h1>Keep the answer library current. The next tender's first draft assembles itself.</h1>
+      <p>Every tender answers a buyer's question set from the same underlying material: policies, accreditations, case studies, CVs, method statements, past winning answers. Today that material lives in a folder, and the answer library is whoever has been there longest. Tenderhouse makes it a system — so the question set arrives and the draft is already half written, with every reused claim traceable to where it came from.</p>
+      <div class="stages">
+        <div class="stage">Find</div><span class="arrow">→</span>
+        <div class="stage">Bid / no-bid</div><span class="arrow">→</span>
+        <div class="stage">SQ / PQQ</div><span class="arrow">→</span>
+        <div class="stage">ITT</div><span class="arrow">→</span>
+        <div class="stage">Clarifications</div><span class="arrow">→</span>
+        <div class="stage">Submit</div><span class="arrow">→</span>
+        <div class="stage">Award / debrief</div>
+      </div>
+    </section>
+
+    <section class="status">
+      <h2>Where this actually stands — read this first</h2>
+      <div class="status-grid">
+        <div>
+          <strong>Available today</strong>
+          The Flowgrid OS platform this module sits on is live: the branded workspace, the cited knowledge vault your answer library would live in, and two shipped sibling modules — Groundwork and Grantwork — that already draft cited client documents from stored records.
+        </div>
+        <div>
+          <strong>Not yet built</strong>
+          Tenderhouse itself is specified and costed, not written. Nothing on this page is a working screenshot or a delivery promise. We are looking for a small number of design partners to shape it before the first line of code — and to tell us where this description is wrong.
+        </div>
+      </div>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>What we intend to build</h2>
+        <ul>
+          <li><strong>The question set as the unit of work.</strong> Each question is tracked in its own right — required, drafting, review, final, submitted — not buried in one long document.</li>
+          <li><strong>An answer library that earns its keep.</strong> Past winning answers, policies, accreditations and case studies, retrieved by relevance rather than by memory.</li>
+          <li><strong>Answer-library coverage.</strong> The share of a new question set that existing material can already serve — turning "should we bid?" from a gut call into a computed one.</li>
+          <li><strong>A social-value method statement</strong> grounded in your own evidence, not generic commitments.</li>
+          <li><strong>A bid/no-bid scorecard</strong> and win rates by framework, buyer and value band.</li>
+        </ul>
+      </section>
+      <section class="card">
+        <h2>The correctness problem we care most about</h2>
+        <ul>
+          <li><strong>The danger is not invention — it is expiry.</strong> The realistic failure mode in bidding is a statement that was true in 2024 asserted as current in 2026: a lapsed accreditation, a departed key person, an ageing case study.</li>
+          <li><strong>So every reused claim carries a citation to its source bid</strong>, and a reviewer can check whether it is <em>still true</em>. We treat that as a correctness requirement, not a nicety.</li>
+          <li><strong>No auto-submit, ever.</strong> A missed or wrong submission is unrecoverable and contractually consequential. Draft-first is absolute.</li>
+          <li><strong>Missing facts appear as [TO CONFIRM]</strong> rather than a confident guess.</li>
+        </ul>
+      </section>
+    </div>
+
+    <section>
+      <div class="eyebrow" style="margin-bottom:1.2mm;">Why we think this is worth building</div>
+      <div class="numbers">
+        <div class="num"><strong>£1.5k–£8k</strong><span>to produce a single SME tender response</span></div>
+        <div class="num"><strong>4–30</strong><span>bids a year for a typical SME bidder</span></div>
+        <div class="num"><strong>10–30%</strong><span>of the score now carried by social value in most tenders</span></div>
+        <div class="num"><strong>20–35%</strong><span>typical unassisted win rate</span></div>
+      </div>
+      <p style="font-size:0.66rem;color:var(--ink-soft);margin-top:1.5mm;">Existing bid software is priced for enterprises and sold per seat to a single organisation. A bid consultancy needs the opposite shape: one branded workspace per client, each with its own answer library, none of them able to see another's. That is what Flowgrid OS already does for every other module — and it is the reason we think this belongs here rather than as another point tool.</p>
+    </section>
+
+    <div class="split">
+      <section class="card">
+        <h2>Out of scope for a first phase</h2>
+        <ul>
+          <li><strong>No portal scraping or tender discovery.</strong> Find a Tender and Contracts Finder are not ours to automate, and you already have alerts.</li>
+          <li><strong>No direct submission.</strong> You submit through the buyer's portal, as you do now.</li>
+          <li><strong>No automatic parsing of ITT documents</strong> into question sets in phase one — paste and manual entry first, parsing once we have seen enough real question sets to do it properly.</li>
+          <li><strong>No pricing model, e-signature or post-award contract management.</strong></li>
+        </ul>
+        <p style="font-size:0.68rem;color:var(--ink-soft);margin-top:1.5mm;">We would rather ship a narrow thing that works than a broad thing that mostly does.</p>
+      </section>
+      <section class="card">
+        <h2>What being a design partner involves</h2>
+        <ul>
+          <li><strong>An hour of your time</strong> walking us through two real question sets and how you answer them today.</li>
+          <li><strong>Telling us where this page is wrong.</strong> The description above is a hypothesis built from desk research, not from watching you work.</li>
+          <li><strong>First access</strong> when it exists, shaped around your material, and a say in what phase one includes.</li>
+          <li><strong>No commitment to buy</strong>, and no charge for the sessions.</li>
+        </ul>
+        <p style="font-size:0.68rem;color:var(--ink-soft);margin-top:1.5mm;">You can also start on the platform today — the workspace and vault are live, and your answer library is useful there before Tenderhouse exists.</p>
+      </section>
+    </div>
+
+    <section class="cta">
+      <div>
+        <h2>Help us build the right thing.</h2>
+        <p>Design partners get the module shaped around their real question sets — and an honest answer about when it will exist.</p>
+      </div>
+      <a href="mailto:hello@flowgridos.co.uk?subject=Tenderhouse design partner">Become a design partner</a>
+    </section>
+
+    <footer>
+      <strong>Status: specified, not built.</strong> Tenderhouse is a planned module of Flowgrid OS. The shipped modules today are <strong>Groundwork</strong> (development projects) and <strong>Grantwork</strong> (grant funding). · Market figures from desk research, August 2026 · flowgridos.co.uk
+    </footer>
+  </div>
+</body>
+</html>
