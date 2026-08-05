@@ -377,12 +377,42 @@ and every divergence is recorded here.
     and prices it at **$0.76/$2.42** in both `app/litellm.py` and
     `worker/drafting/llm.py`.
 
-    **Why (speed):** the same model, a faster host on average. One `reasoner`
-    section was 17.5s of a 35.1s draft while ten `drafter` calls averaged
-    1.6s. Across six identical section-shaped calls per provider, CoreWeave
+    **`allowed_openai_params: ["reasoning_effort"]` is mandatory on this
+    route, and omitting it fails silently.** LiteLLM's own parameter
+    validation rejects `reasoning_effort` for `openrouter/z-ai/*` before the
+    request leaves the proxy — OpenRouter itself accepts it — and the
+    resulting 400 was swallowed whole by the spec §4 `reasoner: [longdoc]`
+    fallback. For three drafts every financial section was written by
+    **deepseek-v4-flash** and metered at `reasoner` rates, with `succeeded`
+    job rows and plausible prose. Nothing looked wrong. **Never "fix" the
+    error with `drop_params: true`:** that discards the effort bound instead,
+    and an unbounded GLM-5.2 spends its whole budget thinking and returns an
+    empty section (§6h).
+
+    Two general lessons, both cheap to re-learn the hard way:
+
+    - **A fallback between models of different capability degrades output
+      silently.** It converts a hard 400 into a wrong-model success. This is
+      why `worker/drafting/llm.py` logs `served_by` — without it a slow or
+      wrong call is unattributable.
+    - **Verify a provider change end-to-end, not just at the config.** The
+      deployed `config.yaml` was correct, the alias resolved, and drafts
+      succeeded — while every reasoner call was going somewhere else entirely.
+
+    **Why (speed):** the same model, a faster host. Measured in production
+    once the route actually worked: the `reasoner` section fell from **17.5s
+    to 4.07s** (780 output tokens, `served_by=CoreWeave`), taking a
+    `funding_application` draft from **35.1s to 25.9s**. That section was 50%
+    of the draft's wall clock and is now 16%, so it is no longer the dominant
+    term.
+
+    Offline, across six identical section-shaped calls per provider, CoreWeave
     averaged **9.9s (range 6.2–17.0)** against DeepInfra's **31.8s (range
-    12.6–55.4)** — roughly 3x on the mean, with equal or more prose and no
-    quality trade, since the weights are identical.
+    12.6–55.4)**. **Read the range, not the mean.** An initial four-run sample
+    put CoreWeave at 6.2–8.3s and was written up here as "~4x faster and far
+    steadier"; a second sample the same hour returned 13.4–17.0s. Both
+    providers vary 3–4x run to run, so expect a distribution shift rather than
+    a reliable per-draft saving, and do not re-tune this alias off one sample.
 
     **Read that range, not the mean.** An initial four-run sample put
     CoreWeave at 6.2–8.3s and was written up here as "~4x faster and far

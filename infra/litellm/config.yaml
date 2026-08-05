@@ -53,6 +53,15 @@ model_list:
     litellm_params:
       model: openrouter/z-ai/glm-5.2
       api_key: os.environ/OPENROUTER_API_KEY
+      # REQUIRED, and its absence fails silently. LiteLLM's own param
+      # validation rejects `reasoning_effort` for openrouter/z-ai/* before the
+      # request leaves the proxy — OpenRouter itself accepts it fine — and the
+      # resulting 400 was swallowed by the `reasoner: [longdoc]` fallback, so
+      # every financial section was quietly written by deepseek-v4-flash and
+      # metered at reasoner rates. Never "fix" this with `drop_params: true`:
+      # that drops the effort bound instead, and an unbounded GLM-5.2 spends
+      # its whole budget thinking and returns an empty section (§6h).
+      allowed_openai_params: ["reasoning_effort"]
       extra_body:
         provider:
           order: ["CoreWeave", "DeepInfra"]
