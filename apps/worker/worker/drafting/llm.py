@@ -186,9 +186,16 @@ async def chat(
         )
     )
     logger.info(
-        "draft call=%d alias=%s elapsed_ms=%d tokens_in=%d tokens_out=%d finish=%s",
+        # `served_by` matters as much as the timing on any alias with a
+        # provider order: without it a slow call is unattributable — you
+        # cannot tell a degraded first choice from a silent fall-through to
+        # the second, and those need opposite fixes. OpenRouter returns
+        # `provider` at the top level; `model` is the fallback when a route
+        # does not carry one.
+        "draft call=%d alias=%s served_by=%s elapsed_ms=%d tokens_in=%d tokens_out=%d finish=%s",
         len(ledger.calls),
         alias,
+        payload.get("provider") or payload.get("model") or "?",
         elapsed * 1000,
         usage.get("prompt_tokens", 0),
         usage.get("completion_tokens", 0),

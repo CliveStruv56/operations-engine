@@ -377,12 +377,20 @@ and every divergence is recorded here.
     and prices it at **$0.76/$2.42** in both `app/litellm.py` and
     `worker/drafting/llm.py`.
 
-    **Why (speed):** the same model, a faster host. One `reasoner` section was
-    17.5s of a 35.1s draft while ten `drafter` calls averaged 1.6s. Measured
-    over four identical section-shaped calls each: DeepInfra 15.2/30.4/34.8/
-    42.5s at 30–74 tok/s, CoreWeave 6.2/7.1/7.5/8.3s at 159–196 tok/s, with
-    equal or more prose. ~4x faster and far steadier, with no quality trade,
-    because the weights are identical.
+    **Why (speed):** the same model, a faster host on average. One `reasoner`
+    section was 17.5s of a 35.1s draft while ten `drafter` calls averaged
+    1.6s. Across six identical section-shaped calls per provider, CoreWeave
+    averaged **9.9s (range 6.2–17.0)** against DeepInfra's **31.8s (range
+    12.6–55.4)** — roughly 3x on the mean, with equal or more prose and no
+    quality trade, since the weights are identical.
+
+    **Read that range, not the mean.** An initial four-run sample put
+    CoreWeave at 6.2–8.3s and was written up here as "~4x faster and far
+    steadier"; a second sample the same hour returned 13.4–17.0s. **Both
+    providers vary by 3–4x run to run**, and the variance swamps the
+    difference on any single call. Expect a *distribution* shift, not a
+    reliable per-draft saving, and do not re-tune this alias off one sample
+    — that is the mistake this paragraph exists to record.
 
     **Why (price):** spec §4's $0.93/$3.00 is ~24% above the live rate, which
     would break the spec's *own* §11 5% reconciliation. CoreWeave ($0.76/
