@@ -7,6 +7,13 @@
 > capacity. Items 7–9 are untouched and now optional. Numbers and the three
 > hypotheses they settle are in `review-context-handoff.md` §6j.
 >
+> **Drafting confirmed too:** `case_for_support` 21.3s / 9 calls,
+> `funding_application` 35.1s / 11 calls — against ~33 minutes before, with
+> zero 429s. **Item 10 (parallelise draft sections) should be closed, not
+> built:** at these times the concurrency no longer pays for its risk, and one
+> `reasoner` call is half the wall clock, so parallelising the other ten would
+> save almost nothing.
+>
 > **Two claims below are now disproven by measurement, not argument:**
 > §3.1's worry that `reasoning_effort` might not reach a GLM model — it does;
 > and §3.7's gateway key-auth caching hypothesis — the gateway adds no

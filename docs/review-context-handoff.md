@@ -797,9 +797,9 @@ provider. That is the cheap way to confirm any future prompt change.
 
 ### Open, in priority order
 
-1. **`funding_application` end-to-end** (from §6g item 1) — still owed, and
-   still blocked on the same Groq daily quota, which this run exhausted again.
-   It is the only kind never yet run to completion.
+1. ~~**`funding_application` end-to-end**~~ (from §6g item 1) — **done in
+   §6j**: 11 calls, 35.1s, succeeded. It was blocked on the Groq quota, never
+   on the kind itself.
 2. **Re-ingest existing vault documents** — every document ingested since the
    aliases became reasoning models has no usable summary (`0b19e07`). The fix
    only helps new ingests; the back catalogue needs re-running.
@@ -960,16 +960,42 @@ is attached, and a record reaching no handler is just as lost. The tests reset
 logging to uvicorn's default first, because `conftest` builds the app and would
 otherwise leave the state under test already applied.
 
+### Drafting confirmed, and `funding_application` finally ran
+
+Two real drafts on staging (tenant Struvers2, application *Care Home*) after
+`litellm` and `worker` picked up the OpenRouter change:
+
+| Kind | Calls | Wall clock | Cost | Result |
+| --- | --- | --- | --- | --- |
+| `case_for_support` | 9 | **21.3s** | $0.0068 | succeeded, 12 to confirm |
+| `funding_application` | 11 | **35.1s** | $0.0131 | succeeded, 13 to confirm |
+
+Against ~33 minutes before, or a 429 death partway. **Zero 429s, zero
+retries, zero `finish=length`** across all 20 calls, and both documents
+registered with a file and `versions` length 1.
+
+**`funding_application` has now run end-to-end** — closing §6g item 1 / §6i
+item 1, the only kind that had never completed. It was blocked on the Groq
+quota, not on anything wrong with the kind.
+
+The per-call spread is the actual proof, not the total: 0.9–3.1s, tight and
+even. Backoff is bimodal with multi-minute stragglers, which is exactly what
+the old `~3 min/call` figure was measuring. This is clean generation.
+
+**Parallelising draft sections is now not worth doing** — review item 10 can
+be closed rather than built. At 21–35s the wall clock no longer justifies the
+concurrency, the rate-limit risk, or the cost-guard complications.
+
+**If drafting ever does need to be faster, there is exactly one target.** In
+the `funding_application` run, call 8 — the single `reasoner` (GLM-5.2)
+section — took **17.5s of the 35.1s total**, while the other ten averaged
+1.6s. One call is half the draft. Fixing that means the `reasoner` alias, not
+concurrency; parallelising ten fast calls around one slow one saves almost
+nothing.
+
 ### Not done, in priority order
 
-1. **Confirm the new drafting numbers** now that `litellm` and `worker` carry
-   the OpenRouter change, then decide on parallelising sections. The
-   `~3 min/call` note in `worker/main.py` describes the *old* free-tier
-   backoff and is now misleading — replace it with a measured figure rather
-   than trusting it. `funding_application` end-to-end (§6g item 1, §6i item 1)
-   has never run to completion and was blocked on the old quota; it is the
-   obvious first thing to try.
-2. **Cap chat history** — `conversations.py` fetches it with no `LIMIT` and
+1. **Cap chat history** — `conversations.py` fetches it with no `LIMIT` and
    re-sends all of it every turn, so prompt cost grows without bound. Agreed
    approach: a ~8k token budget keeping recent turns whole, using
    `routing.estimate_tokens`.
