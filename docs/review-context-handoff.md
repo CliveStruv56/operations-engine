@@ -982,9 +982,11 @@ The per-call spread is the actual proof, not the total: 0.9–3.1s, tight and
 even. Backoff is bimodal with multi-minute stragglers, which is exactly what
 the old `~3 min/call` figure was measuring. This is clean generation.
 
-**Those totals were a lucky window — quote ~21–56s, not 21s.** Four
-`case_for_support` runs on one day, same code and prompt: 21.3s, 29.0s, 52.3s,
-56.4s. The fast ones had Groq serve all nine calls; the slow ones did not. The cause is provider luck on the `drafter` alias, not a
+**Those totals were a lucky window — quote ~18–56s, not the best figure.**
+Five `case_for_support` runs on one day, same code and prompt: 17.8s, 21.3s,
+29.0s, 52.3s, 56.4s. The fast ones had Groq serve all nine calls; the slow
+ones did not. Capacity recovered within the day, so a slow spell is a window
+to wait out, not a state to re-tune against. The cause is provider luck on the `drafter` alias, not a
 regression: Groq's capacity through OpenRouter is intermittent, and a request
 that falls through to a stand-in is 3–5x slower. Measured that hour — Groq
 337–403 tok/s, Nebius 113–152, Together 76–116 — which is why the order became

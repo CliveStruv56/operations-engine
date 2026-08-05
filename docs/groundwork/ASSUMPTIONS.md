@@ -345,18 +345,22 @@ and every divergence is recorded here.
     identically, so the swap carries no telemetry consequence.
 
     **What that means for expectations:** a draft's wall clock is set largely
-    by how many calls Groq happens to serve. Four `case_for_support` runs on
-    one day, same code and same prompt: **21.3s, 29.0s, 52.3s, 56.4s**. The
-    fast ones had Groq serve all nine calls; the slow ones did not. Quote
-    drafting as **~21–56s**, never the best figure.
+    by how many calls Groq happens to serve. Five `case_for_support` runs on
+    one day, same code and same prompt: **17.8s, 21.3s, 29.0s, 52.3s, 56.4s**.
+    The fast ones had Groq serve all nine calls; the slow ones did not. Quote
+    drafting as **~18–56s**, never the best figure. Groq's capacity visibly
+    recovered within the day, so a slow spell is a window to wait out rather
+    than a state to re-tune against.
 
-    **The reorder is unverified in production.** It only pays out when Groq
-    is unavailable, and every call in the run after deploying it went to Groq
-    — so Nebius has never actually served a drafting request. The evidence for
-    it is the offline benchmark, not observed behaviour. Confirm by looking
-    for `served_by=Nebius` in `worker.drafting.latency` before treating it as
-    proven; a faster draft with `served_by=Groq` throughout proves only that
-    Groq had capacity.
+    **The reorder is inferred, not observed.** It only pays out when Groq is
+    unavailable, and all 18 calls across the two runs after deploying it went
+    to Groq — Nebius has never actually served a drafting request. What *is*
+    observed: under the previous order fall-through landed on **Together at
+    position 2**, so the mechanism works and respects order position, and
+    Nebius is independently functional (113–152 tok/s offline). Treat it as
+    sound but unwitnessed. Confirm by finding `served_by=Nebius` in
+    `worker.drafting.latency` — a fast draft showing `served_by=Groq`
+    throughout proves only that Groq had capacity.
 
     **The constraint to preserve:** all three pinned providers bill
     $0.15/$0.60, which is exactly what `ALIAS_PRICES_PER_MTOK` claims `drafter`
