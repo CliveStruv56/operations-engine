@@ -1,6 +1,7 @@
 """The per-document summary call against a reasoning model.
 
-`drafter` is groq/openai/gpt-oss-120b, which bills its thinking against
+`drafter` is gpt-oss-120b (reached via OpenRouter since 4 Aug 2026, which
+changes the provider but not the model — ASSUMPTIONS #25). It bills thinking against
 `completion_tokens` — 675–709 tokens before it writes a word, measured live on
 3 Aug 2026. The summariser was written when the aliases were not reasoning
 models and asked for 512 output tokens, so the whole budget went on reasoning

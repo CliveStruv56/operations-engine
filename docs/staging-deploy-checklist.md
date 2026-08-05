@@ -21,9 +21,18 @@
 > upload that Railway builds from the app's own Dockerfile:
 >
 > ```sh
-> railway up ./apps/api    --path-as-root --service api    --environment production
-> railway up ./apps/worker --path-as-root --service worker --environment production
+> railway up ./apps/api     --path-as-root --service api     --environment production
+> railway up ./apps/worker  --path-as-root --service worker  --environment production
+> railway up ./infra/litellm --path-as-root --service litellm --environment production
 > ```
+>
+> **The gateway is a deploy too** (added 4 Aug 2026). `infra/litellm/config.yaml`
+> is *baked into the image* via `infra/litellm/Dockerfile` because Railway
+> cannot mount files — so editing an alias in that file changes nothing until
+> the `litellm` service is deployed. Nothing warns you; the old aliases keep
+> serving. Verify with
+> `railway ssh --service litellm "cat /app/config.yaml"` rather than assuming
+> the build shipped what you edited.
 >
 > `--path-as-root` is not optional. `railway up` archives from the **linked
 > project root**, not the working directory, so running it from inside

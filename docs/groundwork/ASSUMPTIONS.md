@@ -319,3 +319,53 @@ and every divergence is recorded here.
     a deliberate placeholder rather than a real programme — a local
     community foundation is often a small charity's best first
     application, so the row exists to prompt the question.
+
+## Recorded during the latency review (4–5 Aug 2026)
+
+25. **`drafter` reaches Groq through OpenRouter, not the Groq provider
+    directly** (4 Aug 2026, founder-approved). Spec §4 pins
+    `groq/openai/gpt-oss-120b` with `GROQ_API_KEY`; `infra/litellm/config.yaml`
+    now uses `openrouter/openai/gpt-oss-120b` with provider order
+    `["Groq", "Together", "Nebius"]`, `allow_fallbacks: false` and
+    `data_collection: deny`.
+
+    **Why:** Groq's free tier is 200k tokens/day against ~51k per draft, and
+    paid upgrades were closed to new accounts. The measured "~3 min/call" was
+    rate-limit backoff, not generation — a full draft ran ~33 minutes or died
+    on a 429 partway. OpenRouter resells the same Groq capacity with no new
+    account, since `OPENROUTER_API_KEY` was already wired for `longdoc`.
+    Confirmed live: `case_for_support` 9 calls / 21.3s, `funding_application`
+    11 calls / 35.1s, zero 429s.
+
+    **The constraint to preserve:** all three pinned providers bill
+    $0.15/$0.60, which is exactly what `ALIAS_PRICES_PER_MTOK` claims `drafter`
+    costs in *both* `app/litellm.py` and `worker/drafting/llm.py`. That is why
+    this order was chosen over faster options. **Adding a provider without
+    checking its rate silently breaks the spec §11 5% reconciliation** —
+    Cerebras is ~4x faster but bills $0.35/$0.75, a ~64% understatement per
+    draft, and would need both price tables updated first. `allow_fallbacks:
+    false` keeps a request on one of the three vetted Western hosts (hard
+    constraint 4). `GROQ_API_KEY` stays wired but unused, so reverting is one
+    line.
+
+26. **Chat bounds the model's output and thinking, and overrides the gateway
+    retry budget per request** (4 Aug 2026). Spec §4 describes one
+    `num_retries` for the gateway and says nothing about per-call output
+    limits; `app/litellm.py` now sends `max_tokens`, `reasoning_effort: "low"`
+    and `x-litellm-num-retries: 1` on chat and query-embedding calls.
+
+    **Why:** every chat alias is a reasoning model that bills thinking against
+    `completion_tokens`, and `stream_chat` forwards only `delta.content` — so
+    an unbounded think rendered as a spinner on an open, billing connection.
+    Chat was 30–40s; it is now under 2s (`ttft_ms` 166–356). The retry
+    override is per request rather than per alias because **`drafter` serves
+    both surfaces** — analyse/report/slides/research route to it from chat as
+    well as from the drafting engine — so there is no alias-level split to
+    make. Two retries at a 120s timeout suits the worker, not someone watching
+    a spinner.
+
+    Measurement settled two open worries: `reasoning_effort` **is** honoured
+    by GLM-4.7-Flash via DeepInfra (no GLM-shaped `chat_template_kwargs`
+    workaround is needed — do not add one speculatively), and the gateway adds
+    no meaningful overhead (so the key-auth caching idea in
+    `docs/performance-review-aug-2026.md` §3.7 is not worth chasing).

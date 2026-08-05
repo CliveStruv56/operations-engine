@@ -15,11 +15,13 @@ import httpx
 from worker.blocks import estimate_tokens
 from worker.settings import get_settings
 
-# Per-call timing. A draft is ~11 calls and has been measured at ~3 min/call
-# on `drafter`, which is far too slow to be generation on that provider — the
-# suspicion is rate-limit backoff on the Groq free tier (200k tokens/day
-# against ~51k per draft). Elapsed time per call settles it: backoff produces
-# a bimodal distribution, genuinely slow generation does not. Ids, aliases and
+# Per-call timing. It was added to settle whether the ~3 min/call measured on
+# `drafter` was generation or rate-limit backoff, and it answered: backoff.
+# Routed through OpenRouter the same calls run 0.9–3.1s (ASSUMPTIONS #25).
+#
+# Kept because the question recurs on every provider change, and because a
+# draft's wall clock is not evenly spread — one `reasoner` section took 17.5s
+# of a 35.1s draft while ten `drafter` calls averaged 1.6s. Ids, aliases and
 # counts only — never prompt or document content.
 logger = logging.getLogger("worker.drafting.latency")
 
