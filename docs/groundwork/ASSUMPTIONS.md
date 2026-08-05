@@ -400,11 +400,18 @@ and every divergence is recorded here.
       succeeded — while every reasoner call was going somewhere else entirely.
 
     **Why (speed):** the same model, a faster host. Measured in production
-    once the route actually worked: the `reasoner` section fell from **17.5s
-    to 4.07s** (780 output tokens, `served_by=CoreWeave`), taking a
-    `funding_application` draft from **35.1s to 25.9s**. That section was 50%
-    of the draft's wall clock and is now 16%, so it is no longer the dominant
-    term.
+    once the route actually worked, over two `funding_application` drafts: the
+    `reasoner` section fell from **17.5s to 4.07s / 4.18s** (780 and 666
+    output tokens, both `served_by=CoreWeave`), taking the draft from **35.1s
+    to 25.9s / 24.4s**. That section was 50% of the draft's wall clock and is
+    now ~16%, so it is no longer the dominant term.
+
+    Production is *steadier* than the offline benchmark below — 4.0–4.2s
+    against 6.2–17.0s — because the real section emits 666–780 output tokens
+    where the synthetic prompt forced 1,100–1,900. **Output length, not the
+    provider, is what moves this call.** A benchmark that over-generates reads
+    as provider variance when it is really prompt shape, which is why the
+    offline spread overstated the risk here.
 
     Offline, across six identical section-shaped calls per provider, CoreWeave
     averaged **9.9s (range 6.2–17.0)** against DeepInfra's **31.8s (range

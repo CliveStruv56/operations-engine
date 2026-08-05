@@ -1033,9 +1033,10 @@ backlog to burn down.
    hybrid search. Caching repeat questions is the cheap way in. Nobody should
    be optimising the database or the retrieval SQL.
 4. ~~**Speeding up the `reasoner` alias**~~ — **done 5 Aug 2026**
-   (ASSUMPTIONS #27). GLM-5.2 moved to CoreWeave via OpenRouter: the section
-   fell from **17.5s to 4.07s** and a `funding_application` draft from
-   **35.1s to 25.9s**. It was 50% of the draft's wall clock and is now 16%.
+   (ASSUMPTIONS #27). GLM-5.2 moved to CoreWeave via OpenRouter: confirmed
+   over two drafts, the section fell from **17.5s to 4.07s / 4.18s** and
+   `funding_application` from **35.1s to 25.9s / 24.4s**. It was 50% of the
+   draft's wall clock and is now ~16%.
 
    Read #27 before touching any alias: the change shipped *broken* first.
    LiteLLM rejected `reasoning_effort` for `openrouter/z-ai/*` and the spec §4
