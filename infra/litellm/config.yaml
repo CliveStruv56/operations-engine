@@ -36,10 +36,28 @@ model_list:
           allow_fallbacks: false
           data_collection: deny
 
+  # Same model as before, faster host (5 Aug 2026). GLM-5.2 on DeepInfra ran
+  # 30–74 tok/s and wildly inconsistent — measured 15.2/30.4/34.8/42.5s on four
+  # identical section-shaped calls. CoreWeave serves the same weights at
+  # 159–196 tok/s and 6.2–8.3s, with equal or more prose. One `reasoner`
+  # section was 17.5s of a 35.1s draft; this is that half.
+  #
+  # The order is a correctness ranking as much as a speed one. **DigitalOcean
+  # and Novita must never be added**: both ignore `reasoning_effort` and
+  # returned `finish=length` with *zero* prose, spending the whole 4096-token
+  # budget thinking — precisely the 3 Aug failure that filed documents with
+  # missing sections (§6h). DeepInfra stays as the fallback because it is slow
+  # but proven correct, and both bill within 1% of each other so the price
+  # table below holds whichever serves.
   - model_name: reasoner
     litellm_params:
-      model: deepinfra/zai-org/GLM-5.2
-      api_key: os.environ/DEEPINFRA_API_KEY
+      model: openrouter/z-ai/glm-5.2
+      api_key: os.environ/OPENROUTER_API_KEY
+      extra_body:
+        provider:
+          order: ["CoreWeave", "DeepInfra"]
+          allow_fallbacks: false
+          data_collection: deny
 
   - model_name: longdoc
     litellm_params:

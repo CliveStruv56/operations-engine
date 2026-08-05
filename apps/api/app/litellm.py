@@ -60,7 +60,11 @@ CHAT_NUM_RETRIES = "1"
 ALIAS_PRICES_PER_MTOK: dict[str, tuple[float, float]] = {
     "workhorse": (0.06, 0.40),
     "drafter": (0.15, 0.60),
-    "reasoner": (0.93, 3.00),
+    # CoreWeave/DeepInfra rate for GLM-5.2 (within 1% of each other, so this
+    # holds whichever the order in config.yaml serves). Spec §4 quotes
+    # $0.93/$3.00, which was ~24% high against the live rate — keeping the
+    # spec's figure would break its own §11 5% reconciliation.
+    "reasoner": (0.76, 2.42),
     "longdoc": (0.09, 0.18),
     "embedder": (0.01, 0.0),
 }

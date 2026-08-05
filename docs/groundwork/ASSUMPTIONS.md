@@ -369,3 +369,34 @@ and every divergence is recorded here.
     workaround is needed — do not add one speculatively), and the gateway adds
     no meaningful overhead (so the key-auth caching idea in
     `docs/performance-review-aug-2026.md` §3.7 is not worth chasing).
+
+27. **`reasoner` runs GLM-5.2 on CoreWeave via OpenRouter, and its price
+    table diverges from spec §4** (5 Aug 2026). Spec §4 pins
+    `deepinfra/zai-org/GLM-5.2` at $0.93/$3.00; the repo uses
+    `openrouter/z-ai/glm-5.2` with provider order `["CoreWeave", "DeepInfra"]`
+    and prices it at **$0.76/$2.42** in both `app/litellm.py` and
+    `worker/drafting/llm.py`.
+
+    **Why (speed):** the same model, a faster host. One `reasoner` section was
+    17.5s of a 35.1s draft while ten `drafter` calls averaged 1.6s. Measured
+    over four identical section-shaped calls each: DeepInfra 15.2/30.4/34.8/
+    42.5s at 30–74 tok/s, CoreWeave 6.2/7.1/7.5/8.3s at 159–196 tok/s, with
+    equal or more prose. ~4x faster and far steadier, with no quality trade,
+    because the weights are identical.
+
+    **Why (price):** spec §4's $0.93/$3.00 is ~24% above the live rate, which
+    would break the spec's *own* §11 5% reconciliation. CoreWeave ($0.76/
+    $2.42) and DeepInfra ($0.75/$2.40) agree within 1%, so one figure is
+    correct whichever the order serves. `test_alias_prices_match_the_api_side_
+    table` pins the worker's copy — the two tables are separate by
+    ASSUMPTIONS #13 and drift silently otherwise.
+
+    **The order is a correctness ranking, not just a speed one.
+    DigitalOcean and Novita must never be added to it.** Both ignore
+    `reasoning_effort` and returned `finish=length` with **zero prose**,
+    spending the entire 4096-token budget thinking — exactly the 3 Aug failure
+    (§6h) that filed documents with missing sections. GMICloud honours it but
+    spent 2,516 tokens to produce 822 characters. DeepInfra stays as the
+    fallback: slow, but proven correct. **Benchmark any new provider for empty
+    prose before adding it, not just for speed** — the failure is silent, and
+    on this alias it lands in a document a funder reads.

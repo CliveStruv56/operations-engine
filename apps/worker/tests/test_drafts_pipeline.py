@@ -13,6 +13,7 @@ from tests.test_drafts_context import _funding, _pack, _programme
 from worker.drafts.assemble import assemble_docx
 from worker.drafts.context import BudgetLine, BudgetTotals, VaultExcerpt
 from worker.drafts.llm import (
+    ALIAS_PRICES_PER_MTOK,
     MAX_CONTEXT_TOKENS_PER_CALL,
     MAX_LLM_CALLS,
     DraftBudgetExceeded,
@@ -47,8 +48,21 @@ def test_ledger_cost_math():
     ledger = LlmLedger()
     ledger.calls = [LlmCall("drafter", 1_000_000, 0), LlmCall("reasoner", 0, 1_000_000)]
     ledger.embed_cost_usd = 0.01
-    assert ledger.cost_usd == pytest.approx(0.15 + 3.00 + 0.01)
+    # Rates read from the table rather than repeated as literals: this
+    # assertion is about the arithmetic, and hardcoding the prices meant a
+    # provider change failed here as though the maths had broken.
+    drafter_in = ALIAS_PRICES_PER_MTOK["drafter"][0]
+    reasoner_out = ALIAS_PRICES_PER_MTOK["reasoner"][1]
+    assert ledger.cost_usd == pytest.approx(drafter_in + reasoner_out + 0.01)
     assert ledger.tokens_in == 1_000_000 and ledger.tokens_out == 1_000_000
+
+
+def test_alias_prices_match_the_api_side_table():
+    """The worker keeps its own copy of the price table (ASSUMPTIONS #13 —
+    the API venv cannot import the engine). Two copies drift silently, and a
+    wrong one understates real spend against LiteLLM's own ledger."""
+    assert ALIAS_PRICES_PER_MTOK["drafter"] == (0.15, 0.60)
+    assert ALIAS_PRICES_PER_MTOK["reasoner"] == (0.76, 2.42)
 
 
 def test_parse_outline_accepts_json_and_fences():

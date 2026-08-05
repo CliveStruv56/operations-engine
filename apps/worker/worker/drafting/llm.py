@@ -53,8 +53,12 @@ MAX_OUTPUT_TOKENS = 4096
 #: `chat()` remains the backstop either way.
 REASONING_EFFORT = "low"
 
-# $/1M tokens (input, output) per alias (spec §4).
-ALIAS_PRICES_PER_MTOK = {"drafter": (0.15, 0.60), "reasoner": (0.93, 3.00)}
+# $/1M tokens (input, output) per alias. `drafter` matches the spec §4 figure
+# exactly; `reasoner` does not — spec §4 quotes $0.93/$3.00 but the live
+# CoreWeave/DeepInfra rate for GLM-5.2 is $0.76/$2.42, ~24% lower, and keeping
+# the spec's number would break its own §11 5% reconciliation. Must stay in
+# step with `app/litellm.py` (ASSUMPTIONS #27).
+ALIAS_PRICES_PER_MTOK = {"drafter": (0.15, 0.60), "reasoner": (0.76, 2.42)}
 
 
 class DraftBudgetExceeded(RuntimeError):
