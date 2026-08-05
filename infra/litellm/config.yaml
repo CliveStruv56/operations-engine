@@ -20,19 +20,24 @@ model_list:
   # `drafter` costs in both app/litellm.py and worker/drafting/llm.py, so cost
   # telemetry and the spec §11 reconciliation stay correct with no other edit.
   #
-  # Together and Nebius bill identically and stand in when Groq is saturated.
+  # Nebius and Together bill identically to Groq and stand in when it is
+  # saturated, which happens often enough to dominate a draft's wall clock:
+  # Groq serves at 337–403 tok/s, the stand-ins at 76–152, so an unlucky run
+  # takes twice as long as a lucky one (§6j). **Nebius before Together** on
+  # measurement — 113–152 vs 76–116 tok/s, 5 Aug 2026.
+  #
   # allow_fallbacks stays false so a request can only ever land on one of these
   # three vetted Western hosts — the same discipline as `longdoc` below. Adding
   # a provider here without checking its rate silently breaks the §11 5% rule;
-  # Cerebras is ~4x faster but bills $0.35/$0.75 and would need the price tables
-  # updated in both files first.
+  # Cerebras is faster still but bills $0.35/$0.75 and would need the price
+  # tables in both files updated first.
   - model_name: drafter
     litellm_params:
       model: openrouter/openai/gpt-oss-120b
       api_key: os.environ/OPENROUTER_API_KEY
       extra_body:
         provider:
-          order: ["Groq", "Together", "Nebius"]
+          order: ["Groq", "Nebius", "Together"]
           allow_fallbacks: false
           data_collection: deny
 

@@ -982,6 +982,25 @@ The per-call spread is the actual proof, not the total: 0.9–3.1s, tight and
 even. Backoff is bimodal with multi-minute stragglers, which is exactly what
 the old `~3 min/call` figure was measuring. This is clean generation.
 
+**Those totals were a lucky window — quote ~25–56s, not 21s.** Later the same
+day `case_for_support` ran 52.3s and 56.4s against its own 21.3s, with no code
+change between them. The cause is provider luck on the `drafter` alias, not a
+regression: Groq's capacity through OpenRouter is intermittent, and a request
+that falls through to a stand-in is 3–5x slower. Measured that hour — Groq
+337–403 tok/s, Nebius 113–152, Together 76–116 — which is why the order became
+`["Groq", "Nebius", "Together"]` (ASSUMPTIONS #25).
+
+Two things that diagnosis established, worth not re-deriving:
+
+- **The gateway itself adds nothing.** Calls it routed to Groq matched
+  direct-to-OpenRouter rates (337–403 tok/s). When a draft looks slow, suspect
+  which provider served it, not the proxy.
+- **`elapsed_ms` covers LiteLLM's retries, `served_by` names only the winner.**
+  A call logged `served_by=Groq elapsed_ms=33652` for 487 tokens is not Groq
+  running at 14 tok/s — it is a failed first attempt plus backoff, then a fast
+  success. **Do not compute tokens/sec from `elapsed_ms` and conclude a
+  provider is slow.**
+
 **Parallelising draft sections (review item 10) is DEFERRED, not closed** —
 founder decision, 5 Aug 2026. It remains a legitimate optimisation; it is
 simply not worth its cost today. Two measurements argue against it now:

@@ -337,6 +337,18 @@ and every divergence is recorded here.
     Confirmed live: `case_for_support` 9 calls / 21.3s, `funding_application`
     11 calls / 35.1s, zero 429s.
 
+    **Order revised 5 Aug 2026 to `["Groq", "Nebius", "Together"]`.** Groq's
+    capacity through OpenRouter is intermittent, and the stand-ins are much
+    slower — measured the same hour, Groq 337–403 tok/s against Nebius
+    113–152 and Together 76–116. Nebius goes first of the two on that
+    evidence (four samples each, ranges overlapping slightly). Both bill
+    identically, so the swap carries no telemetry consequence.
+
+    **What that means for expectations:** a draft's wall clock is set largely
+    by how many calls Groq happens to serve. `case_for_support` measured
+    21.3s on a lucky run and 52.3/56.4s on unlucky ones — same code, same
+    prompt, same day. Quote drafting as **~25–56s**, never the best figure.
+
     **The constraint to preserve:** all three pinned providers bill
     $0.15/$0.60, which is exactly what `ALIAS_PRICES_PER_MTOK` claims `drafter`
     costs in *both* `app/litellm.py` and `worker/drafting/llm.py`. That is why
