@@ -982,45 +982,86 @@ The per-call spread is the actual proof, not the total: 0.9–3.1s, tight and
 even. Backoff is bimodal with multi-minute stragglers, which is exactly what
 the old `~3 min/call` figure was measuring. This is clean generation.
 
-**Parallelising draft sections is now not worth doing** — review item 10 can
-be closed rather than built. At 21–35s the wall clock no longer justifies the
-concurrency, the rate-limit risk, or the cost-guard complications.
+**Parallelising draft sections (review item 10) is DEFERRED, not closed** —
+founder decision, 5 Aug 2026. It remains a legitimate optimisation; it is
+simply not worth its cost today. Two measurements argue against it now:
 
-**If drafting ever does need to be faster, there is exactly one target.** In
-the `funding_application` run, call 8 — the single `reasoner` (GLM-5.2)
-section — took **17.5s of the 35.1s total**, while the other ten averaged
-1.6s. One call is half the draft. Fixing that means the `reasoner` alias, not
-concurrency; parallelising ten fast calls around one slow one saves almost
-nothing.
+- At 21–35s the prize is small. Ten sequential `drafter` calls account for
+  ~16s, so even perfect concurrency saves ~10s of a 35s job.
+- It cannot touch the biggest piece. In the `funding_application` run call 8 —
+  the single `reasoner` (GLM-5.2) section — took **17.5s of the 35.1s total**,
+  while the other ten averaged 1.6s. That is one request and cannot be split,
+  so it survives any amount of parallelism.
+
+Against that it costs real complexity: concurrent in-flight requests, more
+rate-limit exposure, and a cost guard (`MAX_LLM_CALLS`, per-call context
+ceiling) that is harder to reason about when calls overlap.
+
+**Revisit if any of these change:**
+
+1. **The `reasoner` section gets faster first.** It is the dominant term;
+   until it shrinks, parallelising around it is rearranging the small half.
+   This is the higher-value piece of work of the two, and the right first move
+   if drafting speed is ever raised again.
+2. **Skeletons grow past ~15 sections**, or a module adds a kind with many
+   more `drafter` calls — the sequential tail scales linearly, the reasoner
+   term does not.
+3. **Drafting becomes interactive** (a user waiting on-screen rather than a
+   background job). 35s is fine to wait for asynchronously and poor to watch.
+
+If it is built: use a `Semaphore(3)`, keep the outline call and anything
+depending on it sequential, and re-check the provider's rate limits first —
+the original recommendation to do this ranked it #1 while drafting was still
+on Groq's free tier, where it would have turned a slow job into a failing one.
 
 ### Not done, in priority order
+
+All of these are now **optional**. Chat is under 2s and drafting 21–35s, so
+none of them is fixing a felt problem; treat them as available work, not a
+backlog to burn down.
 
 1. **Cap chat history** — `conversations.py` fetches it with no `LIMIT` and
    re-sends all of it every turn, so prompt cost grows without bound. Agreed
    approach: a ~8k token budget keeping recent turns whole, using
-   `routing.estimate_tokens`.
-3. **Move retrieved excerpts off the prompt prefix.** They are concatenated
+   `routing.estimate_tokens`. Cost control rather than latency now.
+2. **Move retrieved excerpts off the prompt prefix.** They are concatenated
    into the *system* message, so ~4–5k tokens of volatile content sit in front
    of the stable part and no provider prefix cache can ever hit. Moving them
    onto the final user turn makes the prefix cacheable.
-4. **Gateway caching** — no `cache` block in `config.yaml`. The higher-value
-   target is the proxy's virtual-key auth lookup, not response caching. This
-   is the one item in the report that is a **hypothesis, not a code-confirmed
-   finding** — measure before changing it.
-5. `--workers` on uvicorn (`apps/api/Dockerfile`) — single process today.
+3. **The query embedding is the only latency target left in chat** — 1,151ms
+   of a 1,801ms vault-backed message, against 74ms of DB work and 78ms of
+   hybrid search. Caching repeat questions is the cheap way in. Nobody should
+   be optimising the database or the retrieval SQL.
+4. **Speeding up the `reasoner` alias** — 17.5s of a 35.1s draft in one call.
+   The higher-value half of the drafting-speed question, and the prerequisite
+   for item 5 being worth anything.
+5. **Parallelise draft sections — DEFERRED**, not closed (founder decision,
+   5 Aug 2026). See the drafting section above for the three conditions that
+   should bring it back, and why item 4 comes first.
+6. `--workers` on uvicorn (`apps/api/Dockerfile`) — single process today. Not
+   a current bottleneck; it will become one under concurrent load.
 
-Explicitly rejected: cutting embedder dimensions from 2048 (needs a full
-re-embed, a migration and a new index, degrades retrieval, and saves
-milliseconds on a path that is not the bottleneck).
+**Answered by measurement — do not re-open:**
+
+- **Gateway caching** (review §3.7) was the one item flagged as a hypothesis
+  rather than a code-confirmed finding. Measured: the gateway adds no
+  meaningful overhead (166ms to first token through the same hop). Not worth
+  chasing.
+- **Cutting embedder dimensions from 2048** — needs a full re-embed, a
+  migration and a new index, degrades retrieval, and saves milliseconds on a
+  path that is not the bottleneck.
+- **A GLM-shaped `reasoning_effort` workaround** — unnecessary, the parameter
+  is honoured as sent (ASSUMPTIONS #26).
 
 ## 7. Read first in a new session
 
 **There is no active work brief.** `docs/drafting-engine-brief.md` closed on
 4 Aug 2026 with both its items fixed.
 
-1. This file — **§6j** first (the latency work, and what is deliberately
-   waiting on paid Groq), then **§6i**, then **§6g** for where Grantwork
-   stands overall.
+1. This file — **§6j** first (the latency work: chat and drafting are both
+   measured and fixed, and it lists what measurement *disproved* so it is not
+   re-attempted), then **§6i**, then **§6g** for where Grantwork stands
+   overall.
 2. `docs/groundwork/ASSUMPTIONS.md` (items 20–24 are the newest rulings; #24
    governs the funder catalogue and is easy to break by accident).
 3. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).

@@ -9,10 +9,12 @@
 >
 > **Drafting confirmed too:** `case_for_support` 21.3s / 9 calls,
 > `funding_application` 35.1s / 11 calls — against ~33 minutes before, with
-> zero 429s. **Item 10 (parallelise draft sections) should be closed, not
-> built:** at these times the concurrency no longer pays for its risk, and one
-> `reasoner` call is half the wall clock, so parallelising the other ten would
-> save almost nothing.
+> zero 429s. **Item 10 (parallelise draft sections) is deferred, not closed**
+> (founder decision, 5 Aug 2026) — still legitimate, not worth its cost at
+> these times, and one `reasoner` call is half the wall clock so parallelising
+> the other ten would save little. `review-context-handoff.md` §6j lists the
+> three conditions that should bring it back, and why speeding up the
+> `reasoner` section is the better first move.
 >
 > **Two claims below are now disproven by measurement, not argument:**
 > §3.1's worry that `reasoning_effort` might not reach a GLM model — it does;
