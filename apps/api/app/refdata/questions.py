@@ -11,11 +11,19 @@ Writes belong to the operator (platform catalogue) or to a later import flow
 import json
 from datetime import date
 from typing import Any
+from uuid import UUID
 
 import asyncpg
 
 from app.errors import ApiError
-from app.refdata.schemas import AnswerOut, AnswerSheetOut, QuestionSetOut
+from app.refdata.schemas import (
+    AnswerOut,
+    AnswerSheetOut,
+    Question,
+    QuestionSetIn,
+    QuestionSetOut,
+    QuestionSetPatch,
+)
 
 _COLUMNS = """
     key, name, funder, stage, status, source_url, questions,
@@ -81,6 +89,87 @@ async def require_question_set(conn: asyncpg.Connection, key: str | None) -> Que
             422, "question_set_empty", "That form has no questions recorded against it yet"
         )
     return question_set
+
+
+def validate_questions(questions: list[Question]) -> list[dict]:
+    """Reject a set that would break drafting, and normalise the order.
+
+    Checked here rather than trusted from the client because these rows drive
+    the worker: a duplicate id silently loses an answer on the sheet, and a
+    gap in the order misnumbers every question after it on a funder's form.
+    """
+    ids = [q.id for q in questions]
+    if len(ids) != len(set(ids)):
+        raise ApiError(422, "duplicate_question_id", "Two questions share the same id")
+    for q in questions:
+        if not q.text.strip():
+            raise ApiError(422, "empty_question", "A question cannot be blank")
+        if q.limit is not None and q.limit <= 0:
+            raise ApiError(422, "bad_limit", f"“{q.text[:40]}” has a limit of {q.limit}")
+    # Renumber rather than reject: the client may have reordered or deleted,
+    # and position is ours to own once the set is stored.
+    return [
+        {**q.model_dump(), "order": position}
+        for position, q in enumerate(sorted(questions, key=lambda q: q.order), start=1)
+    ]
+
+
+async def create_question_set(
+    conn: asyncpg.Connection, tenant_id: str, body: QuestionSetIn
+) -> QuestionSetOut:
+    questions = validate_questions(body.questions)
+    row = await conn.fetchrow(
+        f"""
+        insert into tenant_question_sets (tenant_id, key, name, funder, stage, source_url,
+                                          questions, status, last_verified, next_review, notes)
+        values ($1, $2, $3, $4, $5, $6, $7, 'unverified', current_date, current_date, $8)
+        returning {_COLUMNS}
+        """,
+        UUID(tenant_id),
+        body.key,
+        body.name,
+        body.funder,
+        body.stage,
+        body.source_url,
+        json.dumps(questions),
+        body.notes,
+    )
+    return _row_out(row, "tenant", date.today())
+
+
+async def update_question_set(
+    conn: asyncpg.Connection, key: str, body: QuestionSetPatch
+) -> QuestionSetOut:
+    sets: list[str] = []
+    values: list[object] = [key]
+
+    def add(column: str, value: object) -> None:
+        values.append(value)
+        sets.append(f"{column} = ${len(values)}")
+
+    for column in ("name", "funder", "stage", "source_url", "notes"):
+        value = getattr(body, column)
+        if value is not None:
+            add(column, value)
+    if body.questions is not None:
+        add("questions", json.dumps(validate_questions(body.questions)))
+    if body.verified:
+        # Verification is an act somebody performs. This is the endpoint where
+        # they perform it, so it is the one place a date may move forward.
+        sets.append("status = 'open'")
+        sets.append("last_verified = current_date")
+        sets.append("next_review = current_date + 90")
+    if not sets:
+        raise ApiError(422, "nothing_to_update", "No changes were sent")
+
+    row = await conn.fetchrow(
+        f"update tenant_question_sets set {', '.join(sets)}, updated_at = now()"
+        f" where key = $1 returning {_COLUMNS}",
+        *values,
+    )
+    if row is None:
+        raise ApiError(404, "not_found", "You can only edit your workspace's own question sets")
+    return _row_out(row, "tenant", date.today())
 
 
 def answer_sheet(row: asyncpg.Record) -> AnswerSheetOut:

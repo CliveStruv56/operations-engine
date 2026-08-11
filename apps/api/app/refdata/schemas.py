@@ -30,6 +30,51 @@ class Question(BaseModel):
     uses_vault: bool = False
 
 
+class TranscribeIn(BaseModel):
+    """Text a person copied out of a funder's own published guidance."""
+
+    source: str = Field(min_length=20, max_length=24_000)
+
+
+class TranscribeOut(BaseModel):
+    """A proposal, not a saved set. Nothing is stored until a human confirms.
+
+    `limits_missing` and `limits_in_source` exist to make the one unverifiable
+    field noisy: if the text mentions five limits and only three came back, the
+    reviewer should look again before anything drafts against it.
+    """
+
+    questions: list[Question]
+    limits_missing: int
+    limits_in_source: int
+
+
+class QuestionSetIn(BaseModel):
+    key: str = Field(min_length=1, max_length=200, pattern=r"^[a-z0-9][a-z0-9_-]*$")
+    name: str = Field(min_length=1, max_length=300)
+    funder: str = Field(min_length=1, max_length=300)
+    stage: str = Field(default="full", pattern="^(eoi|full|monitoring)$")
+    #: Where the questions were transcribed from. Required: a set with no
+    #: source is one nobody can re-check, which is how a catalogue rots.
+    source_url: str = Field(min_length=1, max_length=1000)
+    questions: list[Question] = Field(min_length=1)
+    notes: str | None = Field(default=None, max_length=5_000)
+
+
+class QuestionSetPatch(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=300)
+    funder: str | None = Field(default=None, min_length=1, max_length=300)
+    stage: str | None = Field(default=None, pattern="^(eoi|full|monitoring)$")
+    source_url: str | None = Field(default=None, min_length=1, max_length=1000)
+    questions: list[Question] | None = Field(default=None, min_length=1)
+    notes: str | None = Field(default=None, max_length=5_000)
+    #: Confirming a set you have checked against the funder's live form. Sets
+    #: `last_verified` to today and `next_review` 90 days out — the same act an
+    #: operator performs on the platform catalogue, and the only thing that
+    #: clears the "not one we have checked" warning.
+    verified: bool | None = None
+
+
 class Citation(BaseModel):
     """A vault source behind an answer. Kept beside the prose rather than
     inside it — a form field has no References page for a `[1]` to point at."""

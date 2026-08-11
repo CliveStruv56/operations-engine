@@ -19,9 +19,11 @@ import asyncpg
 import pytest
 
 from app.db import db
+from app.errors import ApiError
 from app.groundwork.seeds import seed_reference_data
 from app.queue import ingest_queue
 from app.refdata.seeds import FIXTURES, QUESTION_SET_FILE, SEED_STATUS, seed_question_sets
+from app.refdata.transcribe import build_prompt, limits_in_source, parse_questions
 from tests.conftest import APP_URL, OWNER_URL, auth, seed_tenant
 
 VALID_LIMIT_KINDS = {"characters", "words"}
@@ -333,3 +335,217 @@ async def test_the_answer_sheet_leads_with_what_needs_attention(
     assert sheet["to_confirm"] == 1
     assert sheet["question_set_key"] == "generic_eoi_v1"
     assert [a["question_id"] for a in sheet["answers"]] == ["q1", "q2"]
+
+
+# -- transcription -----------------------------------------------------------
+
+
+def test_a_limit_the_text_did_not_state_comes_back_null():
+    """The rule the whole feature rests on.
+
+    An invented character limit is the worst thing this can produce: it is
+    silently wrong at the one moment nobody can check it, and the consultant
+    finds out at the portal after the writing is done. A null is visible, and
+    the review screen asks for it.
+    """
+    raw = json.dumps(
+        {
+            "questions": [
+                {"text": "What is the project?", "limit": None},
+                {"text": "Who are you?", "limit": "2000"},  # a string, not a number
+                {"text": "Why?", "limit": 0},
+                {"text": "How?", "limit": -5},
+                {"text": "When?", "limit": 1500.5},
+                {"text": "Where?", "limit": True},  # bool is an int in Python
+            ]
+        }
+    )
+    questions = parse_questions(raw)
+    assert [q.limit for q in questions] == [None] * 6, (
+        "anything we are not certain about must become a question for the human"
+    )
+
+
+def test_a_stated_limit_survives_with_its_units():
+    raw = json.dumps(
+        {
+            "questions": [
+                {"text": "Describe the need.", "limit": 2000, "limit_kind": "characters"},
+                {"text": "Summarise.", "limit": 400, "limit_kind": "words"},
+                {"text": "Odd units.", "limit": 100, "limit_kind": "furlongs"},
+            ]
+        }
+    )
+    questions = parse_questions(raw)
+    assert [(q.limit, q.limit_kind) for q in questions] == [
+        (2000, "characters"),
+        (400, "words"),
+        (100, "characters"),  # unknown units fall back rather than propagate
+    ]
+
+
+def test_transcription_numbers_questions_in_the_order_they_arrived():
+    raw = json.dumps({"questions": [{"text": "A?"}, {"text": "B?"}, {"text": "C?"}]})
+    questions = parse_questions(raw)
+    assert [(q.id, q.order) for q in questions] == [("q1", 1), ("q2", 2), ("q3", 3)]
+
+
+def test_blank_and_malformed_questions_are_dropped_not_guessed_at():
+    raw = json.dumps(
+        {"questions": [{"text": "Real?"}, {"text": "   "}, "not an object", {"guidance": "x"}]}
+    )
+    assert [q.text for q in parse_questions(raw)] == ["Real?"]
+
+
+@pytest.mark.parametrize("raw", ["not json", "{}", '{"questions": "nope"}', ""])
+def test_an_unreadable_reply_is_an_error_not_an_empty_set(raw):
+    """Returning nothing would look like "this funder asks no questions",
+    which a person would save."""
+    with pytest.raises(ApiError) as exc:
+        parse_questions(raw)
+    assert exc.value.code == "transcription_failed"
+
+
+def test_an_explicitly_empty_reply_is_allowed():
+    assert parse_questions('{"questions": []}') == []
+
+
+def test_the_source_is_scanned_for_limits_as_a_second_opinion():
+    source = "Q1 (max 2000 characters). Q2 (250 words). Q3 no limit given."
+    assert limits_in_source(source) == 2
+
+
+def test_the_prompt_forbids_inventing_a_limit():
+    """A regression on the wording, because it is the only thing standing
+    between a plausible number and a funder's form."""
+    system = build_prompt("x")[0]["content"]
+    assert "NEVER invent a character or word limit" in system
+    assert "return null" in system
+
+
+# -- the write path ----------------------------------------------------------
+
+
+def _set_body(**over) -> dict:
+    body = {
+        "key": "ahf_eoi",
+        "name": "Expression of interest",
+        "funder": "Architectural Heritage Fund",
+        "stage": "eoi",
+        "source_url": "https://ahfund.org.uk/grants/",
+        "questions": [
+            {"id": "q1", "order": 1, "text": "What is the building?", "limit": 500},
+            {"id": "q2", "order": 2, "text": "Who owns it?", "limit": None},
+        ],
+    }
+    body.update(over)
+    return body
+
+
+async def test_a_transcribed_set_arrives_unverified_and_says_so(client, question_set_ref_data):
+    tenant = await seed_tenant(client, "qswrite")
+    h = auth(tenant.owner_id, tenant.id)
+    created = await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    assert created.status_code == 201, created.text
+    row = created.json()
+    assert row["source"] == "tenant"
+    assert row["status"] == "unverified"
+    assert row["stale"] is True, "a set nobody has checked is due for review immediately"
+    assert [q["limit"] for q in row["questions"]] == [500, None]
+
+    listed = (await client.get("/api/v1/question-sets", headers=h)).json()
+    assert any(s["key"] == "ahf_eoi" for s in listed)
+
+
+async def test_a_set_needs_somewhere_its_questions_came_from(client, question_set_ref_data):
+    """A set with no source is one nobody can re-check, which is how a
+    catalogue rots."""
+    tenant = await seed_tenant(client, "qsnosrc")
+    body = _set_body()
+    del body["source_url"]
+    resp = await client.post(
+        "/api/v1/question-sets", json=body, headers=auth(tenant.owner_id, tenant.id)
+    )
+    assert resp.status_code == 422
+
+
+async def test_the_same_key_twice_is_refused(client, question_set_ref_data):
+    tenant = await seed_tenant(client, "qsdupe")
+    h = auth(tenant.owner_id, tenant.id)
+    assert (
+        await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    ).status_code == 201
+    again = await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    assert again.status_code == 409
+
+
+async def test_two_questions_sharing_an_id_are_refused(client, question_set_ref_data):
+    """A duplicate id silently loses an answer on the sheet."""
+    tenant = await seed_tenant(client, "qsdupid")
+    body = _set_body(
+        questions=[
+            {"id": "q1", "order": 1, "text": "A?", "limit": 100},
+            {"id": "q1", "order": 2, "text": "B?", "limit": 100},
+        ]
+    )
+    resp = await client.post(
+        "/api/v1/question-sets", json=body, headers=auth(tenant.owner_id, tenant.id)
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "duplicate_question_id"
+
+
+async def test_editing_renumbers_rather_than_leaving_a_gap(client, question_set_ref_data):
+    """A gap in the order misnumbers every question after it on the form."""
+    tenant = await seed_tenant(client, "qsrenum")
+    h = auth(tenant.owner_id, tenant.id)
+    await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    patched = await client.patch(
+        "/api/v1/question-sets/ahf_eoi",
+        json={
+            "questions": [
+                {"id": "q2", "order": 7, "text": "Who owns it?", "limit": 400},
+                {"id": "q1", "order": 3, "text": "What is the building?", "limit": 500},
+            ]
+        },
+        headers=h,
+    )
+    assert patched.status_code == 200, patched.text
+    assert [(q["id"], q["order"]) for q in patched.json()["questions"]] == [("q1", 1), ("q2", 2)]
+
+
+async def test_verifying_is_the_one_thing_that_moves_the_date(client, question_set_ref_data):
+    tenant = await seed_tenant(client, "qsverify")
+    h = auth(tenant.owner_id, tenant.id)
+    await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    verified = (
+        await client.patch("/api/v1/question-sets/ahf_eoi", json={"verified": True}, headers=h)
+    ).json()
+    assert verified["status"] == "open"
+    assert verified["stale"] is False
+    assert verified["next_review"] > verified["last_verified"]
+
+
+async def test_a_tenant_cannot_edit_or_delete_the_platform_catalogue(client, question_set_ref_data):
+    """The curated library is the operator's. A workspace that wants it
+    different transcribes its own copy."""
+    tenant = await seed_tenant(client, "qsplat")
+    h = auth(tenant.owner_id, tenant.id)
+    assert (
+        await client.patch(
+            "/api/v1/question-sets/generic_eoi_v1", json={"name": "Mine now"}, headers=h
+        )
+    ).status_code == 404
+    assert (
+        await client.delete("/api/v1/question-sets/generic_eoi_v1", headers=h)
+    ).status_code == 404
+    still = (await client.get("/api/v1/question-sets/generic_eoi_v1", headers=h)).json()
+    assert still["name"] == "Expression of interest (generic)"
+
+
+async def test_deleting_a_transcribed_set(client, question_set_ref_data):
+    tenant = await seed_tenant(client, "qsdel")
+    h = auth(tenant.owner_id, tenant.id)
+    await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    assert (await client.delete("/api/v1/question-sets/ahf_eoi", headers=h)).status_code == 204
+    assert (await client.get("/api/v1/question-sets/ahf_eoi", headers=h)).status_code == 404

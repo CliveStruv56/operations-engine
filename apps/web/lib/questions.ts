@@ -59,7 +59,53 @@ export type AnswerSheet = {
   to_confirm: number;
 };
 
+export type Proposal = {
+  questions: Question[];
+  /** Questions the source did not state a limit for — a person must fill these. */
+  limits_missing: number;
+  /** How many limits the pasted text appears to mention, as a second opinion. */
+  limits_in_source: number;
+};
+
+export type QuestionSetBody = {
+  key: string;
+  name: string;
+  funder: string;
+  stage: QuestionSet["stage"];
+  source_url: string;
+  questions: Question[];
+  notes?: string | null;
+};
+
 export const listQuestionSets = () => qs<QuestionSet[]>("/question-sets");
+
+export const transcribeQuestions = (source: string) =>
+  qs<Proposal>("/question-sets/transcribe", {
+    method: "POST",
+    body: JSON.stringify({ source }),
+  });
+
+export const createQuestionSet = (body: QuestionSetBody) =>
+  qs<QuestionSet>("/question-sets", { method: "POST", body: JSON.stringify(body) });
+
+export const updateQuestionSet = (key: string, body: Partial<QuestionSetBody> & { verified?: boolean }) =>
+  qs<QuestionSet>(`/question-sets/${encodeURIComponent(key)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+
+export const deleteQuestionSet = (key: string) =>
+  qs<void>(`/question-sets/${encodeURIComponent(key)}`, { method: "DELETE" });
+
+/** `Architectural Heritage Fund` + `Expression of interest` -> `ahf_expression_of_interest`. */
+export function suggestKey(funder: string, name: string): string {
+  const slug = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  return [slug(funder), slug(name)].filter(Boolean).join("_").slice(0, 60) || "funder_form";
+}
 
 export const getProjectAnswers = (jobId: string) =>
   qs<AnswerSheet>(`/projects/drafts/${jobId}/answers`);

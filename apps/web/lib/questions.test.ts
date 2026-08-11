@@ -3,6 +3,7 @@ import {
   countLabel,
   countTone,
   staleNote,
+  suggestKey,
   type Answer,
   type QuestionSet,
 } from "./questions";
@@ -101,5 +102,28 @@ describe("staleNote", () => {
 
   it("handles nothing chosen yet", () => {
     expect(staleNote(null)).toBeNull();
+  });
+});
+
+describe("suggestKey", () => {
+  it("builds a stable slug from the funder and form", () => {
+    expect(suggestKey("Architectural Heritage Fund", "Expression of interest")).toBe(
+      "architectural_heritage_fund_expression_of_interest"
+    );
+  });
+
+  it("collapses punctuation and trims separators", () => {
+    expect(suggestKey("The National Lottery — Community Fund", "Awards for All!")).toBe(
+      "the_national_lottery_community_fund_awards_for_all"
+    );
+  });
+
+  it("never returns an empty key", () => {
+    expect(suggestKey("", "")).toBe("funder_form");
+    expect(suggestKey("!!!", "???")).toBe("funder_form");
+  });
+
+  it("stays inside the key length the API accepts", () => {
+    expect(suggestKey("x".repeat(200), "y".repeat(200)).length).toBeLessThanOrEqual(60);
   });
 });

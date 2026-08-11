@@ -94,6 +94,18 @@ export function GrantIcon(p: IconProps) {
   );
 }
 
+/** A form: a sheet with ruled answer fields. */
+export function FormIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M5 3h14v18H5z" />
+      <path d="M8.5 8h7" />
+      <path d="M8.5 12h7" />
+      <path d="M8.5 16h4" />
+    </Icon>
+  );
+}
+
 export function DocIcon(p: IconProps) {
   return (
     <Icon {...p}>

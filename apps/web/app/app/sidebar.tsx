@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChatIcon,
+  FormIcon,
   GrantIcon,
   HomeIcon,
   PeopleIcon,
@@ -120,6 +121,17 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           >
             <VaultIcon />
             Vault
+          </Link>
+          {/* Unflagged: a workspace answering a funder's form may have any
+              module, or none. */}
+          <Link
+            href="/app/forms"
+            className={`${item} mt-0.5 ${
+              pathname.startsWith("/app/forms") ? itemActive : itemRest
+            }`}
+          >
+            <FormIcon />
+            Funder forms
           </Link>
           {tenant.features?.contacts === true && (
             <Link

@@ -175,6 +175,43 @@ class LiteLLMClient:
 
     # -- chat (tenant virtual key) --------------------------------------------
 
+    async def complete(
+        self, virtual_key: str, alias: str, messages: list[dict], result: StreamResult
+    ) -> str:
+        """One non-streaming completion, with usage recorded on `result`.
+
+        Streaming is the right shape for an answer somebody is reading as it
+        arrives. It is the wrong shape for a call whose whole output is a JSON
+        object nobody can use until it is complete — there is nothing to render
+        early, and the caller would only be reassembling the deltas.
+        """
+        if not self.enabled:
+            raise ApiError(503, "llm_unavailable", "Model gateway is not configured")
+        resp = await self._http().post(
+            "/v1/chat/completions",
+            headers=self._tenant_headers(virtual_key),
+            json={
+                "model": alias,
+                "messages": messages,
+                "max_tokens": MAX_OUTPUT_TOKENS,
+                "reasoning_effort": REASONING_EFFORT,
+            },
+        )
+        if resp.status_code >= 400:
+            raise ApiError(
+                502 if resp.status_code >= 500 else 400,
+                "llm_error",
+                _safe_upstream_message(resp.status_code, resp.content),
+            )
+        payload = resp.json()
+        usage = payload.get("usage") or {}
+        result.model = payload.get("model", "") or alias
+        result.tokens_in = usage.get("prompt_tokens", 0)
+        result.tokens_out = usage.get("completion_tokens", 0)
+        text = (payload["choices"][0].get("message") or {}).get("content") or ""
+        result.text_parts.append(text)
+        return text
+
     async def stream_chat(
         self,
         virtual_key: str,
