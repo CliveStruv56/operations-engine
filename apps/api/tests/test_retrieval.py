@@ -380,3 +380,27 @@ async def test_vault_search_admin_only(client, citing_llm):
         headers=auth(member_id, t.id),
     )
     assert resp.status_code == 403
+
+
+def test_resolve_citations_drops_a_non_hex_prefixed_id():
+    """Found by the local end-to-end run on 11 Aug 2026.
+
+    The model invented `[c:s1]` on a project with an empty vault. The pattern
+    required a hex-looking id, `s` is not a hex digit, so nothing matched and
+    the marker reached the user verbatim. `c:` is the model saying it meant a
+    citation — whatever follows is a citation attempt, and one that resolves
+    to nothing is a hallucination.
+    """
+    real = _chunk()
+    for fake in ("[c:s1]", "[c:source-1]", "[c:ref]", "【c:s1】"):
+        content, citations = _resolve_citations(f"Need is high {fake}.", [real])
+        assert content == "Need is high .", fake
+        assert citations == []
+
+
+def test_resolve_citations_leaves_prose_that_only_looks_like_a_marker():
+    """The other half: a prefixed pattern with a space inside is prose, and
+    eating it would delete the answer's own words."""
+    real = _chunk()
+    content, _ = _resolve_citations("See [c: the note below] for detail.", [real])
+    assert content == "See [c: the note below] for detail."

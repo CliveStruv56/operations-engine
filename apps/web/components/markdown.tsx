@@ -11,7 +11,11 @@ export type CiteRenderer = (n: number) => React.ReactNode;
 // only rewrites them to [n] in its final `done` event, so raw uuids are live in
 // every streamed delta. Fullwidth brackets and a missing `c:` are both things
 // the GLM/DeepSeek family does in practice. Keep the two in step.
-const CITE_MARKER_RE = /[[【]\s*(c:)?\s*([0-9a-fA-F][0-9a-fA-F-]{3,35})\s*[\]】]/g;
+// A prefixed marker takes anything non-blank: `c:` means the model intended a
+// citation, so `[c:s1]` is a hallucinated one to hide rather than prose to
+// protect. Requiring hex there let exactly that through (11 Aug 2026).
+const CITE_MARKER_RE =
+  /[[【]\s*(?:c:\s*([^\]】\s]{1,64})|([0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]/g;
 // The tail of a marker that straddles two deltas — hide the half that landed
 // rather than let it flash as text for a frame.
 const PARTIAL_CITE_MARKER_RE = /[[【]\s*(?:c:)?\s*[0-9a-fA-F-]{0,35}$/;
@@ -22,8 +26,8 @@ const PARTIAL_CITE_MARKER_RE = /[[【]\s*(?:c:)?\s*[0-9a-fA-F-]{0,35}$/;
  * `c:` prefix is left alone; it is far more often prose than a citation. */
 export function stripCiteMarkers(text: string): string {
   return text
-    .replace(CITE_MARKER_RE, (raw, prefix, id: string) =>
-      prefix || id.length >= 8 ? "" : raw
+    .replace(CITE_MARKER_RE, (raw, prefixed: string | undefined, bare: string | undefined) =>
+      prefixed !== undefined || (bare?.length ?? 0) >= 8 ? "" : raw
     )
     .replace(PARTIAL_CITE_MARKER_RE, "");
 }

@@ -237,6 +237,39 @@ def test_a_pasteable_answer_carries_no_citation_markers():
     assert [c["title"] for c in answer["citations"]] == ["Housing Need Survey"]
 
 
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "[c:s1]",  # the one that actually reached a form, 11 Aug 2026
+        "[c:source-1]",
+        "[c: s1 ]",
+        "【c:s1】",
+        "[c:ref]",
+        "[c:1]",
+    ],
+)
+def test_a_fabricated_prefixed_citation_never_reaches_a_form_field(marker):
+    """Found by the local end-to-end run, not by any unit test.
+
+    The model invented `[c:s1]` on a project with an empty vault. `s` is not a
+    hex digit, so the pattern did not match at all — the marker was neither
+    resolved nor stripped, and sailed into the pasteable answer. The `c:`
+    prefix is the model saying it meant a citation; whatever follows it is a
+    citation attempt, and an unresolvable one is a hallucination.
+    """
+    (answer,) = _sheet([(_q("q1", 2000, uses_vault=True), f"Need is severe {marker}. It is.")])
+    assert "c:" not in answer["text"]
+    assert answer["text"] == "Need is severe. It is."
+
+
+def test_prose_that_merely_looks_like_a_marker_survives():
+    """The other half of the bargain: stripping a lookalike would silently
+    delete the drafted words around it."""
+    for prose in ("[c: see the note below]", "[42]", "[dead]", "[TBC]"):
+        (answer,) = _sheet([(_q("q1", 2000), f"Section {prose} continues.")])
+        assert prose in answer["text"], f"{prose} was eaten"
+
+
 def test_an_answer_keeps_its_to_confirm_markers():
     """An answer with a hole in it should be uncomfortable to paste."""
     (answer,) = _sheet([(_q("q1", 500), "We served [TO CONFIRM: how many?] people.")])

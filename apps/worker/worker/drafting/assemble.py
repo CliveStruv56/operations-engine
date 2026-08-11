@@ -21,12 +21,25 @@ from docx.shared import Pt
 from worker.drafting.pack import DraftPackBase, VaultExcerpt
 from worker.drafting.sections import Section, measure
 
-# 4–36 id chars: models routinely truncate long hex ids when echoing them, so
-# markers resolve by unique prefix too. Fullwidth 【c:…】 accepted too — CJK-
-# bracket echo seen live from the GLM/DeepSeek model family, which also drops
-# the `c:` prefix outright (seen live 11 Aug 2026), hence the optional group.
+# Two shapes, because the `c:` prefix decides how much benefit of the doubt a
+# marker gets.
+#
+# Prefixed: the model is telling us it meant a citation, so whatever follows is
+# a citation attempt whatever it looks like, and an unresolvable one is a
+# hallucination to strip. Requiring hex here let `[c:s1]` — a wholly invented
+# id — through to a funder's form, because `s` is not a hex digit and the
+# pattern simply did not match (seen live 11 Aug 2026).
+#
+# Prefix-less: nothing distinguishes it from prose, so it must still look like
+# a truncated id (models echo long hex ids short, hence 4–36 and the
+# resolve-by-unique-prefix below). Fullwidth 【…】 accepted on both — CJK
+# bracket echo from the GLM/DeepSeek family.
+#
 # Keep in step with the api's app/routers/conversations.py.
-CITATION_RE = re.compile(r"[\[【]\s*(c:)?\s*([0-9a-fA-F][0-9a-fA-F-]{3,35})\s*[\]】]")
+CITATION_RE = re.compile(
+    r"[\[【]\s*(?:c:\s*(?P<prefixed>[^\]】\s]{1,64})"
+    r"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]"
+)
 # A prefix-less marker is only believed at full-id length — short bracketed hex
 # is ordinary prose far more often than it is a citation.
 MIN_UNPREFIXED_ID = 8
@@ -64,11 +77,12 @@ class CitationIndex:
 
     def resolve(self, text: str) -> str:
         def _sub(match: re.Match) -> str:
-            cid = match.group(2).lower()
+            prefixed = match.group("prefixed")
+            cid = (prefixed if prefixed is not None else match.group("bare")).lower()
             # Certain it is a marker: it carries the prefix, or it is a whole
             # uuid. An uncertain one is left verbatim unless it resolves —
             # stripping it would delete drafted prose.
-            certain = match.group(1) is not None or FULL_ID_RE.match(cid) is not None
+            certain = prefixed is not None or FULL_ID_RE.match(cid) is not None
             if not certain and len(cid) < MIN_UNPREFIXED_ID:
                 return match.group(0)
             if cid not in self.by_id:
@@ -159,8 +173,19 @@ def _answer_entry(section: Section, resolved: str, index: CitationIndex) -> dict
     `[TO CONFIRM: …]` markers deliberately stay in. An answer that still has a
     gap in it should be uncomfortable to paste.
     """
-    cited = {int(n) for n in FOOTNOTE_RE.findall(resolved)}
-    plain = FOOTNOTE_RE.sub("", resolved).strip()
+    # Only numbers this document actually issued are endnotes. A model that
+    # writes "[42]" as prose keeps it — the References page has no 42, so
+    # deleting it would be deleting the answer's own words.
+    issued = len(index.order)
+    cited = {n for n in (int(m) for m in FOOTNOTE_RE.findall(resolved)) if 1 <= n <= issued}
+    plain = FOOTNOTE_RE.sub(
+        lambda m: "" if 1 <= int(m.group(1)) <= issued else m.group(0), resolved
+    )
+    # Removing a marker leaves the space that preceded it stranded in front of
+    # the punctuation that followed — " ." reads as sloppy in a bid, and this
+    # text is going into a funder's field verbatim.
+    plain = re.sub(r"[ \t]+([.,;:!?)\]])", r"\1", plain)
+    plain = re.sub(r"[ \t]{2,}", " ", plain).strip()
     length, over_by = measure(plain, section)
     return {
         "question_id": section.key,
