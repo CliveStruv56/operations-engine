@@ -404,3 +404,20 @@ def test_resolve_citations_leaves_prose_that_only_looks_like_a_marker():
     real = _chunk()
     content, _ = _resolve_citations("See [c: the note below] for detail.", [real])
     assert content == "See [c: the note below] for detail."
+
+
+def test_resolve_citations_handles_several_ids_in_one_bracket():
+    """Found by a live AHF draft, 11 Aug 2026. The model writes lists —
+    `[c:p1, c:b1]` — and matching a single id left the whole bracket
+    unrecognised, so it reached the reader verbatim."""
+    c1, c2 = _chunk(title="Survey"), _chunk(title="Local Plan")
+    content, citations = _resolve_citations(f"Both [c:{c1.chunk_id}, c:{c2.chunk_id}].", [c1, c2])
+    assert content == "Both [1][2]."
+    assert [c["n"] for c in citations] == [1, 2]
+
+    # The prefix repeated only on the first id, and fabricated ids in a list.
+    content, _ = _resolve_citations(f"A [c:{c1.chunk_id}, {c2.chunk_id}].", [c1, c2])
+    assert content == "A [1][2]."
+    content, citations = _resolve_citations("Fake [c:p1, c:b1].", [c1])
+    assert content == "Fake ."
+    assert citations == []

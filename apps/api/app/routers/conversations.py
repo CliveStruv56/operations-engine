@@ -55,20 +55,30 @@ router = APIRouter(tags=["conversations"])
 # tuning is guesswork.
 logger = logging.getLogger("app.chat.latency")
 
-# 4–36 id chars: models routinely truncate long hex ids when echoing them
-# (staging saw [c:1a689315] for full UUIDs), so markers resolve by unique
-# prefix too. Fullwidth brackets 【c:…】 are accepted as well — the GLM/
-# DeepSeek-family models occasionally emit CJK brackets when echoing markers
-# (seen live 1 Aug 2026). The `c:` prefix is optional because those same models
-# also drop it (seen live 11 Aug 2026: 【3174bc60-028e-4df2-82c7-d9b3a4eb1b11】
-# reached a user verbatim). Keep in step with worker/drafts/assemble.py.
-# Prefixed markers take anything non-blank: `c:` says the model meant a
-# citation, so `[c:s1]` is a hallucinated one to strip, not prose to protect.
-# Requiring hex there let exactly that reach a drafted document (11 Aug 2026).
+# Citation markers, as the models actually write them rather than as asked.
+# Keep in step with worker/drafting/assemble.py.
+#
+# Two branches, because the `c:` prefix decides how much benefit of the doubt a
+# bracket gets. Prefixed, the model is telling us it meant a citation, so
+# anything inside is a citation attempt and an unresolvable one is an invention
+# to strip. Prefix-less, nothing separates it from prose, so it must still look
+# like a truncated hex id (staging saw [c:1a689315] for a full UUID, hence
+# resolve-by-unique-prefix below).
+#
+# Each relaxation here is a failure we watched reach a reader:
+#   1 Aug  fullwidth 【c:…】 — CJK bracket echo from the GLM/DeepSeek family
+#  11 Aug  the `c:` prefix dropped entirely: 【3174bc60-…】
+#  11 Aug  a non-hex id, [c:s1], matched nothing and so was never stripped
+#  11 Aug  several ids in one bracket, [c:p1, c:b1], likewise
+#
+# Tokens are comma-separated and space-free, which is what keeps
+# `[c: see the note below]` prose rather than something to eat.
+_ID = r"[^\s,\]】]{1,64}"
 CITATION_RE = re.compile(
-    r"[\[【]\s*(?:c:\s*(?P<prefixed>[^\]】\s]{1,64})"
-    r"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]"
+    rf"[\[【]\s*(?:c:\s*(?P<prefixed>{_ID}(?:\s*,\s*(?:c:\s*)?{_ID})*)"
+    rf"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{{3,35}}))\s*[\]】]"
 )
+_ID_SPLIT = re.compile(r"\s*,\s*(?:c:\s*)?")
 # A prefix-less marker is only believed at full-id length. Short bracketed hex
 # is ordinary prose far more often than it is a citation ("[42]", "[dead]"),
 # and the truncations we have actually seen ran to 8 chars.
@@ -121,19 +131,11 @@ def _resolve_citations(
         matches = [(full, c) for full, c in by_id.items() if full.startswith(cid)]
         return matches[0] if len(matches) == 1 else None
 
-    def _sub(match: re.Match) -> str:
-        prefixed = match.group("prefixed")
-        cid_raw = (prefixed if prefixed is not None else match.group("bare")).lower()
-        # Certain it is a marker: it carries the prefix, or it is a whole uuid.
-        # Uncertain ones are left exactly as written when they fail to resolve —
-        # dropping a marker deletes a hallucinated citation, but dropping a
-        # lookalike would silently delete the answer's own text.
-        certain = prefixed is not None or FULL_ID_RE.match(cid_raw) is not None
-        if not certain and len(cid_raw) < MIN_UNPREFIXED_ID:
-            return match.group(0)
+    def _number(cid_raw: str) -> str:
+        """`[n]` for an id that resolves, "" for one that does not."""
         found = _lookup(cid_raw)
         if found is None:
-            return "" if certain else match.group(0)
+            return ""
         cid, chunk = found
         if cid not in order:
             order[cid] = len(order) + 1
@@ -166,6 +168,23 @@ def _resolve_citations(
                     }
                 )
         return f"[{order[cid]}]"
+
+    def _sub(match: re.Match) -> str:
+        prefixed = match.group("prefixed")
+        if prefixed is not None:
+            # The prefix is the model saying it meant a citation, so every id in
+            # the bracket is a citation attempt — resolve each, drop inventions.
+            return "".join(_number(cid.lower()) for cid in _ID_SPLIT.split(prefixed.strip()) if cid)
+        cid_raw = match.group("bare").lower()
+        # Without the prefix, only a whole uuid is a marker beyond doubt.
+        # Anything shorter is left exactly as written when it fails to resolve:
+        # dropping a marker deletes a hallucinated citation, but dropping a
+        # lookalike would silently delete the answer's own text.
+        certain = FULL_ID_RE.match(cid_raw) is not None
+        if not certain and len(cid_raw) < MIN_UNPREFIXED_ID:
+            return match.group(0)
+        numbered = _number(cid_raw)
+        return numbered if numbered or certain else match.group(0)
 
     return CITATION_RE.sub(_sub, text), citations
 

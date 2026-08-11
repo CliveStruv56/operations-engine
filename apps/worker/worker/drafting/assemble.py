@@ -36,10 +36,22 @@ from worker.drafting.sections import Section, measure
 # bracket echo from the GLM/DeepSeek family.
 #
 # Keep in step with the api's app/routers/conversations.py.
+#: A prefixed bracket may carry several ids at once — `[c:p1, c:b1]` and
+#: `[c:g1, g2, g3]` both seen live 11 Aug 2026. Matching only one id left the
+#: whole bracket unrecognised, so it reached a funder's field verbatim, which
+#: is the same failure `[c:s1]` caused by a different route. Each id resolves
+#: to its own reference.
+#:
+#: The tokens must be comma-separated and space-free, which is what keeps
+#: `[c: see the note below]` prose: its content has spaces inside a token, so
+#: it does not match and is left alone.
+_ID = r"[^\s,\]】]{1,64}"
 CITATION_RE = re.compile(
-    r"[\[【]\s*(?:c:\s*(?P<prefixed>[^\]】\s]{1,64})"
-    r"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]"
+    rf"[\[【]\s*(?:c:\s*(?P<prefixed>{_ID}(?:\s*,\s*(?:c:\s*)?{_ID})*)"
+    rf"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{{3,35}}))\s*[\]】]"
 )
+#: Splits a prefixed bracket's payload into its individual ids.
+_ID_SPLIT = re.compile(r"\s*,\s*(?:c:\s*)?")
 # A prefix-less marker is only believed at full-id length — short bracketed hex
 # is ordinary prose far more often than it is a citation.
 MIN_UNPREFIXED_ID = 8
@@ -75,29 +87,45 @@ class CitationIndex:
         self.order: dict[str, int] = {}
         self.stripped = 0
 
+    def _number(self, cid: str, certain: bool) -> str | None:
+        """`[n]` for an id that resolves, "" for a certain one that does not,
+        or None when it is too uncertain to touch."""
+        if cid not in self.by_id:
+            # Truncated markers resolve only as a unique prefix of one
+            # supplied id — fabricated or ambiguous ids still strip.
+            matches = [full for full in self.by_id if full.startswith(cid)]
+            if len(matches) != 1:
+                if not certain:
+                    return None
+                self.stripped += 1
+                return ""
+            cid = matches[0]
+        if cid not in self.order:
+            self.order[cid] = len(self.order) + 1
+        return f"[{self.order[cid]}]"
+
     def resolve(self, text: str) -> str:
         def _sub(match: re.Match) -> str:
             prefixed = match.group("prefixed")
-            cid = (prefixed if prefixed is not None else match.group("bare")).lower()
-            # Certain it is a marker: it carries the prefix, or it is a whole
-            # uuid. An uncertain one is left verbatim unless it resolves —
-            # stripping it would delete drafted prose.
-            certain = prefixed is not None or FULL_ID_RE.match(cid) is not None
+            if prefixed is not None:
+                # The prefix is the model saying it meant a citation, so every
+                # id in the bracket is a citation attempt — resolve each, and
+                # strip the ones that are inventions.
+                out = "".join(
+                    self._number(cid.lower(), certain=True) or ""
+                    for cid in _ID_SPLIT.split(prefixed.strip())
+                    if cid
+                )
+                return out
+            cid = match.group("bare").lower()
+            # Without the prefix, only a whole uuid is a marker beyond doubt.
+            # Anything shorter is left verbatim unless it resolves — stripping
+            # it would delete drafted prose.
+            certain = FULL_ID_RE.match(cid) is not None
             if not certain and len(cid) < MIN_UNPREFIXED_ID:
                 return match.group(0)
-            if cid not in self.by_id:
-                # Truncated markers resolve only as a unique prefix of one
-                # supplied id — fabricated or ambiguous ids still strip.
-                matches = [full for full in self.by_id if full.startswith(cid)]
-                if len(matches) != 1:
-                    if not certain:
-                        return match.group(0)
-                    self.stripped += 1
-                    return ""
-                cid = matches[0]
-            if cid not in self.order:
-                self.order[cid] = len(self.order) + 1
-            return f"[{self.order[cid]}]"
+            numbered = self._number(cid, certain)
+            return match.group(0) if numbered is None else numbered
 
         return CITATION_RE.sub(_sub, text)
 
@@ -184,8 +212,13 @@ def _answer_entry(section: Section, resolved: str, index: CitationIndex) -> dict
     # Removing a marker leaves the space that preceded it stranded in front of
     # the punctuation that followed — " ." reads as sloppy in a bid, and this
     # text is going into a funder's field verbatim.
-    plain = re.sub(r"[ \t]+([.,;:!?)\]])", r"\1", plain)
-    plain = re.sub(r"[ \t]{2,}", " ", plain).strip()
+    #
+    # `[^\S\n]` rather than `[ \t]`: these models write non-breaking and narrow
+    # no-break spaces (U+00A0, U+202F seen live 11 Aug 2026), and a tidy that
+    # only knew about ASCII left exactly the gap it was there to close.
+    # Newlines are excluded so paragraph breaks survive.
+    plain = re.sub(r"[^\S\n]+([.,;:!?)\]])", r"\1", plain)
+    plain = re.sub(r"[^\S\n]{2,}", " ", plain).strip()
     length, over_by = measure(plain, section)
     return {
         "question_id": section.key,

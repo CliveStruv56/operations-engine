@@ -14,8 +14,11 @@ export type CiteRenderer = (n: number) => React.ReactNode;
 // A prefixed marker takes anything non-blank: `c:` means the model intended a
 // citation, so `[c:s1]` is a hallucinated one to hide rather than prose to
 // protect. Requiring hex there let exactly that through (11 Aug 2026).
+// A prefixed bracket may carry several ids — `[c:p1, c:b1]` seen live 11 Aug
+// 2026. Tokens are comma-separated and space-free, which keeps
+// `[c: see the note below]` prose rather than something to hide.
 const CITE_MARKER_RE =
-  /[[【]\s*(?:c:\s*([^\]】\s]{1,64})|([0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]/g;
+  /[[【]\s*(?:c:\s*((?:[^\s,\]】]{1,64})(?:\s*,\s*(?:c:\s*)?[^\s,\]】]{1,64})*)|([0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]/g;
 // The tail of a marker that straddles two deltas — hide the half that landed
 // rather than let it flash as text for a frame.
 const PARTIAL_CITE_MARKER_RE = /[[【]\s*(?:c:)?\s*[0-9a-fA-F-]{0,35}$/;

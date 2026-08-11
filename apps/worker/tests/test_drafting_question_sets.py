@@ -262,6 +262,49 @@ def test_a_fabricated_prefixed_citation_never_reaches_a_form_field(marker):
     assert answer["text"] == "Need is severe. It is."
 
 
+@pytest.mark.parametrize(
+    "marker",
+    [
+        "[c:p1, c:b1]",  # both seen on the live AHF draft, 11 Aug 2026
+        "[c:g1, c:g2, c:g3]",
+        "[c:g1, g2]",  # the prefix repeated only on the first
+        "【c:p1, c:b1】",
+    ],
+)
+def test_a_bracket_holding_several_fabricated_ids_is_stripped_whole(marker):
+    """The second escape found by a live draft, not by a test.
+
+    One id per bracket was the assumption; the model writes lists. Matching a
+    single id left the whole bracket unrecognised, so `[c:p1, c:b1]` reached a
+    funder's field intact — the same failure as `[c:s1]` by a different route.
+    """
+    (answer,) = _sheet([(_q("q1", 2000, uses_vault=True), f"Works are needed {marker}. Yes.")])
+    assert "c:" not in answer["text"]
+    assert answer["text"] == "Works are needed. Yes."
+
+
+def test_each_id_in_a_bracket_gets_its_own_reference():
+    first, second = _excerpt("Survey"), _excerpt("Local Plan")
+    section = _q("q1", 2000, uses_vault=True)
+    text = f"Both apply [c:{first.chunk_id}, c:{second.chunk_id}]."
+    (answer,) = _sheet([(section, text)], excerpts=[first, second])
+    assert answer["text"] == "Both apply."
+    assert [c["n"] for c in answer["citations"]] == [1, 2]
+    assert {c["title"] for c in answer["citations"]} == {"Survey", "Local Plan"}
+
+
+def test_a_stranded_unicode_space_is_closed_up():
+    """These models write U+202F and U+00A0. A tidy that only knew about ASCII
+    left exactly the gap it existed to close, in a funder's field."""
+    excerpt = _excerpt()
+    for space in (" ", " ", " "):
+        (answer,) = _sheet(
+            [(_q("q1", 900, uses_vault=True), f"On the site{space}[c:{excerpt.chunk_id}]. Next.")],
+            excerpts=[excerpt],
+        )
+        assert answer["text"] == "On the site. Next.", repr(space)
+
+
 def test_prose_that_merely_looks_like_a_marker_survives():
     """The other half of the bargain: stripping a lookalike would silently
     delete the drafted words around it."""

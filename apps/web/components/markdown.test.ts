@@ -35,3 +35,22 @@ describe("stripCiteMarkers", () => {
     expect(stripCiteMarkers("Leave is 25 days [c:3174bc")).toBe("Leave is 25 days ");
   });
 });
+
+describe("stripCiteMarkers — several ids in one bracket", () => {
+  it("hides a bracket holding a list of fabricated ids", () => {
+    // Seen on a live AHF draft, 11 Aug 2026.
+    for (const marker of ["[c:p1, c:b1]", "[c:g1, c:g2, c:g3]", "[c:g1, g2]", "【c:p1, c:b1】"]) {
+      expect(stripCiteMarkers(`Works are needed ${marker}.`)).toBe("Works are needed .");
+    }
+  });
+
+  it("hides a bracket holding real ids", () => {
+    expect(stripCiteMarkers(`Both [c:${UUID}, c:${UUID}].`)).toBe("Both .");
+  });
+
+  it("still leaves prose with spaces inside the brackets", () => {
+    expect(stripCiteMarkers("See [c: the note below] for detail.")).toBe(
+      "See [c: the note below] for detail."
+    );
+  });
+});
