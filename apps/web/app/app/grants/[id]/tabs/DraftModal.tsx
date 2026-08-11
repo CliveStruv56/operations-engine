@@ -18,6 +18,14 @@ import {
   submitDraft,
 } from "@/lib/grants";
 import { openPresigned } from "@/lib/groundwork";
+import { AnswerSheetView } from "@/components/answer-sheet";
+import {
+  AnswerSheet,
+  QuestionSet,
+  getGrantAnswers,
+  listQuestionSets,
+  staleNote,
+} from "@/lib/questions";
 import { btn, btnGhost, input } from "../../ui";
 
 const POLL_MS = 3000;
@@ -39,6 +47,10 @@ export function DraftModal({
   const [job, setJob] = useState<DraftJob | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [sets, setSets] = useState<QuestionSet[]>([]);
+  const [setKey, setSetKey] = useState("");
+  const [sheet, setSheet] = useState<AnswerSheet | null>(null);
+  const chosenSet = sets.find((s) => s.key === setKey) ?? null;
 
   // A draft may already be running (this modal invites closing mid-draft) —
   // resume polling it rather than offering a duplicate submit. The API's 409
@@ -63,6 +75,16 @@ export function DraftModal({
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [kind, applicationId]);
 
+  useEffect(() => {
+    if (kind !== "application_form") return;
+    listQuestionSets()
+      .then((rows) => {
+        setSets(rows);
+        if (rows.length) setSetKey(rows[0].key);
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [kind]);
+
   const running = job !== null && (job.status === "queued" || job.status === "running");
   useEffect(() => {
     if (!running || !job) return;
@@ -77,12 +99,22 @@ export function DraftModal({
     return () => clearInterval(timer);
   }, [running, job, onRegistered]);
 
+  // The sheet is the point of an application-form draft, so fetch it as soon
+  // as the job lands rather than making someone click through to it.
+  useEffect(() => {
+    if (job?.status !== "succeeded" || job.kind !== "application_form" || sheet) return;
+    getGrantAnswers(job.id)
+      .then(setSheet)
+      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+  }, [job, sheet]);
+
   async function submit() {
     setError(null);
     setSubmitting(true);
     try {
       const body: Parameters<typeof submitDraft>[1] = { kind };
       if (kind === "monitoring_report") body.reporting_period_id = periodId;
+      if (kind === "application_form") body.question_set_key = setKey;
       if (instructions.trim()) body.instructions = instructions.trim();
       setJob(await submitDraft(applicationId, body));
     } catch (e) {
@@ -94,7 +126,14 @@ export function DraftModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4">
-      <div className="w-full max-w-md rounded-card border border-edge bg-surface p-5 shadow-lg">
+      {/* The sheet is a working surface, not a confirmation — twenty answers
+          at a readable measure need the room, and the body scrolls so the
+          header stays put. */}
+      <div
+        className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-card border border-edge bg-surface p-5 shadow-lg ${
+          sheet ? "max-w-3xl" : "max-w-md"
+        }`}
+      >
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-medium">Draft with AI — {DRAFT_LABEL[kind]}</h2>
           <button onClick={onClose} className={btnGhost}>
@@ -102,6 +141,7 @@ export function DraftModal({
           </button>
         </div>
 
+        <div className="min-h-0 flex-1 overflow-y-auto">
         {job === null && (
           <div className="space-y-3">
             {kind === "monitoring_report" &&
@@ -126,6 +166,34 @@ export function DraftModal({
                   one, and its figures come from the outcomes recorded there.
                 </p>
               ))}
+
+            {kind === "application_form" &&
+              (sets.length ? (
+                <label className="block text-sm">
+                  Which funder&apos;s form?
+                  <select
+                    value={setKey}
+                    onChange={(e) => setSetKey(e.target.value)}
+                    className={`${input} mt-1 block w-full`}
+                  >
+                    {sets.map((s) => (
+                      <option key={s.key} value={s.key}>
+                        {s.funder} — {s.name} ({s.questions.length} questions)
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <p className="text-sm text-ink-muted">
+                  No funder forms are set up yet. Each one holds a funder&apos;s own questions and
+                  their character limits, so answers come out the right length to paste.
+                </p>
+              ))}
+            {kind === "application_form" && staleNote(chosenSet) && (
+              <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">
+                {staleNote(chosenSet)}
+              </p>
+            )}
 
             <label className="block text-sm">
               Instructions (optional)
@@ -152,7 +220,11 @@ export function DraftModal({
             )}
             <button
               onClick={submit}
-              disabled={submitting || (kind === "monitoring_report" && !periodId)}
+              disabled={
+                submitting ||
+                (kind === "monitoring_report" && !periodId) ||
+                (kind === "application_form" && !setKey)
+              }
               className={btn}
             >
               {submitting ? (
@@ -183,11 +255,19 @@ export function DraftModal({
 
         {job?.status === "succeeded" && (
           <div className="space-y-3 text-sm">
-            <p className="rounded-[10px] bg-accent-soft px-3 py-2">
-              Draft ready — {job.to_confirm_count}{" "}
-              {job.to_confirm_count === 1 ? "item" : "items"} marked [TO CONFIRM]. It is filed as a
-              draft; read it before anything goes to the funder.
-            </p>
+            {sheet ? (
+              <AnswerSheetView
+                sheet={sheet}
+                setName={chosenSet?.name}
+                stale={staleNote(chosenSet)}
+              />
+            ) : (
+              <p className="rounded-[10px] bg-accent-soft px-3 py-2">
+                Draft ready — {job.to_confirm_count}{" "}
+                {job.to_confirm_count === 1 ? "item" : "items"} marked [TO CONFIRM]. It is filed as
+                a draft; read it before anything goes to the funder.
+              </p>
+            )}
             {job.download_url && (
               <button onClick={() => openPresigned(job.download_url!)} className={btn}>
                 Download the draft
@@ -201,6 +281,7 @@ export function DraftModal({
             {job.error ?? "The draft failed."}
           </p>
         )}
+        </div>
       </div>
     </div>
   );

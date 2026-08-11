@@ -17,6 +17,7 @@ from worker.drafting.assemble import assemble_docx
 from worker.drafting.llm import MAX_LLM_CALLS, DraftBudgetExceeded
 from worker.drafting.pack import VaultExcerpt
 from worker.drafting.prompts import batch_prompt, parse_answers, section_prompt
+from worker.drafting.questions import QuestionSet, warning_for
 from worker.drafting.sections import (
     BATCH_MAX_CHARS,
     Section,
@@ -142,6 +143,61 @@ def test_the_batch_prompt_carries_every_question_and_asks_for_json():
     assert '"limit": 200' in user and '"limit": 300' in user
     assert "a note" in user
     assert "JSON object mapping each question key" in user
+
+
+# -- the warning that rides on the draft's first page ------------------------
+
+
+def _set(**kw) -> QuestionSet:
+    base = dict(
+        key="fund_eoi",
+        name="Expression of interest",
+        funder="A Trust",
+        stage="eoi",
+        status="open",
+        last_verified=date(2026, 5, 1),
+        next_review=date(2026, 11, 1),
+        questions=[],
+        source="platform",
+        stale=False,
+    )
+    return QuestionSet(**{**base, **kw})
+
+
+def test_a_verified_in_date_form_carries_no_warning():
+    assert warning_for(_set()) is None
+    assert warning_for(None) is None
+
+
+def test_an_unverified_but_in_date_form_is_not_called_overdue():
+    """Naming the wrong problem is worse than naming none — a consultant sent
+    to check a review date that has not passed stops believing the banner."""
+    note = warning_for(_set(status="unverified"))
+    assert "have not been verified" in note
+    assert "past review" not in note
+
+
+def test_an_overdue_form_says_when_it_was_last_checked():
+    note = warning_for(_set(stale=True))
+    assert "2026-05-01" in note and "past review" in note
+
+
+def test_a_form_that_is_both_says_both():
+    note = warning_for(_set(status="unverified", stale=True))
+    assert "never been verified" in note and "past review" in note
+
+
+def test_a_tenants_own_copy_says_so_rather_than_claiming_we_checked_it():
+    note = warning_for(_set(source="tenant"))
+    assert "your own copy" in note
+
+
+def test_the_warning_matches_the_one_the_ui_shows():
+    """The banner on the draft's first page and the one above the answer sheet
+    must not disagree about how far this form can be trusted. Mirrored in
+    apps/web/lib/questions.ts::staleNote."""
+    for kwargs in ({"status": "unverified"}, {"stale": True}, {"source": "tenant"}):
+        assert warning_for(_set(**kwargs)), f"{kwargs}: the UI warns here and the draft does not"
 
 
 # -- the answer sheet --------------------------------------------------------

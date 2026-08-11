@@ -53,6 +53,14 @@ export function BidPackTab({ id }: { id: string }) {
         <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
+      {/* Every other draft launches from its own registry row. A funder's form
+          has none to launch from — which form you are answering is a choice
+          made at the time, not a document the spine seeded. */}
+      <div className="mb-2 flex justify-end">
+        <button onClick={() => setDrafting("application_form")} className={btnGhost}>
+          Answer a funder&apos;s form
+        </button>
+      </div>
       <div className={`overflow-x-auto ${card}`}>
         <table className="w-full text-sm">
           <thead>

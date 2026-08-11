@@ -135,11 +135,23 @@ def warning_for(question_set: QuestionSet | None) -> str | None:
             f"These questions and limits come from your own copy of “{question_set.name}”, "
             "which has not been checked against the funder's current form."
         )
-    if question_set.status != "open" or question_set.stale:
+    # Two different problems, and naming the wrong one is worse than saying
+    # nothing: a set can be unverified but in date, or verified but overdue.
+    check = " Check them against the funder's current form before submitting."
+    if question_set.status != "open" and question_set.stale:
+        return (
+            f"The questions and character limits for “{question_set.name}” have never been "
+            f"verified against the funder's own form, and are past review.{check}"
+        )
+    if question_set.status != "open":
+        return (
+            f"The questions and character limits for “{question_set.name}” have not been "
+            f"verified against the funder's own form.{check}"
+        )
+    if question_set.stale:
         return (
             f"The questions and character limits for “{question_set.name}” were last verified "
-            f"{question_set.last_verified.isoformat()} and are past review — check them against "
-            "the funder's current form before writing to them."
+            f"{question_set.last_verified.isoformat()} and are past review.{check}"
         )
     return None
 

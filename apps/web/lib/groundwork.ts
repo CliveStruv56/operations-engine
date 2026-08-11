@@ -163,7 +163,11 @@ export type Stakeholder = {
   last_contact: string | null;
 };
 
-export type DraftKind = "monthly_report" | "feasibility_study" | "funding_bid";
+export type DraftKind =
+  | "monthly_report"
+  | "feasibility_study"
+  | "funding_bid"
+  | "application_form";
 export type DraftJob = {
   id: string;
   project_id: string;
@@ -181,7 +185,13 @@ export type DraftJob = {
 
 export const submitDraft = (
   projectId: string,
-  body: { kind: DraftKind; month?: string; funding_source_id?: string; instructions?: string }
+  body: {
+    kind: DraftKind;
+    month?: string;
+    funding_source_id?: string;
+    question_set_key?: string;
+    instructions?: string;
+  }
 ) => gw<DraftJob>(`/projects/${projectId}/drafts`, { method: "POST", body: JSON.stringify(body) });
 
 export const getDraftJob = (jobId: string) => gw<DraftJob>(`/projects/drafts/${jobId}`);

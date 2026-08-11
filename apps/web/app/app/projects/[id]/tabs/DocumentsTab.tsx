@@ -68,6 +68,14 @@ export function DocumentsTab({ id }: { id: string }) {
     <div>
       <LoadError failed={failed} onRetry={refresh} />
       {error && <p className="mb-2 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      {/* Every other draft launches from its own registry row. A funder's form
+          has none to launch from — which form you are answering is a choice
+          made at the time, not a document the spine seeded. */}
+      <div className="mb-2 flex justify-end">
+        <button onClick={() => setDraftKind("application_form")} className={btnGhost}>
+          Answer a funder&apos;s form
+        </button>
+      </div>
       <table className="w-full rounded-card border border-edge bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">

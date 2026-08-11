@@ -205,7 +205,8 @@ export type DraftKind =
   | "case_for_support"
   | "funding_application"
   | "monitoring_report"
-  | "impact_evaluation";
+  | "impact_evaluation"
+  | "application_form";
 
 export type DraftJob = {
   id: string;
@@ -229,7 +230,12 @@ export type DownloadTicket = { download_url: string };
 
 export const submitDraft = (
   applicationId: string,
-  body: { kind: DraftKind; reporting_period_id?: string; instructions?: string }
+  body: {
+    kind: DraftKind;
+    reporting_period_id?: string;
+    question_set_key?: string;
+    instructions?: string;
+  }
 ) =>
   gr<DraftJob>(`/grants/applications/${applicationId}/drafts`, {
     method: "POST",
@@ -282,6 +288,7 @@ export const DRAFT_LABEL: Record<string, string> = {
   monitoring_report: "Monitoring return",
   impact_evaluation: "End-of-grant evaluation",
   impact_card: "Impact card",
+  application_form: "Funder's application form",
 };
 
 export const RAG_DOT: Record<string, string> = {
