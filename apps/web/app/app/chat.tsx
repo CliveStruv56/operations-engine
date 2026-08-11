@@ -12,7 +12,7 @@ import {
   GlobeIcon,
   StopIcon,
 } from "@/components/icons";
-import { AnswerMarkdown } from "@/components/markdown";
+import { AnswerMarkdown, stripCiteMarkers } from "@/components/markdown";
 import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
 import ShareBar from "./share-bar";
 import { useWorkspace } from "./workspace";
@@ -557,7 +557,7 @@ export default function ChatPanel({
                 <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
                   {streamText ? (
                     <>
-                      <AnswerMarkdown content={streamText} />
+                      <AnswerMarkdown content={stripCiteMarkers(streamText)} />
                       <PulsingDots className="mt-1.5" />
                     </>
                   ) : (

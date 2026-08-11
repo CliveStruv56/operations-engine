@@ -59,8 +59,19 @@ logger = logging.getLogger("app.chat.latency")
 # (staging saw [c:1a689315] for full UUIDs), so markers resolve by unique
 # prefix too. Fullwidth brackets 【c:…】 are accepted as well — the GLM/
 # DeepSeek-family models occasionally emit CJK brackets when echoing markers
-# (seen live 1 Aug 2026). Keep in step with worker/drafts/assemble.py.
-CITATION_RE = re.compile(r"[\[【]c:([0-9a-fA-F][0-9a-fA-F-]{3,35})[\]】]")
+# (seen live 1 Aug 2026). The `c:` prefix is optional because those same models
+# also drop it (seen live 11 Aug 2026: 【3174bc60-028e-4df2-82c7-d9b3a4eb1b11】
+# reached a user verbatim). Keep in step with worker/drafts/assemble.py.
+CITATION_RE = re.compile(r"[\[【]\s*(c:)?\s*([0-9a-fA-F][0-9a-fA-F-]{3,35})\s*[\]】]")
+# A prefix-less marker is only believed at full-id length. Short bracketed hex
+# is ordinary prose far more often than it is a citation ("[42]", "[dead]"),
+# and the truncations we have actually seen ran to 8 chars.
+MIN_UNPREFIXED_ID = 8
+# 8-4-4-4-12. A bracketed token of exactly this shape is a marker beyond
+# reasonable doubt, prefix or not, so an unresolvable one is a hallucination to
+# strip rather than prose to protect. Matters because a model that copies ids
+# out of its own earlier (unresolved) replies would otherwise keep showing them.
+FULL_ID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z")
 # Evidence-panel excerpt length. Chunks run ~600 tokens (~2,400 chars); 300
 # was too little to carry context past a chunk's heading boilerplate.
 SNIPPET_CHARS = 800
@@ -105,9 +116,17 @@ def _resolve_citations(
         return matches[0] if len(matches) == 1 else None
 
     def _sub(match: re.Match) -> str:
-        found = _lookup(match.group(1).lower())
+        cid_raw = match.group(2).lower()
+        # Certain it is a marker: it carries the prefix, or it is a whole uuid.
+        # Uncertain ones are left exactly as written when they fail to resolve —
+        # dropping a marker deletes a hallucinated citation, but dropping a
+        # lookalike would silently delete the answer's own text.
+        certain = match.group(1) is not None or FULL_ID_RE.match(cid_raw) is not None
+        if not certain and len(cid_raw) < MIN_UNPREFIXED_ID:
+            return match.group(0)
+        found = _lookup(cid_raw)
         if found is None:
-            return ""
+            return "" if certain else match.group(0)
         cid, chunk = found
         if cid not in order:
             order[cid] = len(order) + 1

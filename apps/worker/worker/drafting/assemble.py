@@ -22,11 +22,18 @@ from worker.drafting.pack import DraftPackBase, VaultExcerpt
 from worker.drafting.sections import Section
 
 # 4–36 id chars: models routinely truncate long hex ids when echoing them, so
-# markers resolve by unique prefix too. Keep in step with the api's
-# app/routers/conversations.py.
-# Fullwidth 【c:…】 accepted too — CJK-bracket echo seen live from the
-# GLM/DeepSeek model family. Keep in step with app/routers/conversations.py.
-CITATION_RE = re.compile(r"[\[【]c:([0-9a-fA-F][0-9a-fA-F-]{3,35})[\]】]")
+# markers resolve by unique prefix too. Fullwidth 【c:…】 accepted too — CJK-
+# bracket echo seen live from the GLM/DeepSeek model family, which also drops
+# the `c:` prefix outright (seen live 11 Aug 2026), hence the optional group.
+# Keep in step with the api's app/routers/conversations.py.
+CITATION_RE = re.compile(r"[\[【]\s*(c:)?\s*([0-9a-fA-F][0-9a-fA-F-]{3,35})\s*[\]】]")
+# A prefix-less marker is only believed at full-id length — short bracketed hex
+# is ordinary prose far more often than it is a citation.
+MIN_UNPREFIXED_ID = 8
+# 8-4-4-4-12: a bracketed token of exactly this shape is a marker beyond
+# reasonable doubt, prefix or not, so an unresolvable one strips as a
+# hallucination rather than surviving into the drafted text.
+FULL_ID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z")
 TO_CONFIRM_RE = re.compile(r"\[TO CONFIRM:[^\]]*\]")
 
 #: A module's table renderer: draw `name`'s rows from the pack's own records.
@@ -51,12 +58,20 @@ class CitationIndex:
 
     def resolve(self, text: str) -> str:
         def _sub(match: re.Match) -> str:
-            cid = match.group(1).lower()
+            cid = match.group(2).lower()
+            # Certain it is a marker: it carries the prefix, or it is a whole
+            # uuid. An uncertain one is left verbatim unless it resolves —
+            # stripping it would delete drafted prose.
+            certain = match.group(1) is not None or FULL_ID_RE.match(cid) is not None
+            if not certain and len(cid) < MIN_UNPREFIXED_ID:
+                return match.group(0)
             if cid not in self.by_id:
                 # Truncated markers resolve only as a unique prefix of one
                 # supplied id — fabricated or ambiguous ids still strip.
                 matches = [full for full in self.by_id if full.startswith(cid)]
                 if len(matches) != 1:
+                    if not certain:
+                        return match.group(0)
                     self.stripped += 1
                     return ""
                 cid = matches[0]

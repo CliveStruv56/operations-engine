@@ -125,6 +125,48 @@ def test_resolve_citations_drops_ambiguous_and_fabricated_prefixes():
     assert citations == []
 
 
+def test_resolve_citations_accepts_marker_without_c_prefix():
+    # Seen live 11 Aug 2026: the model dropped the `c:` prefix *and* used CJK
+    # brackets, so 【3174bc60-…】 reached a user as a bare uuid mid-sentence.
+    c1 = _chunk(title="Vendor questions")
+    text = f"Tied to the Act's articles【{c1.chunk_id}】."
+    content, citations = _resolve_citations(text, [c1])
+    assert content == "Tied to the Act's articles[1]."
+    assert citations[0]["chunk_id"] == str(c1.chunk_id)
+
+
+def test_resolve_citations_unprefixed_shares_numbering_with_prefixed():
+    c1 = _chunk()
+    text = f"A [c:{c1.chunk_id}] and B 【{c1.chunk_id}】."
+    content, citations = _resolve_citations(text, [c1])
+    assert content == "A [1] and B [1]."
+    assert len(citations) == 1
+
+
+def test_resolve_citations_leaves_unprefixed_non_markers_alone():
+    """Bracketed text that isn't ours must survive verbatim — deleting a
+    prefixed hallucination is right, deleting the user's prose is not."""
+    c1 = _chunk()
+    # Too short to be an id; ordinary prose that happens to be hex.
+    content, citations = _resolve_citations("See [42] and [dead].", [c1])
+    assert content == "See [42] and [dead]."
+    assert citations == []
+    # 8 hex chars but not a whole uuid and not ours: still a lookalike.
+    content, citations = _resolve_citations("Build [deadbeef].", [c1])
+    assert content == "Build [deadbeef]."
+    assert citations == []
+
+
+def test_resolve_citations_strips_unresolvable_full_uuid_without_prefix():
+    """A whole uuid in brackets is a marker whatever else is missing. Left
+    visible, a model that copies ids out of its own earlier replies would keep
+    showing them to the user."""
+    c1 = _chunk()
+    content, citations = _resolve_citations(f"Stale 【{uuid4()}】.", [c1])
+    assert content == "Stale ."
+    assert citations == []
+
+
 # -- hybrid SQL under RLS ----------------------------------------------------
 
 

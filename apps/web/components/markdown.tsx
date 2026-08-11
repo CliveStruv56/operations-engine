@@ -6,6 +6,28 @@ import remarkGfm from "remark-gfm";
 
 export type CiteRenderer = (n: number) => React.ReactNode;
 
+// Mirrors CITATION_RE / MIN_UNPREFIXED_ID in the api's
+// app/routers/conversations.py. The model writes [c:<uuid>] markers and the API
+// only rewrites them to [n] in its final `done` event, so raw uuids are live in
+// every streamed delta. Fullwidth brackets and a missing `c:` are both things
+// the GLM/DeepSeek family does in practice. Keep the two in step.
+const CITE_MARKER_RE = /[[【]\s*(c:)?\s*([0-9a-fA-F][0-9a-fA-F-]{3,35})\s*[\]】]/g;
+// The tail of a marker that straddles two deltas — hide the half that landed
+// rather than let it flash as text for a frame.
+const PARTIAL_CITE_MARKER_RE = /[[【]\s*(?:c:)?\s*[0-9a-fA-F-]{0,35}$/;
+
+/** Strip citation markers from a partially streamed answer. Until the stream
+ * finishes there are no resolved [n] numbers to show — and an unstripped
+ * marker renders as a bare uuid mid-sentence. Short bracketed hex without the
+ * `c:` prefix is left alone; it is far more often prose than a citation. */
+export function stripCiteMarkers(text: string): string {
+  return text
+    .replace(CITE_MARKER_RE, (raw, prefix, id: string) =>
+      prefix || id.length >= 8 ? "" : raw
+    )
+    .replace(PARTIAL_CITE_MARKER_RE, "");
+}
+
 /** Walk rendered markdown children and replace [n] citation markers inside
  * text nodes with cite buttons — recursing so markers survive inside bold,
  * italics, list items and table cells. */
