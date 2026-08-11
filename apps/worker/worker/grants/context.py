@@ -21,6 +21,7 @@ import asyncpg
 from pydantic import BaseModel, Field
 
 from worker.drafting.pack import DraftPackBase
+from worker.drafting.questions import load_question_set, source_note_for, warning_for
 
 DRAFT_KINDS = (
     "case_for_support",
@@ -28,6 +29,7 @@ DRAFT_KINDS = (
     "monitoring_report",
     "impact_evaluation",
     "impact_card",
+    "application_form",
 )
 
 DOC_TITLES = {
@@ -35,6 +37,7 @@ DOC_TITLES = {
     "funding_application": "Funding application",
     "monitoring_report": "Monitoring return",
     "impact_evaluation": "End-of-grant evaluation",
+    "application_form": "Application form",
 }
 
 #: Statuses that mean the funder has committed money.
@@ -161,7 +164,7 @@ class CatalogueFacts(BaseModel):
 class GrantPack(DraftPackBase):
     kind: str = Field(
         pattern="^(case_for_support|funding_application|monitoring_report"
-        "|impact_evaluation|impact_card)$"
+        "|impact_evaluation|impact_card|application_form)$"
     )
     application: ApplicationFacts
     stages: list[StageFacts] = Field(default_factory=list)
@@ -252,6 +255,8 @@ class GrantPack(DraftPackBase):
             title = f"{title} — {period.label}"
         if self.kind == "funding_application" and self.application.funder_name:
             title = f"{title} — {self.application.funder_name}"
+        if self.kind == "application_form" and self.question_set is not None:
+            title = f"{self.question_set.name} — {self.question_set.funder}"
         return title
 
     def subject_lines(self) -> list[str]:
@@ -309,6 +314,8 @@ class GrantPack(DraftPackBase):
         this fires by default until an operator has actually verified the
         funder's criteria — which is the whole point of that convention.
         """
+        if self.kind == "application_form":
+            return warning_for(self.question_set)
         if self.kind != "funding_application" or self.catalogue is None:
             return None
         if self.catalogue.status == "open" and not self.catalogue.stale:
@@ -321,15 +328,16 @@ class GrantPack(DraftPackBase):
         )
 
     def source_notes(self) -> list[str]:
+        notes = source_note_for(self.question_set)
         if self.catalogue is None:
-            return []
+            return notes
         note = (
             f"Funder catalogue entry “{self.catalogue.name}” ({self.catalogue.funder}), "
             f"facts last checked {self.catalogue.last_verified.isoformat()}."
         )
         if self.catalogue.stale:
             note += " Warning: past its review date — confirm before relying on it."
-        return [note]
+        return [*notes, note]
 
 
 def _loads(value: Any) -> Any:
@@ -448,9 +456,17 @@ async def gather(
         if target_period_id not in {p.id for p in periods}:
             raise ValueError("Reporting period not found on this application")
 
+    question_set = None
+    if kind == "application_form":
+        key = str(params.get("question_set_key") or "")
+        question_set = await load_question_set(conn, key, today, _loads) if key else None
+        if question_set is None:
+            raise ValueError("Question set not found")
+
     return GrantPack(
         kind=kind,
         generated_on=today,
+        question_set=question_set,
         application=application,
         stages=stages,
         tasks=tasks,

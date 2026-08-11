@@ -18,6 +18,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
+from worker.drafting.questions import QuestionSet
+
 
 class VaultExcerpt(BaseModel):
     """One retrieved vault chunk, in the core's citation format."""
@@ -41,6 +43,9 @@ class DraftPackBase(BaseModel):
     generated_on: date
     excerpts: list[VaultExcerpt] = Field(default_factory=list)
     instructions: str | None = None
+    #: The funder's form, when this draft is answering one. Set by the
+    #: module's `gather`; `sections_for` turns it into the section list.
+    question_set: QuestionSet | None = None
 
     # -- hooks ---------------------------------------------------------------
 
@@ -79,8 +84,15 @@ class DraftPackBase(BaseModel):
     # -- shared --------------------------------------------------------------
 
     def prompt_json(self) -> str:
-        """The pack as the model sees it. Excerpts are excluded: they carry
-        their own citation-bearing block and would otherwise be duplicated."""
+        """The pack as the model sees it.
+
+        Excerpts are excluded: they carry their own citation-bearing block and
+        would otherwise be duplicated. The question set likewise — every
+        section prompt already names the question it is answering, and a form
+        with twenty questions would otherwise be repeated in full twenty
+        times, against a 24k-token ceiling per call.
+        """
         return json.dumps(
-            self.model_dump(mode="json", exclude={"excerpts"}), separators=(",", ":")
+            self.model_dump(mode="json", exclude={"excerpts", "question_set"}),
+            separators=(",", ":"),
         )

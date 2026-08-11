@@ -11,7 +11,7 @@ import asyncpg
 import pytest
 
 from app.db import db
-from app.modules import MODULE_TENANT_TABLES
+from app.modules import RLS_TENANT_TABLES
 from tests.conftest import APP_URL, auth
 
 # Tables the two_tenants fixture seeds rows into, so the per-table checks
@@ -239,8 +239,9 @@ async def test_sql_level_rls_per_table(two_tenants):
 
 
 async def test_every_module_table_has_rls():
-    """Every table declared in the module manifest carries RLS and the
-    tenant_isolation policy, in both directions.
+    """Every table declared in the module manifest — plus the unflagged
+    cross-module ones — carries RLS and the tenant_isolation policy, in both
+    directions.
 
     This is the check that makes a forgotten policy loud. A module table
     without one leaks across tenants while every functional test stays
@@ -249,7 +250,7 @@ async def test_every_module_table_has_rls():
     """
     conn = await asyncpg.connect(APP_URL)
     try:
-        for table in MODULE_TENANT_TABLES:
+        for table in RLS_TENANT_TABLES:
             enabled = await conn.fetchval(
                 "select relrowsecurity from pg_class where oid = $1::regclass", table
             )

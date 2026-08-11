@@ -461,13 +461,17 @@ class OutcomeOut(BaseModel):
 
 # -- draft jobs --------------------------------------------------------------
 
-DRAFT_KINDS = "^(case_for_support|funding_application|monitoring_report|impact_evaluation)$"
+DRAFT_KINDS = (
+    "^(case_for_support|funding_application|monitoring_report|impact_evaluation|application_form)$"
+)
 
 
 class DraftIn(BaseModel):
     kind: str = Field(pattern=DRAFT_KINDS)
     #: Required for `monitoring_report` — which obligation the return answers.
     reporting_period_id: UUID | None = None
+    #: Required for `application_form` — whose questions are being answered.
+    question_set_key: str | None = Field(default=None, max_length=200)
     instructions: str | None = Field(default=None, max_length=2_000)
 
 

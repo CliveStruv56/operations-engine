@@ -81,6 +81,7 @@ relevant app's commands pass locally.
 | `docs/vertical-module-roadmap.md` | Which vertical module to build next, and the "module kit" that makes each one cheaper |
 | `docs/modules/*.md` | Mini-PRDs for researched-but-unbuilt modules (Grantwork, Tenderhouse, Assurance) |
 | `docs/drafting-engine-brief.md` | DRAFT-001/002 on the shared drafting engine — closed 4 Aug 2026 |
+| `docs/claims-register-brief.md` | Proposed core claims register — one true place for what a tenant asserts about itself; build alongside Tenderhouse |
 | `docs/next-phase-brief.md` | Earlier work brief, closed 1 Aug 2026 |
 | `docs/performance-review-aug-2026.md` | LLM latency review — read its status banner first: several findings were later disproven by measurement |
 | `docs/staging-deploy-checklist.md` | How staging actually deploys (Railway + Vercel, **not** the compose file) |

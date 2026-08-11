@@ -10,6 +10,7 @@ from uuid import UUID
 
 import asyncpg
 
+from worker.drafting.questions import queries_from
 from worker.drafting.retrieval import project_scope_weights
 
 #: Fixed query sets per draft kind. `monitoring_report` is deliberately absent:
@@ -35,6 +36,10 @@ QUERY_SETS: dict[str, list[str]] = {
 
 
 def queries_for(kind: str, pack) -> list[str]:  # noqa: ANN001 — pack type is the module's own
+    if kind == "application_form" and pack.question_set is not None:
+        # The application's own title stands in for a site address: it is what
+        # distinguishes this bid's evidence from the rest of the vault.
+        return queries_from(pack.question_set, pack.application.title)
     return list(QUERY_SETS.get(kind, []))
 
 

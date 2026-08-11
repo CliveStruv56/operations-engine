@@ -96,6 +96,23 @@ FEATURE_FLAGS: frozenset[str] = frozenset(m.flag for m in MODULES)
 #: Every tenant-scoped table owned by a module — the RLS coverage check reads this.
 MODULE_TENANT_TABLES: tuple[str, ...] = tuple(t for m in MODULES for t in m.tables)
 
+#: Tenant-scoped tables that belong to no module, added after 0001 and
+#: carrying the same `tenant_isolation` policy.
+#:
+#: A cross-module primitive gated on nothing is the awkward case for the
+#: manifest above: `tenant_question_sets` serves `projects` and `grants`
+#: alike, so filing it under either flag would hide it from the other. Listing
+#: it here keeps it inside the RLS coverage check, which is the part that
+#: actually matters — the failure mode is a missing policy, and that is silent
+#: whether or not a flag guards the routes.
+#:
+#: The 0001 core tables are deliberately absent: they predate the check and
+#: are covered row-by-row by the `two_tenants` fixture in the isolation suite.
+CORE_TENANT_TABLES: tuple[str, ...] = ("tenant_question_sets",)
+
+#: Everything the RLS coverage check must see.
+RLS_TENANT_TABLES: tuple[str, ...] = MODULE_TENANT_TABLES + CORE_TENANT_TABLES
+
 #: LIKE patterns for the module audit namespaces the activity feed surfaces.
 FEED_PATTERNS: tuple[str, ...] = tuple(f"{m.feed_prefix}.%" for m in MODULES if m.feed_prefix)
 

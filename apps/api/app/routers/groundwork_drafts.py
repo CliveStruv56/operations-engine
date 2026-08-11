@@ -18,6 +18,8 @@ from app.audit import write_audit
 from app.errors import ApiError
 from app.groundwork.schemas import DraftIn, DraftJobOut
 from app.queue import ingest_queue
+from app.refdata.questions import answer_sheet, require_question_set
+from app.refdata.schemas import AnswerSheetOut
 from app.routers.groundwork import require_projects
 from app.routers.groundwork_room.common import module_project
 from app.storage import storage
@@ -51,6 +53,9 @@ async def _draft_params(conn: asyncpg.Connection, project_id: UUID, body: DraftI
         if not exists:
             raise ApiError(404, "not_found", "Funding source not found")
         return {"funding_source_id": str(body.funding_source_id)}
+    if body.kind == "application_form":
+        question_set = await require_question_set(conn, body.question_set_key)
+        return {"question_set_key": question_set.key}
     return {"instructions": body.instructions} if body.instructions else {}
 
 
@@ -62,16 +67,24 @@ async def submit_draft(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     await module_project(conn, project_id)
+    params = await _draft_params(conn, project_id, body)
     # One in-flight draft per document kind: a second click mid-draft doubles
     # the LLM spend for an identical result (the register would just version it).
+    #
+    # Application forms narrow that to the form itself. Two funders asking two
+    # different question sets are two different documents, and blocking the
+    # second on the first would be wrong — the guard exists to stop double
+    # clicks, not to serialise a consultant's week.
     in_flight = await conn.fetchval(
         f"""
         select 1 from proj_draft_jobs
         where project_id = $1 and kind = $2 and status in ('queued', 'running')
           and created_at > now() - interval '{IN_FLIGHT_WINDOW}'
+          and ($3::text is null or params->>'question_set_key' = $3)
         """,
         project_id,
         body.kind,
+        params.get("question_set_key"),
     )
     if in_flight:
         raise ApiError(
@@ -79,7 +92,6 @@ async def submit_draft(
             "draft_in_flight",
             "This draft is already being generated — it lands in the document registry when done.",
         )
-    params = await _draft_params(conn, project_id, body)
     row = await conn.fetchrow(
         """
         insert into proj_draft_jobs (tenant_id, project_id, kind, params, created_by)
@@ -170,3 +182,21 @@ async def get_draft_job(
     if row["status"] == "succeeded" and row["file_key"]:
         download_url = storage.presign_get(row["file_key"])
     return _job_out(row, download_url)
+
+
+@router.get("/projects/drafts/{job_id}/answers", response_model=AnswerSheetOut)
+async def get_draft_answers(
+    job_id: UUID,
+    ctx: TenantContext = Depends(require_projects),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """The pasteable answers for an application-form draft.
+
+    Separate from the job row because it is a different thing to want: the job
+    tells you whether the draft finished, this tells you what to put in the
+    funder's fields.
+    """
+    row = await conn.fetchrow("select * from proj_draft_jobs where id = $1", job_id)
+    if row is None:
+        raise ApiError(404, "not_found", "Draft job not found")
+    return answer_sheet(row)

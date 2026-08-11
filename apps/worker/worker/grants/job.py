@@ -7,11 +7,20 @@ draft lands in the bid-pack registry.
 """
 
 from worker.drafting.engine import DraftModule, run_draft
-from worker.grants.context import gather
+from worker.drafting.questions import sections_from
+from worker.drafting.sections import Section
+from worker.grants.context import GrantPack, gather
 from worker.grants.prompts import GROUNDING_PROMPT, SKELETONS
 from worker.grants.register import register_draft
 from worker.grants.retrieval import queries_for, scope_weights
 from worker.grants.tables import TABLES
+
+
+def _sections(kind: str, pack: GrantPack) -> list[Section]:
+    if pack.question_set is None:
+        raise ValueError(f"{kind}: no question set on the pack")
+    return sections_from(pack.question_set)
+
 
 GRANTWORK = DraftModule(
     storage_segment="grants",
@@ -23,6 +32,7 @@ GRANTWORK = DraftModule(
     queries_for=queries_for,
     scope_weights=scope_weights,
     register=register_draft,
+    sections_for=_sections,
 )
 
 

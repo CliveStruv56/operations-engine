@@ -14,6 +14,7 @@ suffixed keys (monthly_report_2026_07, funding_bid_<id8>) alongside the
 seeded launcher row (ASSUMPTIONS.md #9)."""
 
 import json
+import re
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -24,7 +25,14 @@ from worker.drafting.llm import LlmLedger
 from worker.drafts.context import ContextPack
 
 # Fallback stage for instance rows when the seeded launcher row is missing.
-_STAGE_FALLBACK = {"monthly_report": "build", "feasibility_study": "plan", "funding_bid": "plan"}
+_STAGE_FALLBACK = {
+    "monthly_report": "build",
+    "feasibility_study": "plan",
+    "funding_bid": "plan",
+    "application_form": "plan",
+}
+
+_KEY_SAFE = re.compile(r"[^a-z0-9]+")
 
 
 def registry_target(pack: ContextPack) -> tuple[str, str]:
@@ -38,6 +46,12 @@ def registry_target(pack: ContextPack) -> tuple[str, str]:
         suffix = str(pack.target_funding_id).replace("-", "")[:8]
         name = source.name if source else "funding source"
         return f"funding_bid_{suffix}", f"Funding application — {name}"
+    if pack.kind == "application_form":
+        # One registry row per form, so redrafting the same funder's questions
+        # appends a version rather than growing a row per attempt.
+        question_set = pack.question_set
+        suffix = _KEY_SAFE.sub("_", question_set.key.lower()).strip("_")[:40]
+        return f"application_form_{suffix}", f"{question_set.name} — {question_set.funder}"
     return "feasibility_study", "Feasibility study"
 
 
@@ -130,7 +144,8 @@ async def register_draft(
         """
         update proj_draft_jobs
         set status = 'succeeded', document_id = $2, file_key = $3, to_confirm_count = $4,
-            llm_calls = $5, tokens_in = $6, tokens_out = $7, cost_usd = $8, updated_at = now()
+            llm_calls = $5, tokens_in = $6, tokens_out = $7, cost_usd = $8,
+            answers = $9, updated_at = now()
         where id = $1
         """,
         UUID(job_id),
@@ -141,5 +156,8 @@ async def register_draft(
         ledger.tokens_in,
         ledger.tokens_out,
         round(ledger.cost_usd, 6),
+        # Null for an ordinary document — the answer sheet only exists for a
+        # draft that is answering somebody else's form.
+        json.dumps(draft.answers) if draft.answers else None,
     )
     return doc["id"]

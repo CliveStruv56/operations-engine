@@ -19,7 +19,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Pt
 
 from worker.drafting.pack import DraftPackBase, VaultExcerpt
-from worker.drafting.sections import Section
+from worker.drafting.sections import Section, measure
 
 # 4–36 id chars: models routinely truncate long hex ids when echoing them, so
 # markers resolve by unique prefix too. Fullwidth 【c:…】 accepted too — CJK-
@@ -35,6 +35,9 @@ MIN_UNPREFIXED_ID = 8
 # hallucination rather than surviving into the drafted text.
 FULL_ID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\Z")
 TO_CONFIRM_RE = re.compile(r"\[TO CONFIRM:[^\]]*\]")
+#: Endnote markers, once `CitationIndex.resolve` has numbered them. Removed
+#: from an answer destined for a form field — see `_answer_sheet`.
+FOOTNOTE_RE = re.compile(r"[ \t]*\[(\d+)\]")
 
 #: A module's table renderer: draw `name`'s rows from the pack's own records.
 TableRenderer = Callable[[Document, DraftPackBase], None]
@@ -46,6 +49,9 @@ class AssembledDraft:
     to_confirm_count: int
     citations: list[dict] = field(default_factory=list)
     stripped_citations: int = 0
+    #: One entry per section, for kinds that answer somebody else's form.
+    #: Empty for ordinary documents, which are read as documents.
+    answers: list[dict] = field(default_factory=list)
 
 
 class CitationIndex:
@@ -141,11 +147,41 @@ def _data_sources(doc: Document, pack: DraftPackBase, index: CitationIndex) -> N
         doc.add_paragraph(note)
 
 
+def _answer_entry(section: Section, resolved: str, index: CitationIndex) -> dict:
+    """One row of the answer sheet: prose a person can paste, plus what backs it.
+
+    `text` has the endnote markers taken back out. They exist for a document
+    with a References page at the end; a funder's form field has no such page,
+    and pasting "[3]" into one asserts a reference the assessor cannot follow.
+    The numbers move to `citations` instead, where the UI can show them beside
+    the answer without putting them inside it.
+
+    `[TO CONFIRM: …]` markers deliberately stay in. An answer that still has a
+    gap in it should be uncomfortable to paste.
+    """
+    cited = {int(n) for n in FOOTNOTE_RE.findall(resolved)}
+    plain = FOOTNOTE_RE.sub("", resolved).strip()
+    length, over_by = measure(plain, section)
+    return {
+        "question_id": section.key,
+        "question": section.title,
+        "guidance": section.guidance,
+        "text": plain,
+        "limit": section.limit,
+        "limit_kind": section.limit_kind,
+        "length": length,
+        "over_by": over_by,
+        "to_confirm": len(TO_CONFIRM_RE.findall(plain)),
+        "citations": [e for e in index.references() if e["n"] in cited],
+    }
+
+
 def assemble_docx(
     pack: DraftPackBase,
     sections: list[tuple[Section, str]],
     generated_on: date,
     tables: dict[str, TableRenderer] | None = None,
+    answer_sheet: bool = False,
 ) -> AssembledDraft:
     index = CitationIndex(pack.excerpts)
     doc = Document()
@@ -156,9 +192,11 @@ def assemble_docx(
     doc.add_page_break()
 
     to_confirm = 0
+    resolved_sections: list[tuple[Section, str]] = []
     for number, (section, text) in enumerate(sections, start=1):
         doc.add_heading(f"{number}. {section.title}", level=1)
         resolved = index.resolve(text)
+        resolved_sections.append((section, resolved))
         to_confirm += len(TO_CONFIRM_RE.findall(resolved))
         _narrative(doc, resolved)
         renderer = renderers.get(section.table) if section.table else None
@@ -170,9 +208,18 @@ def assemble_docx(
 
     buffer = io.BytesIO()
     doc.save(buffer)
+    # Built after the loop, not inside it: `index.references()` is only
+    # complete once every section has been resolved, and an answer's citation
+    # numbers have to agree with the document's.
+    answers = (
+        [_answer_entry(s, resolved, index) for s, resolved in resolved_sections]
+        if answer_sheet
+        else []
+    )
     return AssembledDraft(
         data=buffer.getvalue(),
         to_confirm_count=to_confirm,
         citations=index.references(),
         stripped_citations=index.stripped,
+        answers=answers,
     )

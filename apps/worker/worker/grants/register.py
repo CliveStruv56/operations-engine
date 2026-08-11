@@ -15,6 +15,7 @@ evaluation, which version onto their seeded launcher rows.
 """
 
 import json
+import re
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -30,7 +31,10 @@ _STAGE_FALLBACK = {
     "funding_application": "apply",
     "monitoring_report": "monitor",
     "impact_evaluation": "evaluate",
+    "application_form": "apply",
 }
+
+_KEY_SAFE = re.compile(r"[^a-z0-9]+")
 
 
 def registry_target(pack: GrantPack) -> tuple[str, str]:
@@ -40,6 +44,12 @@ def registry_target(pack: GrantPack) -> tuple[str, str]:
         suffix = str(pack.target_period_id).replace("-", "")[:8]
         label = period.label if period else "period"
         return f"monitoring_report_{suffix}", f"{DOC_TITLES[pack.kind]} — {label}"
+    if pack.kind == "application_form":
+        # Per-instance, keyed by the form: an application can answer more than
+        # one funder's questions, and redrafting the same one versions.
+        question_set = pack.question_set
+        suffix = _KEY_SAFE.sub("_", question_set.key.lower()).strip("_")[:40]
+        return f"application_form_{suffix}", f"{question_set.name} — {question_set.funder}"
     return pack.kind, DOC_TITLES[pack.kind]
 
 
@@ -147,7 +157,8 @@ async def register_draft(
         """
         update grant_draft_jobs
         set status = 'succeeded', document_id = $2, file_key = $3, to_confirm_count = $4,
-            llm_calls = $5, tokens_in = $6, tokens_out = $7, cost_usd = $8, updated_at = now()
+            llm_calls = $5, tokens_in = $6, tokens_out = $7, cost_usd = $8,
+            answers = $9, updated_at = now()
         where id = $1
         """,
         UUID(job_id),
@@ -158,5 +169,8 @@ async def register_draft(
         ledger.tokens_in,
         ledger.tokens_out,
         round(ledger.cost_usd, 6),
+        # Null for an ordinary document — the answer sheet only exists for a
+        # draft that is answering somebody else's form.
+        json.dumps(draft.answers) if draft.answers else None,
     )
     return doc["id"]

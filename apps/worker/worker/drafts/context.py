@@ -16,15 +16,23 @@ import asyncpg
 from pydantic import BaseModel, Field
 
 from worker.drafting.pack import DraftPackBase, VaultExcerpt
+from worker.drafting.questions import load_question_set, source_note_for, warning_for
 
 __all__ = ["VaultExcerpt"]  # re-exported: this was its original home
 
-DRAFT_KINDS = ("monthly_report", "feasibility_study", "funding_bid", "health_card")
+DRAFT_KINDS = (
+    "monthly_report",
+    "feasibility_study",
+    "funding_bid",
+    "health_card",
+    "application_form",
+)
 
 DOC_TITLES = {
     "monthly_report": "Monthly client report",
     "feasibility_study": "Feasibility study",
     "funding_bid": "Funding application",
+    "application_form": "Application form",
 }
 
 
@@ -147,7 +155,9 @@ class StakeholderFacts(BaseModel):
 
 
 class ContextPack(DraftPackBase):
-    kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid|health_card)$")
+    kind: str = Field(
+        pattern="^(monthly_report|feasibility_study|funding_bid|health_card|application_form)$"
+    )
     project: ProjectFacts
     stages: list[StageFacts]
     tasks: list[TaskFacts]
@@ -196,6 +206,8 @@ class ContextPack(DraftPackBase):
             title = f"{title} — {self.report_month}"
         if self.kind == "funding_bid" and self.target_funding() is not None:
             title = f"{title} — {self.target_funding().name}"
+        if self.kind == "application_form" and self.question_set is not None:
+            title = f"{self.question_set.name} — {self.question_set.funder}"
         return title
 
     def subject_lines(self) -> list[str]:
@@ -222,6 +234,8 @@ class ContextPack(DraftPackBase):
         return notes
 
     def warning_block(self) -> str | None:
+        if self.kind == "application_form":
+            return warning_for(self.question_set)
         programme = self.target_programme()
         if self.kind != "funding_bid" or programme is None or programme.status == "open":
             return None
@@ -231,7 +245,7 @@ class ContextPack(DraftPackBase):
         )
 
     def source_notes(self) -> list[str]:
-        notes = []
+        notes = source_note_for(self.question_set)
         for programme in self.programmes:
             note = (
                 f"Funding programme “{programme.name}” ({programme.funder}), "
@@ -356,9 +370,17 @@ async def gather(
         if target_funding_id not in {s.id for s in funding}:
             raise ValueError("Funding source not found on this project")
 
+    question_set = None
+    if kind == "application_form":
+        key = str(params.get("question_set_key") or "")
+        question_set = await load_question_set(conn, key, today, _loads) if key else None
+        if question_set is None:
+            raise ValueError("Question set not found")
+
     return ContextPack(
         kind=kind,
         generated_on=today,
+        question_set=question_set,
         project=project,
         stages=stages,
         tasks=tasks,

@@ -17,6 +17,8 @@ from app.audit import write_audit
 from app.errors import ApiError
 from app.grants.schemas import DraftIn, DraftJobOut
 from app.queue import ingest_queue
+from app.refdata.questions import answer_sheet, require_question_set
+from app.refdata.schemas import AnswerSheetOut
 from app.routers.grants.common import module_application, require_grants
 from app.storage import storage
 from app.tenant import TenantContext, get_conn
@@ -45,6 +47,9 @@ async def _draft_params(conn: asyncpg.Connection, application_id: UUID, body: Dr
         if not exists:
             raise ApiError(404, "not_found", "Reporting period not found")
         return {"reporting_period_id": str(body.reporting_period_id)}
+    if body.kind == "application_form":
+        question_set = await require_question_set(conn, body.question_set_key)
+        return {"question_set_key": question_set.key}
     return {"instructions": body.instructions} if body.instructions else {}
 
 
@@ -58,16 +63,21 @@ async def submit_draft(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     await module_application(conn, application_id)
+    params = await _draft_params(conn, application_id, body)
     # One in-flight draft per kind: a second click mid-draft doubles the model
     # spend for an identical result, since the register would only version it.
+    # Application forms narrow that to the form: two funders asking different
+    # questions are two different documents.
     in_flight = await conn.fetchval(
         f"""
         select 1 from grant_draft_jobs
         where application_id = $1 and kind = $2 and status in ('queued', 'running')
           and created_at > now() - interval '{IN_FLIGHT_WINDOW}'
+          and ($3::text is null or params->>'question_set_key' = $3)
         """,
         application_id,
         body.kind,
+        params.get("question_set_key"),
     )
     if in_flight:
         raise ApiError(
@@ -75,7 +85,6 @@ async def submit_draft(
             "draft_in_flight",
             "This draft is already being generated — it lands in the bid pack when done.",
         )
-    params = await _draft_params(conn, application_id, body)
     row = await conn.fetchrow(
         """
         insert into grant_draft_jobs (tenant_id, application_id, kind, params, created_by)
@@ -173,3 +182,17 @@ async def get_draft_job(
     if row["status"] == "succeeded" and row["file_key"]:
         download_url = storage.presign_get(row["file_key"])
     return _job_out(row, download_url)
+
+
+@router.get("/grants/drafts/{job_id}/answers", response_model=AnswerSheetOut)
+async def get_draft_answers(
+    job_id: UUID,
+    ctx: TenantContext = Depends(require_grants),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """The pasteable answers for an application-form draft — what goes in the
+    funder's fields, as opposed to whether the draft finished."""
+    row = await conn.fetchrow("select * from grant_draft_jobs where id = $1", job_id)
+    if row is None:
+        raise ApiError(404, "not_found", "Draft job not found")
+    return answer_sheet(row)

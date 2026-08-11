@@ -7,6 +7,8 @@ finished draft lands in the project's document registry.
 """
 
 from worker.drafting.engine import DraftModule, run_draft
+from worker.drafting.questions import queries_from, sections_from
+from worker.drafting.sections import Section
 from worker.drafts.assemble import TABLES
 from worker.drafts.context import ContextPack, gather
 from worker.drafts.prompts import GROUNDING_PROMPT, SKELETONS
@@ -15,10 +17,22 @@ from worker.drafts.retrieval import queries_for as _queries_for
 from worker.drafts.retrieval import scope_weights
 
 
+def _subject(pack: ContextPack) -> str:
+    return pack.project.site_address or pack.project.name
+
+
 def _queries(kind: str, pack: ContextPack) -> list[str]:
     """Site-specific arms interpolate the address, falling back to the
     project name when no site has been recorded yet."""
-    return _queries_for(kind, pack.project.site_address or pack.project.name)
+    if kind == "application_form" and pack.question_set is not None:
+        return queries_from(pack.question_set, _subject(pack))
+    return _queries_for(kind, _subject(pack))
+
+
+def _sections(kind: str, pack: ContextPack) -> list[Section]:
+    if pack.question_set is None:
+        raise ValueError(f"{kind}: no question set on the pack")
+    return sections_from(pack.question_set)
 
 
 GROUNDWORK = DraftModule(
@@ -31,6 +45,7 @@ GROUNDWORK = DraftModule(
     queries_for=_queries,
     scope_weights=scope_weights,
     register=register_draft,
+    sections_for=_sections,
 )
 
 

@@ -1,0 +1,105 @@
+{
+  "provenance": {
+    "compiled": "2026-08-11",
+    "contract": "This file ships ONLY question sets we author ourselves. A real funder's question set is external fact — the exact wording of a question and the exact character limit on its field — and neither can be recalled, inferred or approximated. Getting a limit wrong produces an answer that will not paste, which is a worse failure than having no set at all.",
+    "how_to_add_a_real_funder": "Open the funder's own published question list or guidance, transcribe each question verbatim with its stated limit, record the source_url, then insert the row with status='unverified'. An operator promotes it to status='open' with next_review 90 days out only after a second read against the funder's current guidance — in the database, not here.",
+    "warning": "Do not add a funder's questions from memory. Do not estimate a character limit. Verification is an act somebody performs, not a value somebody types."
+  },
+  "question_sets": [
+    {
+      "key": "generic_eoi_v1",
+      "name": "Expression of interest (generic)",
+      "funder": "Flowgrid template",
+      "programme_keys": [],
+      "funder_keys": [],
+      "stage": "eoi",
+      "source_url": null,
+      "status": "template",
+      "last_verified": "2026-08-11",
+      "next_review": "2027-08-11",
+      "notes": "Our own product template, not a transcription of any funder's form. It exists so the answer sheet is usable on day one and so a consultant has somewhere to start before a real set is curated. The limits are our defaults, chosen to sit inside the ranges UK funders commonly use — check them against the actual form before submitting anything.",
+      "questions": [
+        {
+          "id": "q1",
+          "order": 1,
+          "text": "In one sentence, what is the project?",
+          "guidance": "Assessors read this first and skim the rest. Name the place, the thing being built or saved, and who it is for.",
+          "limit_kind": "characters",
+          "limit": 200,
+          "required": true,
+          "uses_vault": false
+        },
+        {
+          "id": "q2",
+          "order": 2,
+          "text": "Who is the applicant organisation, and what is its legal form?",
+          "guidance": "Registered name, number and structure. Say when it was formed and what it exists to do.",
+          "limit_kind": "characters",
+          "limit": 750,
+          "required": true,
+          "uses_vault": false
+        },
+        {
+          "id": "q3",
+          "order": 3,
+          "text": "What need does this project address, and how do you know?",
+          "guidance": "Evidence, not assertion. Cite the survey, the waiting list, the census figure or the consultation that establishes the need.",
+          "limit_kind": "characters",
+          "limit": 2000,
+          "required": true,
+          "uses_vault": true
+        },
+        {
+          "id": "q4",
+          "order": 4,
+          "text": "What will the funding pay for?",
+          "guidance": "Specific costs against specific activities. Refer to the budget rather than repeating every line of it.",
+          "limit_kind": "characters",
+          "limit": 1500,
+          "required": true,
+          "uses_vault": false
+        },
+        {
+          "id": "q5",
+          "order": 5,
+          "text": "What is the full funding stack, and what is already secured?",
+          "guidance": "Be explicit about what is confirmed, what is applied for, and what is still a gap. Funders check.",
+          "limit_kind": "characters",
+          "limit": 1200,
+          "required": true,
+          "uses_vault": false
+        },
+        {
+          "id": "q6",
+          "order": 6,
+          "text": "How is the community involved in this project?",
+          "guidance": "Governance, not consultation. Who decides, and how did they come to be the deciders?",
+          "limit_kind": "characters",
+          "limit": 1500,
+          "required": true,
+          "uses_vault": true
+        },
+        {
+          "id": "q7",
+          "order": 7,
+          "text": "What are the main risks, and how are they being managed?",
+          "guidance": "Name real risks with real mitigations. A risk register with nothing above 'medium' reads as unexamined.",
+          "limit_kind": "characters",
+          "limit": 1500,
+          "required": true,
+          "uses_vault": false
+        },
+        {
+          "id": "q8",
+          "order": 8,
+          "text": "What will have changed if this project succeeds, and how will you know?",
+          "guidance": "Outcomes with measures against them. Say what you will count and when you will count it.",
+          "limit_kind": "characters",
+          "limit": 1500,
+          "required": true,
+          "uses_vault": false
+        }
+      ]
+    }
+  ]
+}

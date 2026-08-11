@@ -301,11 +301,13 @@ class ActivityOut(BaseModel):
 
 
 class DraftIn(BaseModel):
-    kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid)$")
+    kind: str = Field(pattern="^(monthly_report|feasibility_study|funding_bid|application_form)$")
     # monthly_report: reporting period; required for that kind.
     month: str | None = Field(default=None, pattern="^\\d{4}-(0[1-9]|1[0-2])$")
     # funding_bid: the project funding source the bid targets; required there.
     funding_source_id: UUID | None = None
+    # application_form: which funder's questions to answer; required there.
+    question_set_key: str | None = Field(default=None, max_length=200)
     # feasibility_study: optional free-text brief.
     instructions: str | None = Field(default=None, max_length=2_000)
 

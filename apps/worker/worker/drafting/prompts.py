@@ -69,20 +69,59 @@ def outline_prompt(pack: DraftPackBase, sections: list[Section], system: str) ->
     return system, user
 
 
-def parse_outline(raw: str) -> dict[str, list[str]]:
-    """Lenient parse of the outline call; a malformed reply degrades to an
-    empty outline rather than spending budget on retries."""
+def _strip_fences(raw: str) -> str:
     text = raw.strip()
     if text.startswith("```"):
         text = text.strip("`")
         text = text.split("\n", 1)[1] if "\n" in text else text
+    return text
+
+
+def parse_outline(raw: str) -> dict[str, list[str]]:
+    """Lenient parse of the outline call; a malformed reply degrades to an
+    empty outline rather than spending budget on retries."""
     try:
-        data = json.loads(text)
+        data = json.loads(_strip_fences(raw))
     except ValueError:
         return {}
     if not isinstance(data, dict):
         return {}
     return {str(k): [str(n) for n in v] for k, v in data.items() if isinstance(v, list)}
+
+
+def parse_answers(raw: str) -> dict[str, str]:
+    """Parse a batched answer call: {question key: answer prose}.
+
+    Unlike the outline, a malformed reply here cannot degrade quietly — the
+    answers *are* the document. An empty dict propagates to the caller, which
+    retries the batch once and then fails the job.
+    """
+    try:
+        data = json.loads(_strip_fences(raw))
+    except ValueError:
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    return {str(k): str(v) for k, v in data.items() if isinstance(v, str | int | float)}
+
+
+def _length_instruction(section: Section) -> str:
+    """What to tell the model about how long the answer may be.
+
+    The limit is the funder's, and their portal enforces it by truncation, so
+    aiming at it is wrong — a model that lands slightly over produces prose
+    that gets cut mid-sentence when pasted. Aiming just under leaves the
+    consultant room to edit.
+    """
+    if section.limit is None:
+        return "Write 1-4 paragraphs. Prose only."
+    unit = "words" if section.limit_kind == "words" else "characters"
+    target = int(section.limit * 0.9)
+    return (
+        f"This answer goes in a form field with a hard limit of {section.limit} {unit}, "
+        f"counted including spaces and punctuation. Aim for about {target} {unit} and never "
+        f"exceed {section.limit}. Prose only."
+    )
 
 
 def section_prompt(
@@ -117,5 +156,43 @@ def section_prompt(
             "No vault excerpts were found for this topic. Write only what the "
             "project data supports and mark evidence gaps with [TO CONFIRM: …]."
         )
-    parts.append("Write 1-4 paragraphs. Prose only.")
+    parts.append(_length_instruction(section))
+    return system, "\n\n".join(parts)
+
+
+def batch_prompt(
+    pack: DraftPackBase, sections: list[Section], outline: dict[str, list[str]], system: str
+) -> tuple[str, str]:
+    """Answer several short questions in one call.
+
+    Only ever used for questions `plan_calls` judged small and self-contained —
+    no vault excerpts, no data tables, no reasoner alias — so the shared
+    context is just the project data, which every question needs anyway. That
+    is the whole saving: one copy of the pack instead of five.
+    """
+    asked = []
+    for section in sections:
+        entry: dict[str, object] = {"key": section.key, "question": section.title}
+        if section.guidance:
+            entry["guidance"] = section.guidance
+        if section.limit is not None:
+            entry["limit"] = section.limit
+            entry["limit_kind"] = section.limit_kind
+        notes = outline.get(section.key, [])
+        if notes:
+            entry["notes"] = notes
+        asked.append(entry)
+
+    parts = [
+        f"Document: {pack.doc_title()}. Answer each question below in its own words.",
+        f"QUESTIONS:\n{json.dumps(asked, indent=2)}",
+    ]
+    parts.extend(pack.prompt_notes())
+    parts.append(f"PROJECT DATA JSON:\n{pack.prompt_json()}")
+    parts.append(
+        "Each `limit` is a hard ceiling on that answer's form field, counted including "
+        "spaces and punctuation — aim for about 90% of it and never exceed it. Reply with "
+        "a JSON object mapping each question key to its answer as a single prose string. "
+        "Prose only, no markdown, no headings. Answer every key. JSON only, no commentary."
+    )
     return system, "\n\n".join(parts)
