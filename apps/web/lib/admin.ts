@@ -1,6 +1,7 @@
 // Operator console (platform admin) — types + fetch helper. Admin endpoints
 // carry no tenant context, so no X-Tenant-Id header.
 import { api } from "@/lib/api";
+import type { QuestionSet } from "@/lib/questions";
 
 export const admin = <T,>(path: string, init: RequestInit = {}) => api<T>(path, init);
 
@@ -98,4 +99,56 @@ export const updateFeatures = (tenantId: string, features: Record<string, boolea
 
 export function inviteUrl(token: string): string {
   return `${window.location.origin}/invite/${token}`;
+}
+
+// -- the curated question-set catalogue --------------------------------------
+
+export type PromoteCandidate = {
+  tenant_id: string;
+  tenant_name: string;
+  key: string;
+  name: string;
+  funder: string;
+  stage: string;
+  status: string;
+  source_url: string | null;
+  question_count: number;
+  /** Questions with no limit recorded — a form still carrying blanks cannot
+   *  be published, because a blank is a silent gap in a stranger's draft. */
+  limits_missing: number;
+  last_verified: string;
+  next_review: string;
+  stale: boolean;
+  in_catalogue: boolean;
+};
+
+export const listPromoteCandidates = () =>
+  admin<PromoteCandidate[]>("/admin/question-sets/candidates");
+
+export const listCatalogue = () => admin<QuestionSet[]>("/admin/question-sets");
+
+export const promoteQuestionSet = (body: {
+  tenant_id: string;
+  key: string;
+  confirmed_against_source: boolean;
+  replace?: boolean;
+}) =>
+  admin<QuestionSet>("/admin/question-sets/promote", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+
+export const withdrawQuestionSet = (key: string) =>
+  admin<void>(`/admin/question-sets/${encodeURIComponent(key)}`, { method: "DELETE" });
+
+/** Why a candidate cannot be published yet, or null when it can. */
+export function blockedReason(c: PromoteCandidate): string | null {
+  if (c.status !== "open" || c.stale)
+    return "the workspace has not confirmed it against the funder's form";
+  if (c.limits_missing > 0)
+    return c.limits_missing === 1
+      ? "1 question still has no limit"
+      : `${c.limits_missing} questions still have no limit`;
+  if (!c.source_url) return "it does not say where its questions came from";
+  return null;
 }

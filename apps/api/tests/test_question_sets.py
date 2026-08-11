@@ -13,7 +13,7 @@ fixture is structurally incapable of shipping one.
 """
 
 import json
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import asyncpg
 import pytest
@@ -549,3 +549,177 @@ async def test_deleting_a_transcribed_set(client, question_set_ref_data):
     await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
     assert (await client.delete("/api/v1/question-sets/ahf_eoi", headers=h)).status_code == 204
     assert (await client.get("/api/v1/question-sets/ahf_eoi", headers=h)).status_code == 404
+
+
+# -- publishing to the platform catalogue ------------------------------------
+
+
+def _operator() -> dict[str, str]:
+    from tests.conftest import make_token
+
+    return {"Authorization": f"Bearer {make_token(uuid4(), email='operator@example.com')}"}
+
+
+async def _transcribed(client, slug: str, **over):
+    """A workspace with one transcribed form, verified unless told otherwise."""
+    tenant = await seed_tenant(client, slug)
+    h = auth(tenant.owner_id, tenant.id)
+    body = _set_body(key=f"form_{slug}", **over)
+    created = await client.post("/api/v1/question-sets", json=body, headers=h)
+    assert created.status_code == 201, created.text
+    return tenant, h, body["key"]
+
+
+#: Every limit recorded — the state a form has to reach before it can be
+#: published. `_set_body`'s default deliberately leaves one blank.
+COMPLETE = [
+    {"id": "q1", "order": 1, "text": "What is the building?", "limit": 500},
+    {"id": "q2", "order": 2, "text": "Who owns it?", "limit": 300},
+]
+
+
+async def test_publishing_puts_a_form_in_front_of_every_workspace(client, question_set_ref_data):
+    tenant, h, key = await _transcribed(client, "promo1", questions=COMPLETE)
+    await client.patch(f"/api/v1/question-sets/{key}", json={"verified": True}, headers=h)
+
+    op = _operator()
+    candidates = (await client.get("/api/v1/admin/question-sets/candidates", headers=op)).json()
+    mine = next(c for c in candidates if c["key"] == key and c["tenant_id"] == str(tenant.id))
+    assert mine["in_catalogue"] is False
+    assert mine["tenant_name"]
+
+    published = await client.post(
+        "/api/v1/admin/question-sets/promote",
+        json={"tenant_id": str(tenant.id), "key": key, "confirmed_against_source": True},
+        headers=op,
+    )
+    assert published.status_code == 201, published.text
+    assert published.json()["status"] == "open"
+    assert published.json()["stale"] is False
+
+    # A different workspace now sees it, with no "we have not checked" warning.
+    other = await seed_tenant(client, "promo1b")
+    seen = (
+        await client.get(f"/api/v1/question-sets/{key}", headers=auth(other.owner_id, other.id))
+    ).json()
+    assert seen["source"] == "platform"
+    assert seen["stale"] is False
+
+
+async def test_an_unverified_form_cannot_be_published(client, question_set_ref_data):
+    """Publishing one would put question wording and limits nobody has read
+    against the funder's own form in front of every workspace — the seed
+    fixture's rule arriving by a different door."""
+    tenant, _, key = await _transcribed(client, "promo2")
+    resp = await client.post(
+        "/api/v1/admin/question-sets/promote",
+        json={"tenant_id": str(tenant.id), "key": key, "confirmed_against_source": True},
+        headers=_operator(),
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "source_unverified"
+
+
+async def test_a_form_with_a_blank_limit_cannot_be_published(client, question_set_ref_data):
+    """Blank is honest in a workspace's own copy, where whoever left it blank
+    knows. Published, it is a silent gap in somebody else's draft."""
+    tenant, h, key = await _transcribed(client, "promo3")  # q2 has limit null
+    await client.patch(f"/api/v1/question-sets/{key}", json={"verified": True}, headers=h)
+    resp = await client.post(
+        "/api/v1/admin/question-sets/promote",
+        json={"tenant_id": str(tenant.id), "key": key, "confirmed_against_source": True},
+        headers=_operator(),
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "limits_missing"
+
+
+async def test_the_operator_must_affirm_they_checked_it_too(client, question_set_ref_data):
+    """A workspace verifying a form for itself is not the same act as making
+    it everybody's."""
+    tenant, h, key = await _transcribed(
+        client,
+        "promo4",
+        questions=COMPLETE,
+    )
+    await client.patch(f"/api/v1/question-sets/{key}", json={"verified": True}, headers=h)
+    resp = await client.post(
+        "/api/v1/admin/question-sets/promote",
+        json={"tenant_id": str(tenant.id), "key": key, "confirmed_against_source": False},
+        headers=_operator(),
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "confirmation_required"
+
+
+async def test_publishing_over_a_curated_form_needs_saying_so(client, question_set_ref_data):
+    tenant, h, key = await _transcribed(
+        client,
+        "promo5",
+        questions=COMPLETE,
+    )
+    await client.patch(f"/api/v1/question-sets/{key}", json={"verified": True}, headers=h)
+    op = _operator()
+    body = {"tenant_id": str(tenant.id), "key": key, "confirmed_against_source": True}
+    assert (
+        await client.post("/api/v1/admin/question-sets/promote", json=body, headers=op)
+    ).status_code == 201
+
+    clash = await client.post("/api/v1/admin/question-sets/promote", json=body, headers=op)
+    assert clash.status_code == 409
+    assert clash.json()["error"]["code"] == "already_published"
+
+    replaced = await client.post(
+        "/api/v1/admin/question-sets/promote", json={**body, "replace": True}, headers=op
+    )
+    assert replaced.status_code == 201
+
+
+async def test_the_operator_catalogue_never_shows_a_workspaces_private_forms(
+    client, question_set_ref_data
+):
+    """The console runs on the owner connection, where RLS does not bind —
+    listing the wrong table there would hand the operator everyone's drafts."""
+    tenant, _, key = await _transcribed(client, "promo6")
+    catalogue = (await client.get("/api/v1/admin/question-sets", headers=_operator())).json()
+    assert all(s["source"] == "platform" for s in catalogue)
+    assert key not in {s["key"] for s in catalogue}
+
+
+async def test_withdrawing_leaves_a_workspaces_own_copy_alone(client, question_set_ref_data):
+    tenant, h, key = await _transcribed(
+        client,
+        "promo7",
+        questions=COMPLETE,
+    )
+    await client.patch(f"/api/v1/question-sets/{key}", json={"verified": True}, headers=h)
+    op = _operator()
+    await client.post(
+        "/api/v1/admin/question-sets/promote",
+        json={"tenant_id": str(tenant.id), "key": key, "confirmed_against_source": True},
+        headers=op,
+    )
+    assert (
+        await client.delete(f"/api/v1/admin/question-sets/{key}", headers=op)
+    ).status_code == 204
+    # The workspace that transcribed it still has its own.
+    still = (await client.get(f"/api/v1/question-sets/{key}", headers=h)).json()
+    assert still["source"] == "tenant"
+
+
+async def test_the_catalogue_is_operator_only(client, question_set_ref_data):
+    tenant = await seed_tenant(client, "promo8")
+    h = auth(tenant.owner_id, tenant.id)
+    for method, path in (
+        ("get", "/api/v1/admin/question-sets"),
+        ("get", "/api/v1/admin/question-sets/candidates"),
+        ("delete", "/api/v1/admin/question-sets/generic_eoi_v1"),
+    ):
+        resp = await getattr(client, method)(path, headers=h)
+        assert resp.status_code == 403, f"{method} {path}"
+    resp = await client.post(
+        "/api/v1/admin/question-sets/promote",
+        json={"tenant_id": str(tenant.id), "key": "x", "confirmed_against_source": True},
+        headers=h,
+    )
+    assert resp.status_code == 403

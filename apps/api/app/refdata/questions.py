@@ -63,6 +63,26 @@ async def list_question_sets(conn: asyncpg.Connection, today: date) -> list[Ques
     return sorted(sets, key=lambda s: (s.funder.lower(), s.name.lower()))
 
 
+async def list_platform_sets(conn: asyncpg.Connection, today: date) -> list[QuestionSetOut]:
+    """The curated catalogue alone.
+
+    Separate from `list_question_sets` because the operator console runs on
+    the owner connection, where RLS does not bind: reading
+    `tenant_question_sets` there would hand the operator every workspace's
+    private forms as though they were ours.
+    """
+    rows = await conn.fetch(f"select {_COLUMNS} from ref_question_sets")
+    sets = [_row_out(r, "platform", today) for r in rows]
+    return sorted(sets, key=lambda s: (s.funder.lower(), s.name.lower()))
+
+
+async def get_platform_set(
+    conn: asyncpg.Connection, key: str, today: date
+) -> QuestionSetOut | None:
+    row = await conn.fetchrow(f"select {_COLUMNS} from ref_question_sets where key = $1", key)
+    return _row_out(row, "platform", today) if row is not None else None
+
+
 async def get_question_set(
     conn: asyncpg.Connection, key: str, today: date
 ) -> QuestionSetOut | None:

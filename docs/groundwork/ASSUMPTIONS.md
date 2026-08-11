@@ -470,3 +470,49 @@ and every divergence is recorded here.
     fallback: slow, but proven correct. **Benchmark any new provider for empty
     prose before adding it, not just for speed** — the failure is silent, and
     on this alias it lands in a document a funder reads.
+
+## Recorded during question-set work (11 Aug 2026)
+
+28. **`db.platform_tx()` now writes as well as reads, and that is the only
+    way the platform question-set catalogue can be edited.**
+
+    **What the docs said:** `platform_tx` was described as "a read connection
+    … used ONLY by the operator console's fleet listing", and
+    `admin_update_features` explicitly notes it kept "platform_tx read-only"
+    by running in `tenant_tx` instead.
+
+    **What the repo does now:** publishing a workspace's transcribed funder
+    form into `ref_question_sets` writes on that connection.
+
+    **Why there is no alternative.** The reference catalogues carry no
+    `tenant_id`, so there is nothing for `app_current_tenant()` to match and
+    the `tenant_tx` trick that saved `features` cannot work here. Their RLS
+    is `for select using (true)` and the runtime role has no write grant at
+    all — deliberately, since a tenant able to edit the shared catalogue
+    could change what every other workspace tells a funder. The owner role is
+    the only one that can, and `platform_tx` behind `require_platform_admin`
+    is the sanctioned way to reach it.
+
+    **What keeps it fenced.** The write lives in `app/refdata/promote.py`,
+    reachable only from `app/routers/admin.py`; every tenant-facing path
+    still reads the catalogue through RLS. `list_platform_sets` exists
+    precisely because the console must *not* reuse the tenant-facing lister —
+    on the owner connection that would return every workspace's private forms
+    as though they were ours, and there is a test for it.
+
+29. **A form is published on two separate confirmations, not one.**
+
+    A workspace confirming a transcribed form against a funder's guidance
+    clears the warning *for that workspace*. Publishing it to the catalogue
+    clears the warning for everyone, so the operator must also affirm
+    (`confirmed_against_source`) that they read it against the funder's own
+    form, and the API refuses without it.
+
+    **Why:** ASSUMPTIONS #24 established that seeded rows must ship
+    unverified because "verification is an act somebody performs, not a value
+    somebody types". Promotion is the door that rule could be walked around —
+    an unchecked set becomes everybody's with one click and no fixture in
+    sight. Two further gates back it up: the source must be verified and in
+    date, and **no question may be missing its limit**. A blank limit is
+    honest in a workspace's own copy, where whoever left it blank knows it is
+    blank; published, it is a silent gap in a stranger's draft.

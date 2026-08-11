@@ -1,14 +1,19 @@
-"""Operator console: platform-admin-only tenant onboarding and fleet view.
+"""Operator console: platform-admin-only tenant onboarding, fleet view, and
+the curated question-set catalogue.
 
 Identity is the login email against PLATFORM_ADMIN_EMAILS — no tenant
 context, no membership. Creation reuses the bootstrap pattern (tenant_tx
-scoped to the freshly minted tenant id); only the fleet listing crosses
-tenants, via the fenced db.platform_tx() owner connection.
+scoped to the freshly minted tenant id).
+
+Two things here cross tenants, both via the fenced db.platform_tx() owner
+connection: the fleet listing, and publishing a workspace's transcribed
+funder form into `ref_question_sets` — a table with no tenant to scope it to
+and no write path for the runtime role (ASSUMPTIONS #28).
 """
 
 import json
 import secrets
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends
@@ -19,6 +24,9 @@ from app.config import get_settings
 from app.db import db
 from app.errors import ApiError
 from app.litellm import litellm_client
+from app.refdata.promote import list_candidates, promote, withdraw
+from app.refdata.questions import get_platform_set, list_platform_sets
+from app.refdata.schemas import PromoteCandidate, PromoteIn, QuestionSetOut
 from app.routers.invites import INVITE_TTL_DAYS
 from app.schemas import (
     AdminFeaturesIn,
@@ -332,3 +340,61 @@ async def admin_list_tenants(user: AuthUser = Depends(require_platform_admin)):
             """
         )
     return [_tenant_out(r) for r in rows]
+
+
+# -- the platform question-set catalogue -------------------------------------
+#
+# The curated library every workspace drafts against. A workspace transcribes
+# a funder's form for itself; the operator decides which of those become
+# everybody's. Both halves run on the owner connection: `ref_question_sets`
+# has no tenant to scope it to and is read-only to the runtime role.
+
+
+@router.get("/admin/question-sets/candidates", response_model=list[PromoteCandidate])
+async def admin_list_promote_candidates(user: AuthUser = Depends(require_platform_admin)):
+    """Every workspace's transcribed forms — where published ones come from."""
+    async with db.platform_tx() as conn:
+        return await list_candidates(conn)
+
+
+@router.get("/admin/question-sets", response_model=list[QuestionSetOut])
+async def admin_list_catalogue(user: AuthUser = Depends(require_platform_admin)):
+    async with db.platform_tx() as conn:
+        return await list_platform_sets(conn, date.today())
+
+
+@router.post("/admin/question-sets/promote", status_code=201, response_model=QuestionSetOut)
+async def admin_promote_question_set(
+    body: PromoteIn, user: AuthUser = Depends(require_platform_admin)
+):
+    """Publish a workspace's form to the catalogue.
+
+    Audited against the source tenant rather than the operator's own (they
+    have none): the row that matters later is which workspace's transcription
+    became everybody's, and who signed it off.
+    """
+    async with db.platform_tx() as conn:
+        meta = await promote(conn, body)
+        await write_audit(
+            conn,
+            body.tenant_id,
+            user.id,
+            "question_sets.promote",
+            "ref_question_set",
+            body.key,
+            {**meta, "platform_admin": True, "by": user.email},
+        )
+        published = await get_platform_set(conn, body.key, date.today())
+    assert published is not None  # just written in the same transaction
+    return published
+
+
+@router.delete("/admin/question-sets/{key}", status_code=204)
+async def admin_withdraw_question_set(key: str, user: AuthUser = Depends(require_platform_admin)):
+    """Withdraw a form from the catalogue.
+
+    Workspaces keep the answer sheets they already drafted — those live on the
+    job row — and any workspace that transcribed its own copy is untouched.
+    """
+    async with db.platform_tx() as conn:
+        await withdraw(conn, key)

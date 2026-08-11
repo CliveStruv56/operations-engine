@@ -75,6 +75,46 @@ class QuestionSetPatch(BaseModel):
     verified: bool | None = None
 
 
+class PromoteIn(BaseModel):
+    """Publish a workspace's transcribed form to the platform catalogue."""
+
+    tenant_id: UUID
+    key: str = Field(min_length=1, max_length=200)
+    #: The operator's own affirmation that they have opened the funder's form
+    #: and read the questions and limits against it. Required and must be
+    #: true. A tenant verifying a set for themselves is not the same act as
+    #: putting it in front of every workspace, and "verification is an act
+    #: somebody performs, not a value somebody types" has to keep meaning
+    #: something at the point where one row becomes everybody's.
+    confirmed_against_source: bool
+    #: Replace an existing catalogue row of the same key. Off by default so a
+    #: promotion cannot quietly overwrite a curated form.
+    replace: bool = False
+    notes: str | None = Field(default=None, max_length=5_000)
+
+
+class PromoteCandidate(BaseModel):
+    """A tenant's transcribed form, seen from the operator console."""
+
+    tenant_id: UUID
+    tenant_name: str
+    key: str
+    name: str
+    funder: str
+    stage: str
+    status: str
+    source_url: str | None
+    question_count: int
+    #: Questions with no limit recorded. A form still carrying blanks is not
+    #: ready to be everybody's copy.
+    limits_missing: int
+    last_verified: date
+    next_review: date
+    stale: bool
+    #: Whether the platform catalogue already holds this key.
+    in_catalogue: bool
+
+
 class Citation(BaseModel):
     """A vault source behind an answer. Kept beside the prose rather than
     inside it — a form field has no References page for a `[1]` to point at."""

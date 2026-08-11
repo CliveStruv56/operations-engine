@@ -14,6 +14,7 @@ import {
 import { InviteLink, NewWorkspace } from "./NewWorkspace";
 import { ModulesEditor } from "./ModulesEditor";
 import { EditWorkspace, SuspendWorkspace } from "./EditWorkspace";
+import { CatalogueEditor } from "./CatalogueEditor";
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
@@ -200,6 +201,15 @@ export default function AdminConsole() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="mt-8">
+        <h2 className="mb-1 text-lg font-medium">Funder forms</h2>
+        <p className="mb-3 text-sm text-ink-muted">
+          The curated catalogue every workspace drafts against. Forms are transcribed inside a
+          workspace and published from here.
+        </p>
+        <CatalogueEditor />
       </div>
 
       {creating && (

@@ -60,12 +60,17 @@ class Database:
 
     @asynccontextmanager
     async def platform_tx(self) -> AsyncIterator[asyncpg.Connection]:
-        """THE deliberate cross-tenant exception: a read connection as the
+        """THE deliberate cross-tenant exception: a connection as the
         table-owner role (database_url, same as migrations), which RLS does
-        not bind. Used ONLY by the operator console's fleet listing behind
+        not bind. Used ONLY by the operator console behind
         require_platform_admin — never in tenant-facing handlers. A direct
-        connection, not a pool: admin listing is rare and must not let
-        owner-role connections linger."""
+        connection, not a pool: operator actions are rare and must not let
+        owner-role connections linger.
+
+        Two uses, both cross-tenant by nature: reading the fleet listing, and
+        writing the platform reference catalogues, which have no tenant to
+        scope them to and are deliberately read-only to `ops_app`
+        (ASSUMPTIONS #28)."""
         conn = await asyncpg.connect(get_settings().database_url)
         try:
             async with conn.transaction():
