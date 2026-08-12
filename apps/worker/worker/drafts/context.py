@@ -15,6 +15,7 @@ from uuid import UUID
 import asyncpg
 from pydantic import BaseModel, Field
 
+from worker.claims.facts import claim_source_notes, claims_warning, load_claims
 from worker.drafting.pack import DraftPackBase, VaultExcerpt
 from worker.drafting.questions import load_question_set, source_note_for, warning_for
 
@@ -234,6 +235,15 @@ class ContextPack(DraftPackBase):
         return notes
 
     def warning_block(self) -> str | None:
+        # Two independent problems, both worth the first page: the form may be
+        # out of date, and a fact the draft leans on may be. `assemble.py`
+        # renders one bold paragraph, so they are joined rather than competing
+        # for the slot.
+        warnings = [self._form_or_programme_warning(), claims_warning(self.claims)]
+        present = [w for w in warnings if w]
+        return "\n".join(present) if present else None
+
+    def _form_or_programme_warning(self) -> str | None:
         if self.kind == "application_form":
             return warning_for(self.question_set)
         programme = self.target_programme()
@@ -245,7 +255,7 @@ class ContextPack(DraftPackBase):
         )
 
     def source_notes(self) -> list[str]:
-        notes = source_note_for(self.question_set)
+        notes = source_note_for(self.question_set) + claim_source_notes(self.claims)
         for programme in self.programmes:
             note = (
                 f"Funding programme “{programme.name}” ({programme.funder}), "
@@ -377,10 +387,14 @@ async def gather(
         if question_set is None:
             raise ValueError("Question set not found")
 
+    claims, claim_excerpts = await load_claims(conn, today)
+
     return ContextPack(
         kind=kind,
         generated_on=today,
         question_set=question_set,
+        claims=claims,
+        claim_excerpts=claim_excerpts,
         project=project,
         stages=stages,
         tasks=tasks,

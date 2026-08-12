@@ -61,7 +61,7 @@ SKELETONS: dict[str, list[Section]] = {
         Section("recommendations", "Recommendations and next steps"),
     ],
     "funding_bid": [
-        Section("org", "Organisation and governance"),
+        Section("org", "Organisation and governance", uses_claims=True),
         Section("project", "The project"),
         Section("need", "Need and community support", uses_vault=True),
         Section("use", "What the funding will pay for", table="budget"),

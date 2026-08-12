@@ -35,6 +35,11 @@ class Section:
     alias: str = "drafter"
     #: Retrieve and cite vault excerpts for this section.
     uses_vault: bool = False
+    #: Hand this section the organisation's own confirmed facts — registered
+    #: identity, trustees, income, accreditations. Set on the sections that
+    #: are *about* the organisation rather than about the project, which are
+    #: the ones that previously had nothing at all behind them.
+    uses_claims: bool = False
     #: Name of a data table the module renders after the narrative. The model
     #: is told to refer to it, never to repeat the numbers.
     table: str | None = None
@@ -78,6 +83,13 @@ def plan_calls(sections: list[Section]) -> list[list[Section]]:
             or section.limit > BATCH_ITEM_MAX_CHARS
             or section.limit_kind != "characters"
             or section.uses_vault
+            # Same reason as `uses_vault`: the batched prompt carries only the
+            # shared project data, so a section batched here would lose its
+            # organisation-claims block and answer "who are you" from nothing —
+            # exactly the failure claims exist to fix. Skeleton sections are
+            # already solo (no limit); this binds the form questions that
+            # pre-fill marks as needing the register.
+            or section.uses_claims
             or section.table is not None
             or section.alias != "drafter"
         )

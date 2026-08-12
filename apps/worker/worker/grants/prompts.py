@@ -22,20 +22,30 @@ SKELETONS: dict[str, list[Section]] = {
     # grounded: the need evidence and the beneficiary stories already exist in
     # the organisation's own documents, and citing them is the point.
     "case_for_support": [
-        Section("org", "About the organisation", guidance="Purpose, history, governance."),
+        Section(
+            "org",
+            "About the organisation",
+            guidance="Purpose, history, governance.",
+            uses_claims=True,
+        ),
         Section("need", "The need we address", uses_vault=True),
         Section("beneficiaries", "Who benefits", uses_vault=True),
         Section("approach", "What we do about it", guidance="The work itself, in plain words."),
         Section("evidence", "Evidence that it works", uses_vault=True),
         Section("outcomes", "The difference we set out to make", table="impact"),
-        Section("capacity", "Why this organisation", guidance="Track record and capability."),
+        Section(
+            "capacity",
+            "Why this organisation",
+            guidance="Track record and capability.",
+            uses_claims=True,
+        ),
         Section("support", "Community support", uses_vault=True),
     ],
     # Parameterised by the funder-catalogue row. If that row is unverified or
     # stale the pack's warning block lands on page one (ASSUMPTIONS #24).
     "funding_application": [
         Section("summary", "Summary of the request", guidance="What is asked for, and why."),
-        Section("org", "The organisation and its governance"),
+        Section("org", "The organisation and its governance", uses_claims=True),
         Section("need", "Need and evidence", uses_vault=True),
         Section("project", "What the funding will pay for"),
         Section("outcomes", "Outcomes and how we will measure them", table="impact"),

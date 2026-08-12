@@ -25,6 +25,7 @@ from uuid import UUID
 
 import asyncpg
 
+from worker.claims.facts import merge_excerpts
 from worker.db import tenant_tx as _tenant_tx
 from worker.drafting.assemble import AssembledDraft, TableRenderer, assemble_docx
 from worker.drafting.llm import DraftBudgetExceeded, EmptySectionError, LlmLedger, chat
@@ -249,6 +250,14 @@ async def run_draft(
             async with _tenant_tx(pool, tenant_id) as conn:
                 weights = await module.scope_weights(conn, UUID(subject_id))
                 pack.excerpts = await retrieve_excerpts(conn, queries, embedded.vectors, weights)
+
+        # Outside the `if queries:` branch on purpose. `retrieve_excerpts`
+        # *assigns* `pack.excerpts`, and only runs when there is something to
+        # retrieve — so merging inside it would silently drop every claim
+        # citation for any kind with no vault retrieval (a monthly report, a
+        # short application form), leaving the model told to cite ids that
+        # never reached the excerpts.
+        pack.excerpts = merge_excerpts(pack.excerpts, pack.claim_excerpts)
 
         sections_spec = _resolve_sections(module, kind, pack)
         batches = plan_calls(sections_spec)
