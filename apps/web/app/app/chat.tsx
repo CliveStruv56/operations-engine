@@ -168,8 +168,14 @@ function AssistantMessageInner({
           {webCount > 0 && `${webCount} web source${webCount === 1 ? "" : "s"}`}
         </span>
       )}
+      {/* Stored answers arrive already resolved — _resolve_citations turns
+          [c:<id>] into [n] before the row is written. Strip anyway: rows
+          written before a marker shape was recognised (the fullwidth 【…】 and
+          prefix-less forms both post-date August's conversations) still carry
+          raw ids, and no backend fix rewrites what is already on disk. Only
+          markers are removed, so the [n] the cite buttons need survive. */}
       <AnswerMarkdown
-        content={m.content}
+        content={stripCiteMarkers(m.content)}
         cite={cites.length > 0 ? citeButton(cites, () => setShowAllSources(true)) : undefined}
       />
       {cites.length > 0 && (
