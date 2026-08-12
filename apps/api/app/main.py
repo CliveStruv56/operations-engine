@@ -15,6 +15,7 @@ from app.ratelimit import rate_limiter
 from app.routers import (
     activity,
     admin,
+    claims,
     conversations,
     crm,
     documents,
@@ -104,6 +105,7 @@ def create_app() -> FastAPI:
         grants.router,
         crm.router,
         question_sets.router,
+        claims.router,
         conversations.router,
         slides.router,
         documents.router,

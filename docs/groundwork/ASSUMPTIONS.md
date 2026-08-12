@@ -516,3 +516,112 @@ and every divergence is recorded here.
     date, and **no question may be missing its limit**. A blank limit is
     honest in a workspace's own copy, where whoever left it blank knows it is
     blank; published, it is a silent gap in a stranger's draft.
+
+30. **The claims register's tables are `claims`, `claim_revisions` and
+    `ref_claim_kinds` — not the brief's `claim_*` prefix.**
+
+    `docs/claims-register-brief.md` §0.1 says "New tables prefixed `claim_`",
+    following the module convention (`proj_*`, `grant_*`, `bid_*`).
+
+    **Why the repo wins.** In this codebase a table prefix *means* "belongs to
+    a feature-flagged module", and the brief's own §6 insists this is not a
+    module: it carries no flag, every vertical reads it, and a workspace with
+    no vertical modules still benefits. `claims` sits beside `documents` and
+    `projects` as core, and `ref_claim_kinds` follows the `ref_*` platform
+    catalogue convention already set by `ref_question_sets`. `claim_revisions`
+    keeps the prefix because it genuinely is a child of `claims`.
+
+31. **Claims are typed against a seeded catalogue, and `kind` is validated in
+    the router rather than by a check constraint.**
+
+    A claim carries `kind` (a `ref_claim_kinds` key), a machine-readable
+    `value` and a human-readable `statement` — all three, not one.
+
+    **Why:** the feature's whole promise is that facts arrive filled in. That
+    only works if a fact can be matched to the thing that wants it — a
+    register field to import it from, a funder's question to pre-fill, a
+    review rule to age it. Matching free prose is guesswork, and a wrongly
+    auto-filled answer on a funder's form is worse than a blank box.
+
+    **Why not a check constraint:** the same reasoning `0014` records for
+    `tenant_question_sets.ref_key`. A hard constraint means a migration every
+    time we learn a new fact type, and each vertical brings a dozen —
+    Tenderhouse alone adds contract values, framework memberships and TUPE
+    positions. Validating at the edge (422 `unknown_claim_kind`) means new
+    kinds ship as fixture rows, and a *retired* kind leaves its claims
+    readable-but-unmatched rather than breaking the register screen for every
+    workspace that already holds one.
+
+32. **A claim's identity is `(tenant_id, kind, subject, period)`, and only
+    confirmed rows are unique.**
+
+    `subject` names which instance of a multi-valued kind (a trustee, a named
+    policy, "Public liability"); `period` names which slice of a series
+    ("2024/25"). Both are null for the ordinary standing fact.
+
+    **Why both exist from day one:** the brief's §7 payoff — the July
+    monitoring report using the *current* beneficiary number rather than
+    January's — requires exactly one row a consumer reads with no
+    period-selection logic. But "income for each of the last three years" is a
+    real funder question, and OSCR returns exactly that. Retrofitting either
+    column under live tenant data is precisely the migration §9 warns the
+    window closes on, so they are cheap now and expensive later.
+
+    **Why uniqueness binds `status = 'confirmed'` only:** a proposal that
+    duplicates a confirmed claim is not a collision to reject — it is how a
+    changed figure gets noticed ("the register now says £912,000; you hold
+    £847,000"). Confirming supersedes the old row rather than deleting it, so
+    "what did we tell the funder in January" stays answerable.
+
+33. **Value history lives in `claim_revisions`, not in `audit_log`, and
+    re-verifying a claim writes no revision.**
+
+    **Why not `audit_log`:** those rows are activity-feed material and are
+    already scrubbed in place (see `0011_scrub_unshare_audit_titles.py`), so
+    their `meta` is not a contract anything may query. The value that answers
+    "what did we assert last spring" has to be a first-class row.
+
+    **Why re-verification writes nothing:** moving `last_verified` means
+    "still true"; writing a revision means "now different". Conflating them
+    would fill the history with non-events and bury the changes, which are the
+    only reason the table exists.
+
+34. **Public-register lookups are the second sanctioned third-party HTTP
+    client, and their API keys are platform-level rather than per-tenant.**
+
+    `app/claims/registers.py` follows `app/search.py` exactly — plain `httpx`,
+    one timeout, no retry, a missing key is a 503 naming the register, an
+    upstream failure is a 502, and the client is injectable so tests never
+    touch the network. Hard constraint 3 (LiteLLM only) does not bind, for the
+    reason `search.py` already records: a register is not a model provider.
+
+    **Why platform keys:** Companies House, the Charity Commission and OSCR
+    all issue one key per *application*, not per end user, and the data is
+    public and OGL-licensed either way. The cost is that one workspace's
+    lookups spend an allowance every workspace shares — Companies House caps
+    at 600 requests per five minutes and suspends applications that habitually
+    exceed it. Hence `register_lookup_rate_limit_per_hour`, the one rate limit
+    in the codebase whose job is to protect *other tenants* rather than us.
+
+    **Why no SSRF defence in the client:** the identifiers are validated
+    against fixed patterns in the router before any URL is built, and a value
+    matching `^[A-Z0-9]{8}$`, `^\d{6,8}$` or `^SC\d{6}$` cannot express a path
+    segment or a host. The URL-supplied-by-user hazard in
+    `docs/modules/form-fetch-prd.md` §4 does not arise here.
+
+35. **Trustee and director claims store name, role and appointment date only.**
+
+    Companies House also returns a partial date of birth, nationality and
+    occupation for every officer; `registers.py` reads past all three.
+
+    **Why:** it is all public data, so this is a choice rather than a
+    requirement — but the cheapest place to not hold personal data is before
+    it arrives, and nothing downstream wants it. No funder form asks for a
+    trustee's date of birth. Holding one for every client's whole board, in
+    every workspace, would be a data-protection surface bought for nothing.
+
+    **Scotland note:** trustee names have appeared on the Scottish Charity
+    Register only since 9 March 2026 (Charities (Regulation and
+    Administration) (Scotland) Act 2023), and a trustee may hold an exemption
+    where publication would put them at risk. So an OSCR import returning no
+    trustees is normal and must never be surfaced as a failure.

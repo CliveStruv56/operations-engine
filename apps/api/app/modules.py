@@ -106,9 +106,13 @@ MODULE_TENANT_TABLES: tuple[str, ...] = tuple(t for m in MODULES for t in m.tabl
 #: actually matters — the failure mode is a missing policy, and that is silent
 #: whether or not a flag guards the routes.
 #:
+#: `claims` and `claim_revisions` are here for the same reason and one more:
+#: they are the spine every vertical reads from, so gating them on any single
+#: module would hide a workspace's own facts from the module that needed them.
+#:
 #: The 0001 core tables are deliberately absent: they predate the check and
 #: are covered row-by-row by the `two_tenants` fixture in the isolation suite.
-CORE_TENANT_TABLES: tuple[str, ...] = ("tenant_question_sets",)
+CORE_TENANT_TABLES: tuple[str, ...] = ("tenant_question_sets", "claims", "claim_revisions")
 
 #: Everything the RLS coverage check must see.
 RLS_TENANT_TABLES: tuple[str, ...] = MODULE_TENANT_TABLES + CORE_TENANT_TABLES

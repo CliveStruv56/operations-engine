@@ -44,7 +44,9 @@ Key api modules: `app/tenant.py` (RLS context), `app/retrieval.py` (RAG),
 `app/routing.py` + `app/litellm.py` (model routing), `app/schemas.py`,
 `app/groundwork/schemas.py` and `app/crm/schemas.py` (all Pydantic models —
 add new ones there, not inline), `app/crm/` + `app/routers/crm/` (contact
-book, chat lookup, CSV import), `app/routers/admin.py` (operator console —
+book, chat lookup, CSV import), `app/claims/` + `app/routers/claims.py` (the
+claims register — unflagged core; `registers.py` holds the only third-party
+HTTP clients besides Exa), `app/routers/admin.py` (operator console —
 `db.platform_tx()` is the ONLY sanctioned cross-tenant connection; never use
 it in tenant-facing handlers).
 
@@ -82,7 +84,7 @@ relevant app's commands pass locally.
 | `docs/modules/*.md` | Mini-PRDs for researched-but-unbuilt modules (Grantwork, Tenderhouse, Assurance) |
 | `docs/drafting-engine-brief.md` | DRAFT-001/002 on the shared drafting engine — closed 4 Aug 2026 |
 | `docs/funder-forms-guide.md` | How funder forms work end to end — transcribe, verify, draft, paste; Flowgrid never submits to a funder |
-| `docs/claims-register-brief.md` | Proposed core claims register — one true place for what a tenant asserts about itself; build alongside Tenderhouse |
+| `docs/claims-register-brief.md` | The core claims register — one true place for what a tenant asserts about itself. **Approved and in build from 12 Aug 2026**; §12's open questions are settled in `docs/groundwork/ASSUMPTIONS.md` #30–#35 |
 | `docs/next-phase-brief.md` | Earlier work brief, closed 1 Aug 2026 |
 | `docs/performance-review-aug-2026.md` | LLM latency review — read its status banner first: several findings were later disproven by measurement |
 | `docs/staging-deploy-checklist.md` | How staging actually deploys (Railway + Vercel, **not** the compose file) |

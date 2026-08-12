@@ -59,5 +59,21 @@ class RateLimiter:
             "Upload limit reached, retry later",
         )
 
+    async def check_register_lookup(self, tenant_id: UUID) -> None:
+        """Public-register lookups, which spend a platform-wide allowance.
+
+        Unlike chat and uploads, the resource being protected is not ours:
+        Companies House allows 600 requests per five minutes per application
+        and suspends applications that habitually exceed it. One workspace in a
+        loop would take the registers down for every other workspace, so this
+        is the one limit whose job is to protect other tenants.
+        """
+        await self._check(
+            f"rl:register:{tenant_id}",
+            get_settings().register_lookup_rate_limit_per_hour,
+            3600,
+            "Too many register lookups — try again later",
+        )
+
 
 rate_limiter = RateLimiter()

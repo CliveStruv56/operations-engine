@@ -106,6 +106,17 @@ export function FormIcon(p: IconProps) {
   );
 }
 
+/** A register: a stamped seal over a page — a fact with something behind it. */
+export function SealIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M5 3h11l3 3v9H5z" />
+      <circle cx="12" cy="18" r="3" />
+      <path d="M10.5 20.5 9.5 23l2.5-1.3L14.5 23l-1-2.5" />
+    </Icon>
+  );
+}
+
 export function DocIcon(p: IconProps) {
   return (
     <Icon {...p}>
