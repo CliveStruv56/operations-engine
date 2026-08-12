@@ -336,6 +336,13 @@ async def test_the_answer_sheet_leads_with_what_needs_attention(
     assert sheet["question_set_key"] == "generic_eoi_v1"
     assert [a["question_id"] for a in sheet["answers"]] == ["q1", "q2"]
 
+    # Neither stored answer above carries `origin` or `claim_ids`, because
+    # neither existed when sheets like this were written. They must default
+    # rather than 500: these rows are jsonb read back through `AnswerOut(**a)`,
+    # and every sheet drafted before pre-fill shipped looks exactly like this.
+    assert [a["origin"] for a in sheet["answers"]] == ["drafted", "drafted"]
+    assert sheet["from_register"] == 0
+
 
 # -- transcription -----------------------------------------------------------
 
@@ -723,3 +730,77 @@ async def test_the_catalogue_is_operator_only(client, question_set_ref_data):
         headers=h,
     )
     assert resp.status_code == 403
+
+
+async def test_the_sheet_counts_what_the_register_answered(
+    client, question_set_ref_data, fake_draft_queue
+):
+    """The one good-news number on the sheet.
+
+    Counted here rather than left to the UI so the API and the DOCX agree
+    about how much of this form nobody had to write.
+    """
+    project_id, headers, tenant = await _project(client, "Sheet origins")
+    job = await client.post(
+        f"/api/v1/projects/{project_id}/drafts",
+        json={"kind": "application_form", "question_set_key": "generic_eoi_v1"},
+        headers=headers,
+    )
+    job_id = job.json()["id"]
+    claim_id = str(uuid4())
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            "update proj_draft_jobs set status = 'succeeded', answers = $2::jsonb where id = $1",
+            UUID(job_id),
+            json.dumps(
+                [
+                    {
+                        "question_id": "q1",
+                        "question": "Charity number",
+                        "text": "1234567",
+                        "limit": 20,
+                        "limit_kind": "characters",
+                        "length": 7,
+                        "over_by": 0,
+                        "to_confirm": 0,
+                        "citations": [],
+                        "origin": "claim",
+                        "claim_ids": [claim_id],
+                    },
+                    {
+                        "question_id": "q2",
+                        "question": "Who is the applicant organisation?",
+                        "text": "Riverside Community Trust is a charitable company.",
+                        "limit": 750,
+                        "limit_kind": "characters",
+                        "length": 49,
+                        "over_by": 0,
+                        "to_confirm": 0,
+                        "citations": [],
+                        "origin": "claim_assisted",
+                        "claim_ids": [claim_id],
+                    },
+                    {
+                        "question_id": "q3",
+                        "question": "What will the funding pay for?",
+                        "text": "Materials and a part-time coordinator.",
+                        "limit": 1500,
+                        "limit_kind": "characters",
+                        "length": 38,
+                        "over_by": 0,
+                        "to_confirm": 0,
+                        "citations": [],
+                        "origin": "drafted",
+                        "claim_ids": [],
+                    },
+                ]
+            ),
+        )
+
+    sheet = (await client.get(f"/api/v1/projects/drafts/{job_id}/answers", headers=headers)).json()
+    # Only the answer taken outright counts. A model wrote q2's sentences even
+    # though the register supplied its facts, and calling that "from your
+    # register" would overclaim.
+    assert sheet["from_register"] == 1
+    assert [a["origin"] for a in sheet["answers"]] == ["claim", "claim_assisted", "drafted"]
+    assert sheet["answers"][0]["claim_ids"] == [claim_id]

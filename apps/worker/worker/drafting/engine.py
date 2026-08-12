@@ -30,6 +30,7 @@ from worker.db import tenant_tx as _tenant_tx
 from worker.drafting.assemble import AssembledDraft, TableRenderer, assemble_docx
 from worker.drafting.llm import DraftBudgetExceeded, EmptySectionError, LlmLedger, chat
 from worker.drafting.pack import DraftPackBase
+from worker.drafting.prefill import partition_prefilled, restore_order
 from worker.drafting.prompts import (
     batch_prompt,
     outline_prompt,
@@ -260,18 +261,35 @@ async def run_draft(
         pack.excerpts = merge_excerpts(pack.excerpts, pack.claim_excerpts)
 
         sections_spec = _resolve_sections(module, kind, pack)
-        batches = plan_calls(sections_spec)
+        # Answer what the register already knows before planning any calls.
+        # Doing it here rather than after drafting is the whole saving: a
+        # pre-filled question never reaches `plan_calls`, so it costs nothing
+        # and does not count against the call budget — which means a long form
+        # that previously refused to draft may now fit.
+        prefilled, to_draft, claim_ids = partition_prefilled(sections_spec, pack)
+
+        batches = plan_calls(to_draft)
         # Fail before spending anything, with a message that says what to do.
-        check_call_budget(sections_spec, batches)
+        check_call_budget(to_draft, batches)
 
-        system, user = outline_prompt(pack, sections_spec, module.system_prompt)
-        outline = parse_outline(
-            await chat(ledger, virtual_key, "drafter", system, user, allow_empty=True)
-        )
+        outline: dict[str, list[str]] = {}
+        if to_draft:
+            # A form the register answered outright leaves nothing to outline,
+            # and paying for a call that annotates no sections would be an odd
+            # way to celebrate.
+            system, user = outline_prompt(pack, to_draft, module.system_prompt)
+            outline = parse_outline(
+                await chat(ledger, virtual_key, "drafter", system, user, allow_empty=True)
+            )
 
-        sections: list[tuple[Section, str]] = []
+        drafted: list[tuple[Section, str]] = []
         for batch in batches:
-            sections.extend(await _draft_batch(ledger, virtual_key, module, pack, batch, outline))
+            drafted.extend(await _draft_batch(ledger, virtual_key, module, pack, batch, outline))
+
+        # Back into the funder's own order: the two halves finish separately,
+        # and a sheet whose answers do not line up with its questions is
+        # unusable.
+        sections = restore_order(sections_spec, drafted, prefilled)
 
         # A kind with no skeleton is answering somebody else's form, so it also
         # produces the pasteable sheet. Ordinary documents do not: their prose
@@ -283,6 +301,8 @@ async def run_draft(
             date.today(),
             tables=module.tables,
             answer_sheet=kind not in module.skeletons,
+            prefilled_keys={s.key for s, _ in prefilled},
+            claim_ids=claim_ids,
         )
         file_key = f"{tenant_id}/{module.storage_segment}/{subject_id}/drafts/{job_id}.docx"
         await loop.run_in_executor(None, upload_bytes, file_key, draft.data, DOCX_MIME)

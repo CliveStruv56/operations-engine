@@ -82,6 +82,26 @@ function Sources({ answer }: { answer: Answer }) {
   );
 }
 
+/**
+ * Where the answer came from, when that is worth saying.
+ *
+ * `grounded` green is reserved for trust states, and an answer taken straight
+ * from a confirmed, dated, sourced fact is exactly that — it is the one thing
+ * on this sheet nobody needs to check. A drafted answer gets no stamp at all;
+ * saying "written by a model" on nine of eleven cards would be noise.
+ */
+function OriginStamp({ answer }: { answer: Answer }) {
+  if (answer.origin === "claim")
+    return (
+      <span className="rounded-[10px] bg-grounded-tint px-2 py-0.5 text-xs font-medium text-grounded">
+        From your register
+      </span>
+    );
+  if (answer.origin === "claim_assisted")
+    return <span className="text-xs text-ink-faint">Written from your register</span>;
+  return null;
+}
+
 function AnswerCard({ answer, index }: { answer: Answer; index: number }) {
   return (
     <li className="rounded-card border border-edge bg-surface p-4">
@@ -104,6 +124,7 @@ function AnswerCard({ answer, index }: { answer: Answer; index: number }) {
             {answer.over_by.toLocaleString("en-GB")} over — shorten before pasting
           </span>
         )}
+        <OriginStamp answer={answer} />
       </div>
 
       <Sources answer={answer} />
@@ -142,6 +163,17 @@ export function AnswerSheetView({
           <p className="text-xs text-ink-faint">Everything fits</p>
         )}
       </div>
+
+      {/* Said once at the top rather than left to be counted badge by badge —
+          it is the number that tells somebody the register was worth filling
+          in, and it is the only good news on the sheet. */}
+      {sheet.from_register > 0 && (
+        <p className="text-xs text-ink-muted">
+          {sheet.from_register} of {sheet.answers.length}{" "}
+          {sheet.from_register === 1 ? "answer came" : "answers came"} straight from your
+          register — no drafting, nothing to check.
+        </p>
+      )}
 
       {stale && (
         <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">

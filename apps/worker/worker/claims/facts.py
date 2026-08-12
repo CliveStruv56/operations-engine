@@ -19,6 +19,7 @@ provenance reaches the Data sources appendix through `source_notes()` instead.
 That is also what discharges the Open Government Licence attribution.
 """
 
+import json
 from datetime import date
 from uuid import UUID
 
@@ -48,10 +49,13 @@ async def load_claims(
     """
     rows = await conn.fetch(
         """
-        select c.kind, c.subject, c.period, c.statement, c.as_of, c.expires_on,
-               c.source, c.source_ref, c.source_chunk_id, c.last_verified, c.next_review,
+        select c.id, c.kind, c.subject, c.period, c.statement, c.value, c.unit,
+               c.as_of, c.expires_on, c.source, c.source_ref, c.source_chunk_id,
+               c.last_verified, c.next_review,
                coalesce(k.label, c.kind) as label,
-               coalesce(k.category, 'identity') as category
+               coalesce(k.value_kind, 'text') as value_kind,
+               coalesce(k.cardinality, 'single') as cardinality,
+               coalesce(k.question_hints, '{}') as question_hints
         from claims c left join ref_claim_kinds k on k.key = c.kind
         where c.status = 'confirmed'
         order by c.kind, coalesce(c.subject, ''), coalesce(c.period, '')
@@ -89,11 +93,17 @@ async def load_claims(
 
     claims = [
         ClaimFacts(
+            id=r["id"],
             kind=r["kind"],
             label=r["label"],
             subject=r["subject"],
             period=r["period"],
             statement=r["statement"],
+            value=json.loads(r["value"]) if isinstance(r["value"], str) else r["value"],
+            value_kind=r["value_kind"],
+            unit=r["unit"],
+            question_hints=list(r["question_hints"] or []),
+            cardinality=r["cardinality"],
             as_of=r["as_of"],
             expires_on=r["expires_on"],
             source=r["source"],

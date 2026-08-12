@@ -14,8 +14,15 @@ from worker.claims.facts import (
     claims_warning,
     merge_excerpts,
 )
+from worker.drafting.assemble import assemble_docx
 from worker.drafting.llm import MAX_CONTEXT_TOKENS_PER_CALL
 from worker.drafting.pack import ClaimFacts, VaultExcerpt
+from worker.drafting.prefill import (
+    match_claims,
+    partition_prefilled,
+    prefill_answer,
+    restore_order,
+)
 from worker.drafting.prompts import section_prompt
 from worker.drafting.sections import Section, plan_calls
 from worker.grants.context import ApplicationFacts, GrantPack
@@ -27,6 +34,7 @@ SYSTEM = "system prompt"
 def _claim(**overrides) -> ClaimFacts:
     return ClaimFacts(
         **{
+            "id": uuid4(),
             "kind": "registered_name",
             "label": "Registered name",
             "statement": "The organisation's registered name is Riverside Community Trust.",
@@ -325,3 +333,194 @@ def test_a_full_register_still_fits_in_one_section_call():
     )
     estimated_tokens = len(prompt) // 4 + 1
     assert estimated_tokens < MAX_CONTEXT_TOKENS_PER_CALL
+
+
+# -- pre-fill: answering from the register with no model call ------------------
+
+
+def _hinted(**overrides) -> ClaimFacts:
+    """A claim carrying its kind's question hints, as `load_claims` builds it."""
+    base = {
+        "kind": "charity_number",
+        "label": "Charity number",
+        "statement": "The organisation is a registered charity, number 1234567.",
+        "value": "1234567",
+        "value_kind": "text",
+        "question_hints": [
+            "charity number",
+            "charity registration",
+            "registered charity",
+            "applicant organisation",
+        ],
+    }
+    return _claim(**{**base, **overrides})
+
+
+def test_the_size_of_the_box_decides_what_the_answer_looks_like():
+    """A twenty-character "Charity number" field wants 1234567, not a sentence.
+
+    A hundred-character one wants the sentence — a bare number dropped into a
+    field that size reads as an unanswered question.
+    """
+    claims = [_hinted()]
+    tiny = prefill_answer(Section("q", "Charity number", limit=20), claims)
+    roomy = prefill_answer(Section("q", "Charity number", limit=100), claims)
+
+    assert tiny is not None and tiny[0] == "1234567"
+    assert roomy is not None and roomy[0].startswith("The organisation is a registered charity")
+
+
+def test_a_prose_sized_box_is_never_answered_outright():
+    """The failure this rule exists to stop.
+
+    "Who is the applicant organisation, and what is its legal form?" at 750
+    characters wants the name, the structure, the founding date and the
+    purpose. A one-line charity number fits the box, passes every other check,
+    and answers a different question from the one asked — so the size of the
+    field is taken as the funder saying they want prose.
+    """
+    section = Section("q", "Who is the applicant organisation?", limit=750)
+    assert prefill_answer(section, [_hinted()]) is None
+
+
+def test_a_skeleton_section_is_never_answered_outright():
+    """No limit at all means a document section, not a form field."""
+    assert prefill_answer(Section("org", "Organisation and governance"), [_hinted()]) is None
+
+
+def test_an_answer_that_would_not_fit_is_left_to_the_model():
+    """The limit is the funder's and their portal truncates at it.
+
+    Handing over something that gets cut mid-word is worse than drafting to the
+    limit properly.
+    """
+    long_claim = _hinted(
+        statement="The organisation is a registered charity, " + "number " * 40,
+        value=None,
+    )
+    assert prefill_answer(Section("q", "Charity number", limit=30), [long_claim]) is None
+
+
+def test_matching_is_whole_word_not_substring():
+    """`app/crm/lookup.py` records why in blood: a substring lookup for "SAM"
+    matched "Samantha Fry" and put her home address in a prompt."""
+    claims = [_hinted(question_hints=["income"])]
+    assert match_claims("What is your income?", claims)
+    assert match_claims("Tell us about incomers to the area", claims) == []
+
+
+def test_a_question_spanning_two_facts_is_not_auto_filled():
+    """ "Your income and expenditure" is not a lookup, and picking one of the
+    two would answer a different question from the one asked."""
+    claims = [
+        _hinted(kind="annual_income", question_hints=["income"], value=847000.0),
+        _hinted(kind="annual_expenditure", question_hints=["expenditure"], value=792000.0),
+    ]
+    assert prefill_answer(Section("q", "Your income and expenditure", limit=40), claims) is None
+
+
+def test_a_vault_question_is_never_auto_filled():
+    """A question asking for evidence wants an argument, not a fact."""
+    section = Section("q", "What is your charity number?", limit=750, uses_vault=True)
+    assert prefill_answer(section, [_hinted()]) is None
+
+
+def test_an_expired_fact_is_never_auto_filled():
+    """The draft would look complete and be wrong, which is the one outcome
+    worse than a gap."""
+    lapsed = _hinted(
+        kind="insurance_policy",
+        question_hints=["insurance"],
+        value=5000000.0,
+        value_kind="money",
+        expires_on=TODAY - timedelta(days=1),
+        expired=True,
+    )
+    assert prefill_answer(Section("q", "Insurance cover", limit=30), [lapsed]) is None
+
+
+def test_money_does_not_arrive_as_a_float_string():
+    """jsonb hands income back as 847000.0, and nobody writes that on a form."""
+    claim = _hinted(
+        kind="annual_income", question_hints=["income"], value=847000.0, value_kind="money"
+    )
+    answer = prefill_answer(Section("q", "Annual income", limit=20), [claim])
+    assert answer is not None and answer[0] == "847000"
+
+
+def test_partition_splits_the_form_and_marks_the_rest_for_the_facts():
+    """The two tiers, on one form.
+
+    q1 is a lookup and never reaches a model. q2 is prose about the
+    organisation, so it drafts *with* the facts rather than from nothing. q3 is
+    about the project and is untouched.
+    """
+    pack = _pack(claims=[_hinted()])
+    spec = [
+        Section("q1", "Charity number", limit=20),
+        Section("q2", "Who is the applicant organisation?", limit=750),
+        Section("q3", "What will the funding pay for?", limit=1500),
+    ]
+    prefilled, to_draft, claim_ids = partition_prefilled(spec, pack)
+
+    assert [s.key for s, _ in prefilled] == ["q1"]
+    assert prefilled[0][1] == "1234567"
+    assert [s.key for s in to_draft] == ["q2", "q3"]
+
+    by_key = {s.key: s for s in to_draft}
+    assert by_key["q2"].uses_claims is True  # tier B: drafts with the facts
+    assert by_key["q3"].uses_claims is False  # nothing to do with the organisation
+    assert claim_ids["q1"] and claim_ids["q2"]
+    assert "q3" not in claim_ids
+
+
+def test_prefilled_questions_do_not_count_against_the_call_budget():
+    """The saving, stated as a test.
+
+    A form the register can half-answer makes half the calls — and a long form
+    that previously refused to draft may now fit under MAX_LLM_CALLS.
+    """
+    pack = _pack(claims=[_hinted()])
+    spec = [Section("q1", "Charity number", limit=20)] + [
+        Section(f"q{i}", f"Question {i}", limit=1500) for i in range(2, 6)
+    ]
+    _, to_draft, _ = partition_prefilled(spec, pack)
+    assert len(plan_calls(to_draft)) < len(plan_calls(spec))
+
+
+def test_answers_go_back_into_the_funders_order():
+    """The two halves finish separately, and a sheet whose answers do not line
+    up with its questions is unusable."""
+    spec = [Section(f"q{i}", f"Question {i}") for i in range(1, 5)]
+    drafted = [(spec[1], "second"), (spec[3], "fourth")]
+    prefilled = [(spec[0], "first"), (spec[2], "third")]
+    assert [s.key for s, _ in restore_order(spec, drafted, prefilled)] == ["q1", "q2", "q3", "q4"]
+
+
+def test_the_answer_sheet_says_where_each_answer_came_from():
+    """Three states, and the middle one matters: the register supplied the
+    facts but a model wrote the sentences, and calling that "from your
+    register" would overclaim."""
+    pack = _pack(kind="application_form", claims=[_hinted()])
+    spec = [
+        Section("q1", "Charity number", limit=20),
+        Section("q2", "Who is the applicant organisation?", limit=750),
+        Section("q3", "What will the funding pay for?", limit=1500),
+    ]
+    prefilled, to_draft, claim_ids = partition_prefilled(spec, pack)
+    drafted = [(s, "Drafted prose.") for s in to_draft]
+
+    result = assemble_docx(
+        pack,
+        restore_order(spec, drafted, prefilled),
+        TODAY,
+        answer_sheet=True,
+        prefilled_keys={s.key for s, _ in prefilled},
+        claim_ids=claim_ids,
+    )
+    origins = {a["question_id"]: a["origin"] for a in result.answers}
+    assert origins == {"q1": "claim", "q2": "claim_assisted", "q3": "drafted"}
+
+    answered = next(a for a in result.answers if a["question_id"] == "q1")
+    assert answered["text"] == "1234567"
+    assert answered["claim_ids"] == claim_ids["q1"]

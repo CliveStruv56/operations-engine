@@ -14,6 +14,7 @@ only from the pack — the grounding contract in `prompts.py` depends on it.
 
 import json
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -47,11 +48,23 @@ class ClaimFacts(BaseModel):
     vault, and minting a pseudo-chunk for one would misrepresent the evidence.
     """
 
+    id: UUID
     kind: str
     label: str
     subject: str | None = None
     period: str | None = None
     statement: str
+    #: The machine-readable form. What a 20-character "Charity number" box
+    #: wants, where the statement is a sentence and will not fit.
+    value: Any = None
+    value_kind: str = "text"
+    unit: str | None = None
+    #: Whole-word tokens meaning a funder's question is asking for this fact.
+    #: Carried per claim rather than as a separate catalogue on the pack: the
+    #: pack is already the model's only fact source, and a second lookup table
+    #: beside it is a second thing to keep in step.
+    question_hints: list[str] = Field(default_factory=list)
+    cardinality: str = "single"
     as_of: date | None = None
     expires_on: date | None = None
     source: str

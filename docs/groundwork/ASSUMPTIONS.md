@@ -625,3 +625,53 @@ and every divergence is recorded here.
     Administration) (Scotland) Act 2023), and a trustee may hold an exemption
     where publication would put them at risk. So an OSCR import returning no
     trustees is normal and must never be surfaced as a failure.
+
+36. **A funder's question is answered from the register only when the size of
+    the field says it is a lookup.**
+
+    Pre-fill has two tiers. Tier A returns the claim as the answer with no
+    model call; tier B marks the section `uses_claims` so a model drafts it
+    *with* the facts. The line between them is `PREFILL_MAX_LIMIT` (120
+    characters), plus: exactly one claim matched, a scalar value kind, single
+    cardinality, not expired, not a vault question, and the text fits.
+
+    **Why the field size and not just "does it fit":** "Who is the applicant
+    organisation, and what is its legal form?" at 750 characters matched a
+    single charity-number claim in an early build, and the one-line answer fit
+    the box and passed every other check — while answering a different question
+    from the one asked. The funder chose that box size, and a large one is the
+    clearest statement we have that they want prose. Caught by a test before it
+    reached anything real, and the test is still there.
+
+    **Why so conservative overall:** every condition is a way an answer could
+    be wrong in a field somebody then submits over their own name. A blank the
+    consultant fills is a far cheaper failure than a confident wrong one.
+
+37. **`uses_claims` forces a solo model call, exactly as `uses_vault` does.**
+
+    `plan_calls` batches small, self-contained questions to save calls, and the
+    batched prompt carries only the shared project data — no vault excerpts and
+    no claims block.
+
+    **Why:** a 750-character "Who is the applicant organisation?" is precisely
+    the shape `plan_calls` likes to batch, and batched it would answer from
+    nothing, which is the failure claims exist to fix. Skeleton sections were
+    never at risk (no limit means always solo); form questions are, and phase 3
+    is what starts setting the flag on them.
+
+38. **An answer sheet records where each answer came from, in three states.**
+
+    `AnswerOut.origin` is `claim` (the register answered it outright),
+    `claim_assisted` (a model wrote it with the register's facts) or `drafted`.
+    `from_register` on the sheet counts only the first.
+
+    **Why three and not two:** rounding `claim_assisted` up to "from your
+    register" would tell a user a paragraph of model prose needs no checking.
+    Rounding it down to "drafted" would hide the thing that makes keeping the
+    register current worth doing. Both fields carry defaults and must keep
+    them — stored sheets are jsonb read back through `AnswerOut(**a)`, so a
+    required field would 500 every sheet written before this shipped.
+
+    `claim_ids` is on each answer for Tenderhouse (brief §12.5): a bid question
+    references claims rather than being one, so re-verifying a claim can later
+    flag every stored answer that leaned on it.

@@ -19,6 +19,8 @@ const answer = (over: Partial<Answer> = {}): Answer => ({
   over_by: 0,
   to_confirm: 0,
   citations: [],
+  origin: "drafted",
+  claim_ids: [],
   ...over,
 });
 
