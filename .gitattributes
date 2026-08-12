@@ -1,0 +1,17 @@
+# Normalize to LF in the repo and in the working tree on every platform.
+# Shell scripts here are COPY'd into Linux images (infra/backup/backup.sh),
+# where a CRLF shebang fails with "bad interpreter".
+* text=auto eol=lf
+
+# Binary assets — never touch.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.pptx binary
+*.docx binary
+*.woff binary
+*.woff2 binary
