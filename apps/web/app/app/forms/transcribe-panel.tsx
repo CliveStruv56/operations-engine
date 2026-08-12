@@ -155,7 +155,21 @@ export function TranscribePanel({
   }
 
   const missing = questions?.filter((q) => q.limit === null).length ?? 0;
-  const ready = Boolean(questions?.length && funder.trim() && name.trim() && sourceUrl.trim());
+  // Name what is still needed rather than leaving a greyed-out button to be
+  // interpreted. The three fields it wants sit above the question list, so by
+  // the time anyone has scrolled to Save they are off screen — a disabled
+  // button with no reason reads as broken rather than incomplete.
+  const missingFields = [
+    questions?.length ? null : "a question",
+    funder.trim() ? null : "Funder",
+    name.trim() ? null : "Form",
+    sourceUrl.trim() ? null : "Where these came from",
+  ].filter((f): f is string => f !== null);
+  const ready = missingFields.length === 0;
+  const missingLabel =
+    missingFields.length > 1
+      ? `${missingFields.slice(0, -1).join(", ")} and ${missingFields[missingFields.length - 1]}`
+      : missingFields[0];
 
   return (
     <div className="space-y-4">
@@ -288,6 +302,9 @@ export function TranscribePanel({
             <button onClick={onCancel} className={btnGhost}>
               Cancel
             </button>
+            {!ready && !busy && (
+              <span className="text-xs text-warn">Still needed: {missingLabel}</span>
+            )}
           </div>
           <p className="text-xs text-ink-faint">
             Saved forms start unverified and say so on every draft written against them, until
