@@ -20,6 +20,9 @@ from arq.connections import RedisSettings
 
 from worker.blocks import estimate_tokens
 from worker.chunking import chunk_blocks
+from worker.claims.extract import EXTRACT_ALIAS, ScorableChunk, extract_claims
+from worker.claims.facts import load_kind_specs, save_proposals
+from worker.claims.harvest import harvest_claims_from_application
 from worker.db import tenant_tx
 from worker.drafts.job import draft_document
 from worker.embed import embed_texts
@@ -45,6 +48,59 @@ async def _set_status(
             status,
             error,
         )
+
+
+async def _propose_claims(
+    pool: asyncpg.Pool,
+    tenant_id: str,
+    document_id: str,
+    user_id: str,
+    title: str,
+    virtual_key: str,
+) -> None:
+    """Read a just-ingested document for facts the organisation could assert.
+
+    Three reads and one write, with the model call deliberately outside every
+    transaction — it is network, and the rest of the codebase does not hold a
+    tenant transaction open across one.
+
+    Most documents return here having spent nothing: `extract_claims` scores
+    the chunks against the catalogue first and gives up when a document is a
+    site plan rather than a set of accounts. That is what keeps this a feature
+    rather than a charge on every upload.
+    """
+    async with tenant_tx(pool, tenant_id) as conn:
+        kinds = await load_kind_specs(conn)
+        chunk_rows = await conn.fetch(
+            "select id, content from doc_chunks where document_id = $1 and is_summary is not true",
+            document_id,
+        )
+    chunks = [ScorableChunk(id=r["id"], content=r["content"]) for r in chunk_rows]
+
+    result = await extract_claims(virtual_key, title, chunks, kinds)
+    if result is None:
+        return  # nothing worth reading; no call was made and nothing is billed
+
+    async with tenant_tx(pool, tenant_id) as conn:
+        # Usage first, and unconditionally: the tokens were spent whether or
+        # not the model found anything, and a call that bills nothing because
+        # the answer was an empty array is exactly the leak hard constraint 5
+        # exists to stop (the drafting engine learned this on 4 Aug 2026).
+        await conn.execute(
+            """
+            insert into usage_events (tenant_id, user_id, kind, model,
+                                      tokens_in, tokens_out, cost_usd)
+            values ($1, $2, 'extract', $3, $4, $5, $6)
+            """,
+            tenant_id,
+            user_id,
+            EXTRACT_ALIAS,
+            result.tokens_in,
+            result.tokens_out,
+            result.cost_usd,
+        )
+        if result.facts:
+            await save_proposals(conn, tenant_id, document_id, user_id, result.facts)
 
 
 async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: str) -> str:
@@ -169,6 +225,14 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
                 document_id,
                 summary.text if summary else None,
             )
+
+        # Claim proposals — best-effort, and after the chunk transaction rather
+        # than inside it, because a proposal's evidence link points at a
+        # persisted `doc_chunks` row and those ids do not exist until it
+        # commits. Same contract as the summary above: its absence never fails
+        # ingest, and a document that proposes nothing is the normal case.
+        with contextlib.suppress(Exception):
+            await _propose_claims(pool, tenant_id, document_id, user_id, doc["title"], virtual_key)
         return f"ready:{len(chunks)} chunks"
     except Exception as exc:
         # Sanitized failure reason only — no file content in the row or logs.
@@ -206,6 +270,7 @@ class WorkerSettings:
         generate_health_card,
         grant_draft_document,
         generate_impact_card,
+        harvest_claims_from_application,
     ]
     on_startup = startup
     on_shutdown = shutdown

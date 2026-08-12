@@ -39,8 +39,21 @@ def test_migrations_are_reversible():
                 "insert into tenants (name) values ('migtest') returning id"
             ).fetchone()
             conn.execute(
-                "insert into usage_events (tenant_id, kind) values (%s, 'summary'), (%s, 'draft')",
-                (row[0], row[0]),
+                "insert into usage_events (tenant_id, kind) values"
+                " (%s, 'summary'), (%s, 'draft'), (%s, 'transcribe'), (%s, 'extract')",
+                (row[0], row[0], row[0], row[0]),
+            )
+            # A claim and its revision, so 0016's downgrade has to drop tables
+            # that actually hold rows and honour its own FK ordering.
+            claim = conn.execute(
+                "insert into claims (tenant_id, kind, statement, source)"
+                " values (%s, 'registered_name', 'A name.', 'typed') returning id",
+                (row[0],),
+            ).fetchone()
+            conn.execute(
+                "insert into claim_revisions (tenant_id, claim_id, statement, source)"
+                " values (%s, %s, 'A name.', 'typed')",
+                (row[0], claim[0]),
             )
         command.downgrade(cfg, "base")
         command.upgrade(cfg, "head")

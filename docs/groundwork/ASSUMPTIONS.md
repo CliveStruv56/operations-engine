@@ -675,3 +675,75 @@ and every divergence is recorded here.
     `claim_ids` is on each answer for Tenderhouse (brief §12.5): a bid question
     references claims rather than being one, so re-verifying a claim can later
     flag every stored answer that leaned on it.
+
+39. **Extraction and harvesting are gated on a keyword score, not run on
+    everything.**
+
+    A document proposes claims only if some chunk mentions at least
+    `MIN_CHUNK_SCORE` (2) distinct fact kinds, whole-word. Below that the
+    upload makes **zero** model calls.
+
+    **Why:** most uploads are site plans, meeting notes and photographs of
+    noticeboards, not annual accounts. Running a model over every one would put
+    a per-upload charge on the whole vault to find facts in a tenth of it —
+    which is the difference between a feature and a tax on uploading. One hint
+    is too loose ("income" appears in a tenancy note about somebody else);
+    three would miss a clean table of registered details.
+
+    **Corollary:** the `extract` usage kind is separate from `summary` even
+    though both fire on upload and use the same alias, because the whole cost
+    argument rests on being able to see the difference on the usage screen.
+
+40. **A proposal's quote must appear in the text it claims to come from, and
+    the parser enforces it.**
+
+    Every extracted or harvested fact carries a `locator` — a `doc_chunks` id
+    when reading an upload, a question id when harvesting a submitted draft —
+    and a verbatim quote. Four things are dropped silently: an unknown kind, an
+    unquotable fact, a locator we never supplied, and a quote that does not
+    appear at that locator (compared whitespace- and case-insensitively,
+    because models reflow quotes out of PDF tables).
+
+    **Why in the parser and not the prompt:** a rule the parser applies is a
+    rule; a rule the prompt states is a request. The failure that matters is a
+    plausible figure pinned to a *real* chunk it did not come from — hardest to
+    notice, worst to submit, and the one no prompt instruction reliably stops.
+
+41. **A harvested claim carries no citation, and says where it came from.**
+
+    Claims harvested from a submitted application land `source='draft'` with no
+    `source_chunk_id` and no `source_document_id`: the generated document is
+    not a chunked vault upload, so there is nothing citable to point at. That
+    puts a harvested fact in the same position as a register fact — usable,
+    attributable in prose, never given a `[c:]` marker.
+
+    The distinction is kept on the row rather than flattened to "document"
+    because it is real: an uploaded certificate is evidence, while a bid is the
+    organisation repeating a claim it made somewhere else. Worth keeping, worth
+    checking a little harder.
+
+42. **Harvesting is fire-and-forget, and failing at it is invisible.**
+
+    Marking an application submitted enqueues `harvest_claims_from_application`
+    inside `contextlib.suppress`, and the job itself never raises into arq.
+
+    **Why:** harvesting is a by-product of work somebody has already finished.
+    No Redis, no worker, or a model that returns nonsense must not be able to
+    stop somebody recording that they submitted their application — that is the
+    thing that mattered, and it has already happened.
+
+43. **Removing a member releases their claims explicitly, and counts them.**
+
+    `owner_membership_id … on delete set null` means the foreign key would do
+    this anyway and nothing would break. `disown_claims` does it first so the
+    count can go into the `member.remove` audit meta.
+
+    **Why:** "nothing breaks" is how a register quietly stops being anybody's
+    job. Removing somebody is the one moment an admin could reassign what they
+    owned, so it is the moment worth recording.
+
+    **What is deliberately not done:** unowned claims are *not* counted as
+    needing attention. Ownership is optional and most claims never have an
+    owner, so counting them would put a permanent warning on every workspace —
+    and a warning that is always there is not read, which is the same rule the
+    drafting warning follows.

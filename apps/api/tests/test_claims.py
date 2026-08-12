@@ -7,7 +7,10 @@ test against Companies House.
 """
 
 import json
+import sys
 from datetime import date, timedelta
+from pathlib import Path
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -17,6 +20,14 @@ from app.claims.service import load_kinds, render_statement
 from app.config import get_settings
 from app.db import db
 from tests.conftest import auth
+
+# Worker CI has no Postgres, so the worker's DB-touching claims modules
+# (asyncpg + pydantic only) are imported across the monorepo and exercised
+# here — the same rule as the context gatherers, ASSUMPTIONS #13.
+sys.path.append(str(Path(__file__).resolve().parents[2] / "worker"))
+
+from worker.claims.extract import ExtractedFact  # noqa: E402
+from worker.claims.facts import load_claims, save_proposals  # noqa: E402
 
 
 @pytest.fixture
@@ -639,3 +650,259 @@ async def test_statement_templates_render_for_every_seeded_kind(client, two_tena
         statement = render_statement(kind, "Example subject", "Example value")
         assert "{" not in statement, f"{kind.key} left a placeholder unrendered"
         assert statement.strip()
+
+
+# -- proposals written from a document (worker path, exercised here) ----------
+
+
+async def test_a_document_proposes_facts_that_a_person_can_tick(client, two_tenants):
+    """The worker's `save_proposals` against a real database.
+
+    Worker CI has no Postgres, so its DB-touching modules are imported across
+    the monorepo and run here — the same rule as the context gatherers
+    (ASSUMPTIONS #13).
+    """
+
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        chunk_id = await conn.fetchval(
+            "insert into doc_chunks (tenant_id, document_id, content) values ($1, $2, $3)"
+            " returning id",
+            a.id,
+            a.document_id,
+            "Total income for the year was £847,000.",
+        )
+        written = await save_proposals(
+            conn,
+            str(a.id),
+            str(a.document_id),
+            str(a.owner_id),
+            [
+                ExtractedFact(
+                    kind="annual_income",
+                    value=847000,
+                    locator=str(chunk_id),
+                    quote="Total income for the year was £847,000",
+                    period="2025/26",
+                ),
+                ExtractedFact(
+                    kind="insurance_policy",
+                    subject="Public liability",
+                    value=5000000,
+                    locator=str(chunk_id),
+                    quote="Limit of indemnity £5,000,000, expiring 12 April 2027",
+                    expires_on="2027-04-12",
+                ),
+            ],
+        )
+    assert written == 2
+
+    listed = (await client.get("/api/v1/claims", headers=headers)).json()
+    by_kind = {c["kind"]: c for c in listed}
+
+    income = by_kind["annual_income"]
+    # Proposed, never asserted. Nothing reaches a draft until somebody ticks it.
+    assert income["status"] == "proposed"
+    assert income["source"] == "document"
+    assert income["statement"] == "The organisation's annual income was £847,000."
+    assert income["period"] == "2025/26"
+    # The evidence link is what lets the claim be cited in a draft later.
+    assert income["source_chunk_id"] == str(chunk_id)
+    assert income["source_document_id"] == str(a.document_id)
+    # And the quote is why a person can decide in ten seconds without opening
+    # the document.
+    assert "Total income for the year was £847,000" in income["notes"]
+
+    # An expiry read off a certificate is most of why reading it was worth it:
+    # it is what later makes lapsed cover visible rather than quietly asserted.
+    assert by_kind["insurance_policy"]["expires_on"] == "2027-04-12"
+
+
+async def test_reingesting_a_document_does_not_ask_the_same_question_twice(client, two_tenants):
+
+    a, _ = two_tenants
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        chunk_id = await conn.fetchval(
+            "insert into doc_chunks (tenant_id, document_id, content) values ($1, $2, $3)"
+            " returning id",
+            a.id,
+            a.document_id,
+            "We work with 40 volunteers.",
+        )
+        fact = ExtractedFact(
+            kind="volunteers",
+            value=40,
+            locator=str(chunk_id),
+            quote="We work with 40 volunteers",
+        )
+        first = await save_proposals(conn, str(a.id), str(a.document_id), str(a.owner_id), [fact])
+        second = await save_proposals(conn, str(a.id), str(a.document_id), str(a.owner_id), [fact])
+
+    assert first == 1
+    assert second == 0, "re-uploading a document must not restack the same proposals"
+
+
+async def test_a_proposal_never_reaches_a_draft_until_it_is_confirmed(client, two_tenants):
+    """The line the whole feature rests on, checked end to end.
+
+    A document proposal is visible in the register and invisible to the
+    drafting worker, until a person says otherwise.
+    """
+
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        chunk_id = await conn.fetchval(
+            "insert into doc_chunks (tenant_id, document_id, content) values ($1, $2, $3)"
+            " returning id",
+            a.id,
+            a.document_id,
+            "The organisation employs 12 people.",
+        )
+        await save_proposals(
+            conn,
+            str(a.id),
+            str(a.document_id),
+            str(a.owner_id),
+            [
+                ExtractedFact(
+                    kind="employees_headcount",
+                    value=12,
+                    locator=str(chunk_id),
+                    quote="The organisation employs 12 people",
+                )
+            ],
+        )
+        claims, _ = await load_claims(conn, date.today())
+    assert "employees_headcount" not in {c.kind for c in claims}
+
+    proposal = next(
+        c
+        for c in (await client.get("/api/v1/claims", headers=headers)).json()
+        if c["kind"] == "employees_headcount"
+    )
+    await client.patch(
+        f"/api/v1/claims/{proposal['id']}", json={"status": "confirmed"}, headers=headers
+    )
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        claims, excerpts = await load_claims(conn, date.today())
+
+    confirmed = next(c for c in claims if c.kind == "employees_headcount")
+    assert confirmed.statement == "The organisation employs 12 people."
+    # Confirmed *and* citable: its chunk comes along, so a draft leaning on it
+    # can point at the page it was read from.
+    assert confirmed.chunk_id == chunk_id
+    assert chunk_id in {e.chunk_id for e in excerpts}
+
+
+# -- keeping the register true ------------------------------------------------
+
+
+async def test_removing_a_member_releases_the_claims_they_owned(client, two_tenants):
+    """Brief §12.3.
+
+    The foreign key would null these on its own, so nothing would break — but
+    "nothing breaks" is how a register quietly stops being anybody's job. The
+    release is done explicitly and counted, so it lands in the audit trail at
+    the one moment an admin could act on it.
+    """
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    invited = await client.post(
+        "/api/v1/invites", json={"email": "leaver@example.com", "role": "member"}, headers=headers
+    )
+    assert invited.status_code == 201
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        leaver = await conn.fetchval(
+            "insert into memberships (tenant_id, user_id, role, email)"
+            " values ($1, $2, 'member', 'leaver@example.com') returning id",
+            a.id,
+            uuid4(),
+        )
+        await conn.execute(
+            "update claims set owner_membership_id = $2 where id = $1", a.claim_id, leaver
+        )
+
+    resp = await client.delete(f"/api/v1/members/{leaver}", headers=headers)
+    assert resp.status_code == 204
+
+    claim = (await client.get(f"/api/v1/claims/{a.claim_id}", headers=headers)).json()
+    # Released, not deleted: the fact is still true, it just has no owner.
+    assert claim["owner_membership_id"] is None
+    assert claim["status"] == "confirmed"
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        meta = await conn.fetchval(
+            "select meta from audit_log where action = 'member.remove'"
+            " order by created_at desc limit 1"
+        )
+    assert json.loads(meta)["claims_disowned"] == 1
+
+
+async def test_harvested_facts_arrive_as_proposals_with_no_citation(client, two_tenants):
+    """A bid is the organisation repeating a claim it made elsewhere.
+
+    Worth keeping, worth checking, and never citable — the submitted document
+    is not a chunked upload, so a harvested claim points at no chunk. That puts
+    it in the same position as a register fact, and honestly so.
+    """
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        written = await save_proposals(
+            conn,
+            str(a.id),
+            None,
+            str(a.owner_id),
+            [
+                ExtractedFact(
+                    kind="accreditation",
+                    subject="Cyber Essentials Plus",
+                    value="held since 2024",
+                    locator="q7",
+                    quote="We have held Cyber Essentials Plus since 2024",
+                )
+            ],
+            source="draft",
+        )
+    assert written == 1
+
+    claim = next(
+        c
+        for c in (await client.get("/api/v1/claims", headers=headers)).json()
+        if c["kind"] == "accreditation"
+    )
+    assert claim["status"] == "proposed"
+    assert claim["source"] == "draft"
+    assert claim["source_chunk_id"] is None
+    assert claim["source_document_id"] is None
+    assert "a document you submitted" in claim["notes"]
+
+    # And it stays out of drafts until somebody ticks it.
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        claims, _ = await load_claims(conn, date.today())
+    assert "accreditation" not in {c.kind for c in claims}
+
+
+async def test_a_harvested_fact_the_register_already_holds_is_not_reproposed(client, two_tenants):
+    """Submitting a second application must not re-ask everything the first
+    one already put in front of somebody."""
+    a, _ = two_tenants
+    fact = ExtractedFact(
+        kind="volunteers",
+        value=40,
+        locator="q4",
+        quote="We work with 40 volunteers",
+    )
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        first = await save_proposals(conn, str(a.id), None, str(a.owner_id), [fact], source="draft")
+        second = await save_proposals(
+            conn, str(a.id), None, str(a.owner_id), [fact], source="draft"
+        )
+    assert (first, second) == (1, 0)

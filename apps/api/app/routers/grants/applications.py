@@ -6,6 +6,7 @@ Groundwork project is few and long-lived. `project_id` is the optional soft
 link back to a core project when a bid funds one.
 """
 
+import contextlib
 import json
 from uuid import UUID
 
@@ -23,6 +24,7 @@ from app.grants.schemas import (
     ApplicationStatusIn,
     PortfolioRow,
 )
+from app.queue import ingest_queue
 from app.routers.grants.common import module_application, require_grants, visible_funder
 from app.routers.grants.common import visible_project as _visible_project
 from app.sqlutil import patch_sets
@@ -316,6 +318,17 @@ async def set_status(
         str(application_id),
         {"status": body.status, "conditions_seeded": seeded},
     )
+    if body.status == "submitted":
+        # Every bid an organisation sends restates the facts it will be asked
+        # for again in six months, so submission is the natural moment to
+        # offer them for the register — a by-product of work already finished
+        # rather than a maintenance chore nobody gets round to.
+        #
+        # Suppressed and outside the transaction on purpose: no queue, no
+        # Redis, or a worker that never runs must not be able to stop somebody
+        # recording that they submitted their application.
+        with contextlib.suppress(Exception):
+            await ingest_queue.enqueue_harvest(ctx.tenant_id, application_id, ctx.user_id)
     return dict(await conn.fetchrow(f"{_SELECT} where a.id = $1", application_id))
 
 

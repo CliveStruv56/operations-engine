@@ -4,6 +4,7 @@ import asyncpg
 from fastapi import APIRouter, Depends
 
 from app.audit import write_audit
+from app.claims.service import disown_claims
 from app.errors import ApiError
 from app.schemas import MemberOut, MemberRolePatch
 from app.tenant import TenantContext, get_conn, require_role
@@ -104,6 +105,12 @@ async def remove_member(
         if not any(o["id"] == membership_id for o in owners):
             # Deleted or demoted after our initial read.
             raise ApiError(404, "not_found", "Membership not found")
+    # Release their claims before the row goes. The foreign key would null
+    # these anyway (`on delete set null`), but doing it here is what lets us
+    # say how many — and the moment somebody is being removed is the only
+    # moment an admin can actually reassign them.
+    disowned = await disown_claims(conn, membership_id)
+
     deleted = await conn.fetchval(
         "delete from memberships where id = $1 returning id", membership_id
     )
@@ -116,5 +123,5 @@ async def remove_member(
         "member.remove",
         "membership",
         str(membership_id),
-        meta={"removed_user_id": str(target["user_id"])},
+        meta={"removed_user_id": str(target["user_id"]), "claims_disowned": disowned},
     )

@@ -130,6 +130,22 @@ def _row_out(
     )
 
 
+async def disown_claims(conn: asyncpg.Connection, membership_id: UUID) -> int:
+    """Release the claims a departing member owned, and say how many.
+
+    Brief §12.3. The foreign key is already `on delete set null`, so nothing
+    breaks on its own — but "nothing breaks" is how a register quietly stops
+    being anybody's job. Returning the count lets the caller tell the admin at
+    the one moment they can act on it: while they are removing the person.
+    """
+    released = await conn.fetch(
+        "update claims set owner_membership_id = null, updated_at = now()"
+        " where owner_membership_id = $1 returning id",
+        membership_id,
+    )
+    return len(released)
+
+
 async def list_claims(
     conn: asyncpg.Connection, today: date, *, status: str | None = None
 ) -> list[ClaimOut]:

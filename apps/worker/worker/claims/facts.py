@@ -21,11 +21,15 @@ That is also what discharges the Open Government Licence attribution.
 
 import json
 from datetime import date
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import asyncpg
 
 from worker.drafting.pack import ClaimFacts, VaultExcerpt
+
+if TYPE_CHECKING:  # import cycle: extract.py has no need of this module
+    from worker.claims.extract import ExtractedFact, KindSpec
 
 #: A workspace is expected to hold 40–80 claims. The cap is well clear of that
 #: and exists only so a pathological register cannot push a section prompt into
@@ -212,6 +216,177 @@ def claim_source_notes(claims: list[ClaimFacts]) -> list[str]:
             note += f", confirmed {verified.isoformat()}"
         notes.append(note + ".")
     return notes
+
+
+async def load_kind_specs(conn: asyncpg.Connection) -> list["KindSpec"]:
+    """The fact-type catalogue, in the shape extraction needs it.
+
+    Register-only kinds are excluded: nothing in a tenant's own documents
+    establishes their Companies House status, and offering the model a kind it
+    cannot honestly fill is an invitation to fill it anyway.
+    """
+    from worker.claims.extract import KindSpec
+
+    rows = await conn.fetch(
+        """
+        select key, label, value_kind, cardinality, question_hints
+        from ref_claim_kinds
+        where key not in ('registration_status', 'company_number', 'charity_number')
+        order by key
+        """
+    )
+    return [
+        KindSpec(
+            key=r["key"],
+            label=r["label"],
+            value_kind=r["value_kind"],
+            cardinality=r["cardinality"],
+            question_hints=list(r["question_hints"] or []),
+        )
+        for r in rows
+    ]
+
+
+def _parse_date(raw: str | None) -> date | None:
+    """A model-supplied date, or nothing.
+
+    Anything it could not read as ISO is dropped rather than guessed at: a
+    wrong expiry date is worse than none, because none shows as "nobody has
+    checked this" and a wrong one shows as cover that is fine.
+    """
+    if not raw:
+        return None
+    try:
+        return date.fromisoformat(raw.strip()[:10])
+    except ValueError:
+        return None
+
+
+def render_statement(
+    template: str, label: str, subject: str | None, value: Any, value_kind: str = "text"
+) -> str:
+    """The sentence a person reads when deciding whether to keep the fact.
+
+    Deliberately a copy of `app/claims/service.py::render_statement`, and the
+    same standing hazard as the worker's copy of the alias price table
+    (ASSUMPTIONS #27): the API renders when a register import or a person
+    writes a claim, and the worker renders when a document proposes one, and
+    the two must not drift — or the same organisation's income would read
+    "£847,000" from Companies House and "847000" from its own accounts, and a
+    person ticking both would have no idea they were the same fact.
+
+    The drift is not hypothetical: this function shipped without the money
+    branch and a test caught exactly that pair of statements.
+    """
+    if value is None or isinstance(value, dict):
+        rendered = ""
+    elif isinstance(value, list):
+        rendered = ", ".join(str(v) for v in value)
+    elif value_kind == "money" and isinstance(value, int | float):
+        rendered = f"£{value:,.0f}"
+    elif value_kind == "number" and isinstance(value, float) and value.is_integer():
+        rendered = str(int(value))
+    elif isinstance(value, float) and value.is_integer():
+        rendered = str(int(value))
+    else:
+        rendered = str(value)
+    try:
+        statement = template.format(value=rendered, subject=subject or label)
+    except (KeyError, IndexError):
+        statement = f"{label}: {rendered}" if rendered else label
+    return statement.strip()
+
+
+async def save_proposals(
+    conn: asyncpg.Connection,
+    tenant_id: str,
+    document_id: str,
+    user_id: str,
+    facts: list["ExtractedFact"],
+    *,
+    source: str = "document",
+) -> int:
+    """Write extracted facts as proposals. Never as claims.
+
+    A proposal that duplicates something the workspace already holds — same
+    kind, subject and period, same statement — is dropped rather than stacked:
+    re-uploading last year's accounts should not put the same eleven questions
+    in front of somebody a second time.
+
+    `source` is `document` when reading an upload and `draft` when harvesting
+    something the organisation submitted. The difference is real and shows on
+    the register: an uploaded certificate is evidence, whereas a bid is the
+    organisation repeating a claim it made elsewhere — worth keeping, worth
+    checking a little harder.
+    """
+    templates = {
+        r["key"]: (r["statement_template"], r["label"], r["value_kind"])
+        for r in await conn.fetch(
+            "select key, statement_template, label, value_kind from ref_claim_kinds"
+        )
+    }
+    written = 0
+    for fact in facts:
+        entry = templates.get(fact.kind)
+        if entry is None:
+            continue
+        statement = render_statement(entry[0], entry[1], fact.subject, fact.value, entry[2])
+        if not statement:
+            continue
+        duplicate = await conn.fetchval(
+            """
+            select 1 from claims
+            where kind = $1 and coalesce(subject, '') = coalesce($2, '')
+              and coalesce(period, '') = coalesce($3, '')
+              and statement = $4 and status in ('confirmed', 'proposed')
+            """,
+            fact.kind,
+            fact.subject,
+            fact.period,
+            statement,
+        )
+        if duplicate:
+            continue
+        # A document proposal's locator is a `doc_chunks` id, so it can be
+        # cited later. A harvested one's is a question id on a form, which
+        # names no chunk — the claim points at the submitted document instead
+        # and carries no citation, the same position a register fact is in.
+        chunk_id = _as_uuid(fact.locator) if source == "document" else None
+        found_in = "the document" if source == "document" else "a document you submitted"
+        await conn.execute(
+            """
+            insert into claims (tenant_id, kind, subject, period, statement, value,
+                expires_on, notes, status, source, source_document_id, source_chunk_id,
+                created_by)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, 'proposed', $9, $10, $11, $12)
+            """,
+            tenant_id,
+            fact.kind,
+            fact.subject,
+            fact.period,
+            statement,
+            json.dumps(fact.value),
+            # An insurance certificate's renewal date is most of why reading
+            # the certificate was worth doing: it is what later makes lapsed
+            # cover visible instead of quietly asserted.
+            _parse_date(fact.expires_on),
+            # The quote is the whole reason a person can decide in ten seconds
+            # rather than opening the document.
+            f"Found in {found_in}: “{fact.quote}”",
+            source,
+            document_id,
+            chunk_id,
+            user_id,
+        )
+        written += 1
+    return written
+
+
+def _as_uuid(raw: str) -> UUID | None:
+    try:
+        return UUID(raw)
+    except (ValueError, TypeError):
+        return None
 
 
 def merge_excerpts(existing: list[VaultExcerpt], extra: list[VaultExcerpt]) -> list[VaultExcerpt]:
