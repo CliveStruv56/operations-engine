@@ -6,6 +6,25 @@ on:
   pull_request:
 
 jobs:
+  line-endings:
+    name: Line endings (LF only)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # .gitattributes pins the repo to LF. A CRLF shebang in a script that gets
+      # COPY'd into a Linux image (infra/backup/backup.sh) dies with "bad
+      # interpreter", so catch it at the blob rather than at deploy.
+      - name: Fail on CRLF in any tracked blob
+        run: |
+          offenders=$(git ls-files --eol | grep -E '^i/(crlf|mixed)' || true)
+          if [ -n "$offenders" ]; then
+            echo "These tracked files are stored with CRLF:"
+            echo "$offenders"
+            echo
+            echo "Fix with: git add --renormalize . && git commit"
+            exit 1
+          fi
+
   api:
     name: API (lint, types, isolation suite)
     runs-on: ubuntu-latest
