@@ -1,11 +1,20 @@
 # Claims Register Brief — one true place for what the tenant asserts about itself
 
-## Flowgrid OS · Core primitive (unflagged) · Proposal
+## Flowgrid OS · Core primitive (unflagged) · Built
 
-**Version:** 0.1 · 11 August 2026
-**Status:** Proposed, **not approved for build**.
-**Recommended timing:** inside the Tenderhouse sprint, built as **core** rather than
-`bid_*`. See §9 — the window closes when Tenderhouse ships.
+**Version:** 0.2 · written 11 August 2026, status updated 12 August 2026
+**Status:** **BUILT.** Approved 12 Aug 2026 and delivered in four commits —
+`cef54ce`, `9fea88c`, `be4e8e4`, `0d85908`. §13 says what each one covers.
+§12's open questions are all settled, and the rulings live in
+`docs/groundwork/ASSUMPTIONS.md` **#30–#43**, not here.
+
+**Two follow-ups are proposed and NOT built — see §14.** Read that section
+before starting either: both exist to avoid a specific failure, and one of them
+has no infrastructure to build on.
+
+**Original timing note (now historic):** inside the Tenderhouse sprint, built as **core** rather than
+`bid_*`. See §9 — the window closes when Tenderhouse ships. It was built ahead
+of Tenderhouse instead, which satisfies the same argument.
 **Feature flag:** none. This is platform, like `documents` or `audit_log`.
 **Prerequisite reading:** `docs/vertical-module-roadmap.md` §0.2 (the engine's shape),
 `docs/modules/tenderhouse-prd.md` §0 (the answer-library framing this replaces),
@@ -293,3 +302,130 @@ without one real corroborating quote.
 5. **Whether Tenderhouse questions are claims or reference them.** A question-and-
    answer pair is not the same shape as an atomic fact. Most likely: questions live in
    `bid_*` and cite claims. Needs settling in the Tenderhouse spec, not here.
+
+---
+
+## 13. What was built (12 August 2026)
+
+Four commits, each independently green. Branch `claims-register`, off `main`.
+
+| Commit | What |
+| --- | --- |
+| `cef54ce` | The register itself. Migration **0016** (`ref_claim_kinds`, `claims`, `claim_revisions` + RLS), the claim-kind fixture and seeder, `app/claims/` (schemas, three register clients, service), `/api/v1/claims` incl. three import routes, `/app/claims`, the settings section, isolation coverage |
+| `9fea88c` | Claims reach the four organisation sections. `Section.uses_claims`, `<organisation-claims>` block, `claims`/`claim_excerpts` on `DraftPackBase`, the excerpt merge in the engine, stale-claim warning joined onto each module's `warning_block` |
+| `be4e8e4` | Form pre-fill. `worker/drafting/prefill.py`, partition before `plan_calls`, `AnswerOut.origin`/`claim_ids`, "From your register" stamps and the sheet header count |
+| `0d85908` | Extraction and harvesting. Migration **0017** (`usage_events.kind = 'extract'`), `worker/claims/extract.py` + `harvest.py`, the ingest hook, the submit trigger, `disown_claims` on member removal |
+
+**Jurisdictions.** Companies House, the Charity Commission for England and
+Wales, and **OSCR (Scotland)** are all live. Terms were verified on 12 Aug
+2026: all three are free, all three publish under the Open Government Licence,
+and the OGL attribution duty is discharged by the register provenance line in
+the Data sources appendix plus a credit on `/app/claims`. Companies House
+allows 600 requests per five minutes **per application**, which is why
+`register_lookup_rate_limit_per_hour` exists — it is the only rate limit in the
+codebase whose job is protecting other tenants rather than us.
+
+**Northern Ireland (CCNI) is deliberately not built.** It has no per-charity
+JSON API, only a CSV export, so it needs an operator-refreshed
+`ref_ni_charities` snapshot rather than a live lookup — a different shape from
+the other three. The UI says so plainly rather than letting an NI charity
+discover it by failing. Roughly half a day if wanted.
+
+**Outstanding before Scotland works in anger:** the OSCR key is issued on an
+approval request rather than self-serve, so it has lead time. And the OSCR API
+predates the 9 March 2026 register change that put trustee names on the
+Scottish Charity Register — whether they are in the *API payload* (as opposed
+to the web entry and the daily CSV) needs confirming against a live response
+before trustee auto-fill is promised to a Scottish client. The client already
+treats trustees as an optional block for that reason.
+
+---
+
+## 14. Proposed follow-ups — NOT built
+
+Both were asked for on 12 Aug 2026 and deliberately left unbuilt.
+
+### 14.1 Surfacing overdue claims on a regular basis
+
+**The gap.** §6 of this brief assumed a weekly digest would carry the "four
+claims need checking" line. **No digest infrastructure exists anywhere in the
+codebase** — no scheduler, no email transport, no template, no user preference.
+So today an overdue or expired claim is visible in exactly two places, both of
+which require somebody to already be looking: the register screen, and the
+first page of a draft that leans on it.
+
+That is the wrong way round. The whole value proposition in §7 is the July
+monitoring report using the *current* beneficiary number — and a fact only gets
+updated if somebody is told it has gone off **before** they need it.
+
+**What to check first, because it changes the shape.** Search for a scheduler
+and an email transport before designing anything. As of 12 Aug 2026 there is
+neither: arq runs jobs enqueued by the API, not on a cron, and nothing in the
+codebase sends email except Supabase's own auth flows. Confirm that is still
+true — if a digest has since been built for something else, this becomes a
+query and a template rather than a piece of infrastructure.
+
+**Recommended shape, cheapest first.** Three steps, each shippable alone:
+
+1. **In-app, always visible (half a day).** A count on the sidebar's "Your
+   organisation" item, the same way an inbox shows unread. Needs
+   `GET /claims/summary` returning `{needs_attention, proposals}` — cheap,
+   indexed by `claims_review_idx`, and it makes the register self-announcing
+   without any new infrastructure. **Do this one first regardless**, because it
+   is the only step with no dependency and it is what makes the other two
+   optional rather than essential.
+2. **A scheduled sweep (one to two days).** An arq cron job — arq supports
+   `cron_jobs` alongside `functions` in `WorkerSettings`, so this needs no new
+   dependency — running daily, per tenant, collecting claims where
+   `next_review <= today or expires_on < today`. It writes an `audit_log` row
+   (`claims.review_due`) so the tenant activity feed carries it. Note
+   `FEED_PATTERNS` in `app/modules.py` currently only surfaces module
+   namespaces (`projects.*`, `grants.*`), so `claims.*` must be added there or
+   the row is written and never shown — that is the easy thing to get wrong.
+3. **Email, only if steps 1 and 2 are not enough (two to three days plus a
+   decision).** Requires choosing a transport, a sender domain, an
+   unsubscribe path and a per-user preference. That is a platform decision
+   well beyond this feature, and it should not be smuggled in under it.
+
+**The rule that must hold.** Whatever surfaces this must count only claims that
+are *actually* a problem, never "you have eighty facts". `claims_warning` in
+`worker/claims/facts.py` already follows that rule and ASSUMPTIONS #43 records
+why unowned claims are excluded from attention counts for the same reason: a
+warning that is always there is not read.
+
+### 14.2 Telling people when a departing member's claims are released
+
+**What happens today.** `disown_claims` (`app/claims/service.py`) nulls
+`owner_membership_id` on every claim the removed member owned, and the count
+goes into the `member.remove` audit meta as `claims_disowned`. That is a
+complete audit trail and **nobody is told**: `member.*` is not in
+`FEED_PATTERNS`, so it never reaches the tenant activity feed, and the register
+screen shows the claims as ordinary confirmed facts with no owner.
+
+**What was asked for.** Two things, and they are different:
+
+1. **Visible when somebody opens the register.** An "unowned" filter or badge
+   on `/app/claims`, so the facts nobody is responsible for are findable.
+   Straightforward: `owner_membership_id` is already on `ClaimOut` and the web
+   type. The only real decision is whether to show it always or only for claims
+   that *lost* an owner — see the caveat below.
+2. **Proactively told.** The admin who removed the member is the right
+   audience and the moment of removal is the right time, because it is the only
+   moment they can reassign. `DELETE /members/{id}` currently returns 204 with
+   no body, so this needs either a response body (a contract change) or a
+   follow-up toast driven by re-reading the audit row.
+
+**The caveat that shapes it.** ASSUMPTIONS #43 records why unowned claims are
+*not* counted as needing attention: ownership is optional, most claims never
+have an owner, and counting them would put a permanent warning on every
+workspace. So "show me unowned claims" is a filter people opt into, not a
+badge — **unless** the schema learns to distinguish "never had an owner" from
+"lost its owner". That distinction does not exist today (`on delete set null`
+erases it) and adding it means either a nullable `owner_lost_at` column or
+reading it back out of `audit_log`. Settle that before building either half,
+because it decides whether this is a filter or an alert.
+
+**Recommended:** add the filter (half a day), change the 204 to return
+`{claims_disowned: N}` and show it in the removal confirmation (half a day),
+and only add `owner_lost_at` if a pilot user actually asks to be chased about
+it.
