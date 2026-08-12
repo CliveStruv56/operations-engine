@@ -11,6 +11,7 @@ const BASE: WorkspaceState = {
   projects: [],
   conversations: [],
   conversationsLoaded: true,
+  claimSummary: null,
   error: null,
   setError: () => {},
   selectTenant: async () => {},
@@ -18,6 +19,7 @@ const BASE: WorkspaceState = {
   createProject: async () => null,
   refreshProjects: async () => {},
   refreshConversations: async () => {},
+  refreshClaimSummary: async () => {},
   refreshTenant: async () => {},
   logout: async () => {},
 };

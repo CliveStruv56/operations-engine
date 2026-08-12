@@ -21,6 +21,7 @@ import {
   sourceLabel,
   updateClaim,
 } from "@/lib/claims";
+import { useWorkspace } from "../workspace";
 import { ImportPanel } from "./import-panel";
 
 const card = "rounded-card border border-edge bg-card p-5 shadow-card";
@@ -124,15 +125,22 @@ function ClaimRow({ claim, onChanged }: { claim: Claim; onChanged: () => void })
 }
 
 export default function ClaimsPage() {
+  const ws = useWorkspace();
   const [claims, setClaims] = useState<Claim[] | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Confirming a proposal or checking a stale fact changes the sidebar count,
+  // and this is the screen where that happens — a badge still claiming four
+  // after somebody has just cleared all four is the fastest way to teach them
+  // to ignore it.
+  const refreshSummary = ws.refreshClaimSummary;
   const refresh = useCallback(() => {
     listClaims()
       .then(setClaims)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
-  }, []);
+    refreshSummary();
+  }, [refreshSummary]);
 
   useEffect(refresh, [refresh]);
 

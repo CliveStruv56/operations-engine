@@ -81,7 +81,40 @@ export type ClaimBody = {
   source_document_id?: string | null;
 };
 
+/**
+ * The register in four numbers, for a count shown outside the register.
+ *
+ * `stale` and `expired` break `needs_attention` down rather than adding to it —
+ * one claim can be both, so they may sum to more than it does.
+ */
+export type ClaimSummary = {
+  needs_attention: number;
+  stale: number;
+  expired: number;
+  proposals: number;
+};
+
 export const listClaims = () => cl<Claim[]>("/claims");
+
+export const getClaimSummary = () => cl<ClaimSummary>("/claims/summary");
+
+/** How many facts about the organisation are waiting for a person. */
+export const claimsWaiting = (s: ClaimSummary) => s.needs_attention + s.proposals;
+
+/**
+ * What that number means, in words — a bare badge tells nobody which of three
+ * different jobs they have, and lapsed cover is not the same job as an unread
+ * proposal. Ordered worst first, and null when there is nothing to say.
+ */
+export function claimsWaitingLabel(s: ClaimSummary): string | null {
+  const parts: string[] = [];
+  if (s.expired > 0) parts.push(`${s.expired} lapsed`);
+  // Every lapsed fact is past review too; say the worse thing once.
+  const overdue = Math.max(0, s.stale - s.expired);
+  if (overdue > 0) parts.push(`${overdue} past review`);
+  if (s.proposals > 0) parts.push(`${s.proposals} to check`);
+  return parts.length > 0 ? parts.join(", ") : null;
+}
 
 export const listClaimKinds = () => cl<ClaimKind[]>("/claims/kinds");
 

@@ -747,3 +747,35 @@ and every divergence is recorded here.
     owner, so counting them would put a permanent warning on every workspace —
     and a warning that is always there is not read, which is the same rule the
     drafting warning follows.
+
+## Recorded while surfacing overdue claims (12 Aug 2026)
+
+44. **`/claims/summary` returns four numbers, not the brief's two, and the
+    sidebar badge adds two of them together.**
+
+    `docs/claims-register-brief.md` §14.1 step 1 specifies
+    `{needs_attention, proposals}`. The endpoint also returns `stale` and
+    `expired`, which break `needs_attention` down rather than adding to it —
+    one claim can be both, so the three do not sum.
+
+    **Why the repo wins.** The rule the brief itself sets is that whatever
+    surfaces this must name the problem, not gesture at staleness
+    (`claims_warning`, #43). Two numbers cannot: "3" cannot tell lapsed
+    insurance apart from an overdue review, and those send somebody to
+    different places. With the breakdown the badge's own label reads "1 lapsed,
+    1 past review, 3 to check".
+
+    **The badge counts `needs_attention + proposals`** — everything waiting on
+    a person, the way an inbox counts unread — but it is only warn-coloured
+    when `needs_attention > 0`. A pile of proposals is an opportunity, not a
+    fault, and colouring the two alike is how a warning stops being read.
+
+    **The trap:** the summary's two predicates are the same two lines as
+    `_row_out`'s `stale`/`expired`, and must stay that way. A badge that
+    disagrees with the screen it links to is worse than no badge. It counts in
+    Postgres (`claims_review_idx`, `claims_tenant_status_idx`) rather than
+    pulling every claim back, because it is read on every workspace load.
+
+    **Steps 2 and 3 of §14.1 are still unbuilt** — the arq `cron_jobs` sweep
+    and email. Verified again on 12 Aug 2026: there is still no scheduler and
+    no email transport in the codebase, so neither is a small change.

@@ -1087,7 +1087,8 @@ backlog to burn down.
 
 ## 6k. Claims register — built end to end (12 August 2026)
 
-**This is the latest state. Start here.**
+**Start here** — this is the feature everything current sits on. §6l is the
+latest change to it.
 
 ### What it is, in one sentence
 
@@ -1180,13 +1181,12 @@ lookup. ~half a day. The UI says so rather than failing.
 Both are specified in **`docs/claims-register-brief.md` §14** — read it before
 starting either.
 
-- **§14.1 Surfacing overdue claims regularly.** No digest infrastructure exists
-  anywhere in the codebase (no scheduler, no email transport) — verify that is
-  still true first. Three steps, cheapest first: an in-app count on the sidebar
-  (half a day, no dependencies, **do this one first**), an arq `cron_jobs` sweep
-  writing `claims.review_due` to `audit_log` (note `FEED_PATTERNS` in
-  `app/modules.py` must gain `claims.*` or the row is written and never shown),
-  and email only if the first two are not enough.
+- **§14.1 Surfacing overdue claims regularly. Step 1 is now built** — see §6l
+  below. Steps 2 and 3 are not: an arq `cron_jobs` sweep writing
+  `claims.review_due` to `audit_log` (note `FEED_PATTERNS` in `app/modules.py`
+  must gain `claims.*` or the row is written and never shown), and email only if
+  the first two are not enough. Re-verified 12 Aug 2026: still no scheduler and
+  no email transport anywhere in the codebase, so neither is a small change.
 - **§14.2 Telling people when a departing member's claims are released.**
   `disown_claims` already nulls the owner and puts the count in the
   `member.remove` audit meta, but `member.*` is not in `FEED_PATTERNS` so nobody
@@ -1197,20 +1197,60 @@ starting either.
 
 ---
 
+## 6l. The register announces itself — §14.1 step 1 (12 August 2026)
+
+Branch `claims-summary-badge` off `main`, one commit, green: **api 332, worker
+182, web 69**, plus web lint/typecheck/build. Ruling: ASSUMPTIONS **#44**.
+
+**The gap it closes.** A claim that had gone off was visible in exactly two
+places, both of which needed somebody to already be looking: the register
+screen, and page one of a draft leaning on it. A fact only gets updated if
+somebody is told *before* they need it.
+
+**What was built.** `GET /claims/summary` (member-level, one round trip,
+counted in Postgres over `claims_review_idx` / `claims_tenant_status_idx`) →
+`{needs_attention, stale, expired, proposals}`. Carried on the workspace
+context beside projects and conversations, so it joins the tab-focus refetch.
+Shown as a badge on the sidebar's "Your organisation" item, and refreshed by
+`/app/claims` after every confirm, reject, check and import.
+
+**Four decisions worth keeping:**
+
+1. **Four numbers, not the brief's two.** `stale` and `expired` break
+   `needs_attention` down (a claim can be both, so they do not sum). Two
+   numbers cannot name *which* problem somebody has, and lapsed insurance
+   sends them somewhere different from an overdue review.
+2. **The badge counts `needs_attention + proposals`** — everything waiting on a
+   person — but is warn-coloured only when `needs_attention > 0`. A pile of
+   proposals is an opportunity, not a fault.
+3. **The summary's predicates are `_row_out`'s two lines.** Keep them
+   identical: a badge that disagrees with the screen it links to is worse than
+   no badge. The API test asserts the two agree, on purpose.
+4. **A failed summary fetch raises nothing** — the badge hides. It is a number
+   on a nav item; a workspace-wide error banner over it would be absurd.
+
+**One trap, the same family as the two in §6k:** `/claims/summary` must be
+declared **before** `/claims/{claim_id}`, exactly as `/claims/kinds` is, or the
+literal path is parsed as a claim id and 422s. The isolation half of the test
+also covers it.
+
+---
+
 ## 7. Read first in a new session
 
-**Active work brief:** `docs/claims-register-brief.md` **§14** — two proposed,
-unbuilt follow-ups. Nothing else is in flight.
+**Active work brief:** `docs/claims-register-brief.md` **§14** — §14.1 steps 2–3
+and all of §14.2 remain unbuilt. Nothing else is in flight.
 
 1. This file — **§6k** first (the claims register: what was built, the five
    rulings not to relitigate, the three traps not to reintroduce, and what the
-   user still owes). Then **§6j** if touching latency, **§6g** for Grantwork.
+   user still owes), then **§6l** (the summary badge, and the fourth trap of the
+   same family). Then **§6j** if touching latency, **§6g** for Grantwork.
 2. `docs/claims-register-brief.md` — **§13** for what shipped, **§14** for the
    two proposed follow-ups with their recommended shapes and the decisions to
    settle first.
-3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#43** are the claims-register
-   rulings and the newest in the file. #36, #37 and #43 each record a specific
-   failure and are easy to undo by accident.
+3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#44** are the claims-register
+   rulings and the newest in the file. #36, #37, #43 and #44 each record a
+   specific failure and are easy to undo by accident.
 4. `CLAUDE.md` (unchanged conventions: RLS with an isolation test per table,
    LiteLLM-only for models, cost telemetry on every LLM call, commit-on-green).
 5. `docs/vertical-module-roadmap.md` if the next move is a new module.

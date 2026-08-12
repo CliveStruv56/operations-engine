@@ -25,7 +25,7 @@ from uuid import UUID
 import asyncpg
 
 from app.claims.registers import RegisterFacts
-from app.claims.schemas import ClaimIn, ClaimKindOut, ClaimOut, ClaimPatch
+from app.claims.schemas import ClaimIn, ClaimKindOut, ClaimOut, ClaimPatch, ClaimSummaryOut
 from app.errors import ApiError
 
 #: Fallback review cycle for a kind that names none and whose fact carries no
@@ -167,6 +167,46 @@ async def list_claims(
         *([status] if status else []),
     )
     return [_row_out(r, kinds, today, document_title=r["source_document_title"]) for r in rows]
+
+
+async def claims_summary(conn: asyncpg.Connection, today: date) -> ClaimSummaryOut:
+    """How much of the register is waiting on somebody, in one round trip.
+
+    Read on every workspace load, so it counts in Postgres rather than pulling
+    every claim back to filter in Python — `claims_review_idx` covers the
+    review comparison and `claims_tenant_status_idx` the status splits.
+
+    The predicates are the same two lines as `_row_out`, and they have to stay
+    that way: a badge that disagrees with the screen it links to is worse than
+    no badge. Unowned claims are not attention (ASSUMPTIONS #43) — ownership is
+    optional and most claims never have an owner, so counting them would put a
+    permanent number on every workspace.
+    """
+    row = await conn.fetchrow(
+        """
+        select
+          count(*) filter (where status = 'proposed') as proposals,
+          count(*) filter (
+            where status = 'confirmed' and next_review is not null and next_review <= $1
+          ) as stale,
+          count(*) filter (
+            where status = 'confirmed' and expires_on is not null and expires_on < $1
+          ) as expired,
+          count(*) filter (
+            where status = 'confirmed'
+              and ((next_review is not null and next_review <= $1)
+                   or (expires_on is not null and expires_on < $1))
+          ) as needs_attention
+        from claims
+        """,
+        today,
+    )
+    return ClaimSummaryOut(
+        needs_attention=row["needs_attention"],
+        stale=row["stale"],
+        expired=row["expired"],
+        proposals=row["proposals"],
+    )
 
 
 async def get_claim(conn: asyncpg.Connection, claim_id: UUID, today: date) -> ClaimOut | None:

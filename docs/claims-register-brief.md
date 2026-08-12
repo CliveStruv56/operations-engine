@@ -341,11 +341,26 @@ treats trustees as an optional block for that reason.
 
 ---
 
-## 14. Proposed follow-ups — NOT built
+## 14. Proposed follow-ups
 
-Both were asked for on 12 Aug 2026 and deliberately left unbuilt.
+Both were asked for on 12 Aug 2026. **§14.1 step 1 is now built** (commit on
+branch `claims-summary-badge`, ASSUMPTIONS #44); steps 2 and 3 of §14.1 and all
+of §14.2 remain unbuilt.
 
 ### 14.1 Surfacing overdue claims on a regular basis
+
+> **Step 1 shipped, 12 Aug 2026.** `GET /claims/summary` returns
+> `{needs_attention, stale, expired, proposals}` — four numbers rather than the
+> two specified below, because two cannot name *which* problem somebody has
+> (ASSUMPTIONS #44). It is counted in Postgres in one round trip, carried on the
+> workspace context beside projects and conversations (so it refreshes on tab
+> focus, which matters for a count that changes at midnight with nobody
+> touching anything), and shown as a badge on the sidebar's "Your organisation"
+> item: `needs_attention + proposals`, labelled "1 lapsed, 1 past review, 3 to
+> check", and warn-coloured only when something has actually gone off. The
+> register screen refreshes it after every confirm, reject, check and import.
+> **Steps 2 and 3 below are unchanged and unbuilt** — re-verified on 12 Aug
+> 2026 that the codebase still has no scheduler and no email transport.
 
 **The gap.** §6 of this brief assumed a weekly digest would carry the "four
 claims need checking" line. **No digest infrastructure exists anywhere in the

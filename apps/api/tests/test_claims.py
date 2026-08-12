@@ -581,6 +581,81 @@ async def test_expiry_drives_review_and_shows_as_expired(client, two_tenants):
     assert created["stale"] is True
 
 
+async def test_summary_counts_only_what_somebody_can_act_on(client, two_tenants):
+    """Brief §14.1 step 1 — the count the sidebar shows all the time.
+
+    The rule it has to keep is `claims_warning`'s: never "you hold eighty
+    facts". A healthy confirmed claim and a claim nobody owns are both silent;
+    a lapsed one and an overdue one are not.
+    """
+    a, b = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    async def post(kind, statement, **extra):
+        resp = await client.post(
+            "/api/v1/claims", json={"kind": kind, "statement": statement, **extra}, headers=headers
+        )
+        assert resp.status_code == 201
+        return resp.json()
+
+    healthy = await post("volunteers", "The organisation works with 40 volunteers.", value=40)
+    overdue = await post("people_served", "The organisation supported 1,240 people.", value=1240)
+    await post(
+        "insurance_policy",
+        "The organisation holds Public liability cover of £5,000,000.",
+        subject="Public liability",
+        value=5000000,
+        expires_on=(date.today() - timedelta(days=30)).isoformat(),
+    )
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        await conn.execute(
+            "update claims set next_review = $2 where id = $1",
+            overdue["id"],
+            date.today() - timedelta(days=1),
+        )
+        # Owned by nobody and perfectly current: ASSUMPTIONS #43 — ownership is
+        # optional, so this must not put a permanent number on the sidebar.
+        assert await conn.fetchval(
+            "select owner_membership_id is null from claims where id = $1", healthy["id"]
+        )
+        chunk_id = await conn.fetchval(
+            "insert into doc_chunks (tenant_id, document_id, content) values ($1, $2, $3)"
+            " returning id",
+            a.id,
+            a.document_id,
+            "The organisation employs 12 people.",
+        )
+        await save_proposals(
+            conn,
+            str(a.id),
+            str(a.document_id),
+            str(a.owner_id),
+            [
+                ExtractedFact(
+                    kind="employees_headcount",
+                    value=12,
+                    locator=str(chunk_id),
+                    quote="The organisation employs 12 people",
+                )
+            ],
+        )
+
+    summary = (await client.get("/api/v1/claims/summary", headers=headers)).json()
+    # The lapsed policy is expired *and* overdue — one claim, counted once.
+    assert summary == {"needs_attention": 2, "stale": 2, "expired": 1, "proposals": 1}
+
+    # It agrees with the screen it links to: same two predicates, same answer.
+    listed = (await client.get("/api/v1/claims", headers=headers)).json()
+    confirmed = [c for c in listed if c["status"] == "confirmed"]
+    assert len([c for c in confirmed if c["stale"] or c["expired"]]) == summary["needs_attention"]
+    assert len([c for c in listed if c["status"] == "proposed"]) == summary["proposals"]
+
+    # A literal path declared after `/claims/{claim_id}` would 422 here instead.
+    other = await client.get("/api/v1/claims/summary", headers=auth(b.owner_id, b.id))
+    assert other.json() == {"needs_attention": 0, "stale": 0, "expired": 0, "proposals": 0}
+
+
 async def test_single_valued_kind_rejects_a_subject(client, two_tenants):
     a, _ = two_tenants
     resp = await client.post(

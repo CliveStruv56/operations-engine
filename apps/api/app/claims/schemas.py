@@ -123,6 +123,28 @@ class ClaimOut(BaseModel):
     expired: bool
 
 
+class ClaimSummaryOut(BaseModel):
+    """The register in four numbers, for a count the sidebar can always show.
+
+    A fact only gets updated if somebody is told it has gone off *before* they
+    need it, and until this existed the register announced itself in exactly
+    two places, both of which needed somebody to already be looking.
+
+    Counts only what a person can act on, following `claims_warning`: a badge
+    saying "you hold eighty facts" is a badge nobody reads. `stale` and
+    `expired` break `needs_attention` down so the count can name the problem
+    rather than gesture at it — and because one claim can be both, they may sum
+    to more than `needs_attention`, which counts claims and not complaints.
+    """
+
+    #: Confirmed claims past review or lapsed. Proposals are deliberately not
+    #: in here — an unanswered question is not a fact that has gone wrong.
+    needs_attention: int
+    stale: int
+    expired: int
+    proposals: int
+
+
 class RegisterImportIn(BaseModel):
     """A lookup against one public register.
 
