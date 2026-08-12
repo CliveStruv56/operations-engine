@@ -31,5 +31,24 @@ RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
         torch torchvision \
     && pip install --no-cache-dir ".[parse]"
 
+# Nothing above is pinned. uv.lock never enters this image, so the versions a
+# build lands on are decided by the day it ran — two images from the same
+# commit can carry different torch, transformers and docling releases. Read
+# any failure that appears without a code change in that light, and compare
+# `pip show` across two images before hunting for it in our own source.
+#
+# That drift is what broke ingestion on 12 Aug 2026. Redeploying carried
+# staging from its 5 Aug stack to torch 2.13 / transformers 5.15, where
+# docling's models route through torch.compile. Inductor shells out to g++,
+# this slim runtime has no compiler, and every parse died with
+# InvalidCxxCompiler — leaving the document at 'parsing', which the vault
+# shows as "reading", while arq retried behind it.
+#
+# Eager inference is the right trade here: CPU, a few pages at a time, so
+# compilation was buying us little and cost a toolchain in an image whose
+# build has already overflowed a runner's disk once. Dropping this line means
+# installing g++ as well, not just deleting it.
+ENV TORCHDYNAMO_DISABLE=1
+
 USER worker
 CMD ["arq", "worker.main.WorkerSettings"]
