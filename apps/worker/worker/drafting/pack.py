@@ -14,6 +14,7 @@ only from the pack — the grounding contract in `prompts.py` depends on it.
 
 import json
 from datetime import date
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -32,6 +33,49 @@ class VaultExcerpt(BaseModel):
     content: str
 
 
+class ClaimFacts(BaseModel):
+    """One confirmed claim from the register, as a drafting prompt sees it.
+
+    Lives here beside `VaultExcerpt` rather than in `worker/claims/facts.py`
+    because the pack must not import from the loader that fills it — the
+    shapes belong to the pack, the querying belongs to the module that reads
+    the database.
+
+    `chunk_id` is the load-bearing field: set only when the claim came from a
+    vault document *and* that document's chunk is still there, and it is what
+    decides whether the model is allowed to cite the fact. A register-sourced
+    claim has no chunk, because Companies House is not a document in the
+    vault, and minting a pseudo-chunk for one would misrepresent the evidence.
+    """
+
+    id: UUID
+    kind: str
+    label: str
+    subject: str | None = None
+    period: str | None = None
+    statement: str
+    #: The machine-readable form. What a 20-character "Charity number" box
+    #: wants, where the statement is a sentence and will not fit.
+    value: Any = None
+    value_kind: str = "text"
+    unit: str | None = None
+    #: Whole-word tokens meaning a funder's question is asking for this fact.
+    #: Carried per claim rather than as a separate catalogue on the pack: the
+    #: pack is already the model's only fact source, and a second lookup table
+    #: beside it is a second thing to keep in step.
+    question_hints: list[str] = Field(default_factory=list)
+    cardinality: str = "single"
+    as_of: date | None = None
+    expires_on: date | None = None
+    source: str
+    source_ref: str | None = None
+    chunk_id: UUID | None = None
+    last_verified: date | None = None
+    next_review: date | None = None
+    stale: bool = False
+    expired: bool = False
+
+
 class DraftPackBase(BaseModel):
     """Shared shape plus the hooks the engine calls.
 
@@ -46,6 +90,14 @@ class DraftPackBase(BaseModel):
     #: The funder's form, when this draft is answering one. Set by the
     #: module's `gather`; `sections_for` turns it into the section list.
     question_set: QuestionSet | None = None
+    #: What the organisation asserts about itself. On the base rather than on
+    #: either module's pack, deliberately: every vertical opens by saying who
+    #: the organisation is, and a future module should inherit that for free.
+    claims: list[ClaimFacts] = Field(default_factory=list)
+    #: Vault chunks behind document-backed claims. The engine merges these
+    #: into `excerpts` so the citation index resolves them with no change to
+    #: `assemble.py` at all.
+    claim_excerpts: list[VaultExcerpt] = Field(default_factory=list)
 
     # -- hooks ---------------------------------------------------------------
 
@@ -91,8 +143,18 @@ class DraftPackBase(BaseModel):
         section prompt already names the question it is answering, and a form
         with twenty questions would otherwise be repeated in full twenty
         times, against a 24k-token ceiling per call.
+
+        Claims are excluded for the same reason with a sharper edge: they
+        carry per-fact citation instructions that only make sense inside their
+        own block, and only the handful of sections about the organisation
+        itself need them. Serialised here they would ride into all eleven
+        section prompts, telling the model to cite ids in sections whose
+        excerpts do not contain them.
         """
         return json.dumps(
-            self.model_dump(mode="json", exclude={"excerpts", "question_set"}),
+            self.model_dump(
+                mode="json",
+                exclude={"excerpts", "question_set", "claims", "claim_excerpts"},
+            ),
             separators=(",", ":"),
         )

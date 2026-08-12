@@ -1,8 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/api";
 import { deriveBrandVars } from "@/lib/brand";
+import { Claim, listClaims } from "@/lib/claims";
 import { Spinner } from "@/components/activity";
 import { useWorkspace, type Tenant } from "../workspace";
 import Members from "./members";
@@ -53,6 +55,53 @@ function WorkspaceSection({ tenant }: { tenant: Tenant }) {
       <p className="data mt-3 text-ink-faint uppercase">
         {tenant.plan} plan · {tenant.seats} seats
       </p>
+    </section>
+  );
+}
+
+/**
+ * Where somebody looks for "our charity number" — so it has to be here, even
+ * though the register itself lives at /app/claims.
+ *
+ * A summary and a way in, deliberately not a second editor: two places to
+ * change the same fact is how the two disagree.
+ */
+function OrganisationSection() {
+  const [claims, setClaims] = useState<Claim[] | null>(null);
+
+  useEffect(() => {
+    listClaims()
+      .then(setClaims)
+      .catch(() => setClaims([]));
+  }, []);
+
+  const live = (claims ?? []).filter((c) => c.status === "confirmed");
+  const proposals = (claims ?? []).filter((c) => c.status === "proposed").length;
+  const attention = live.filter((c) => c.stale || c.expired).length;
+
+  return (
+    <section className={card}>
+      <h2 className="data mb-3 text-ink-muted uppercase">Your organisation</h2>
+      {claims === null ? (
+        <p className="flex items-center gap-2 text-sm text-ink-muted">
+          <Spinner /> Loading…
+        </p>
+      ) : live.length === 0 && proposals === 0 ? (
+        <p className="text-sm text-ink-muted">
+          Your registered details, trustees and finances are not on file yet. Enter a charity or
+          company number and we will read them from the public register, so nobody has to type
+          them.
+        </p>
+      ) : (
+        <p className="text-sm text-ink-muted">
+          {live.length} {live.length === 1 ? "fact" : "facts"} on file
+          {proposals > 0 && `, ${proposals} waiting to be checked`}
+          {attention > 0 && `, ${attention} past review`}. Drafts read from here.
+        </p>
+      )}
+      <Link href="/app/claims" className={`${btn} mt-4 inline-block`}>
+        {live.length === 0 && proposals === 0 ? "Set this up" : "Open the register"}
+      </Link>
     </section>
   );
 }
@@ -313,6 +362,7 @@ export default function SettingsPage() {
           </p>
         </header>
         <WorkspaceSection tenant={tenant} />
+        <OrganisationSection />
         <BrandSection tenant={tenant} />
         <Members tenant={tenant} />
       </div>

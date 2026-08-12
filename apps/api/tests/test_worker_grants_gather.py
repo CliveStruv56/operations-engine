@@ -193,3 +193,106 @@ async def test_gather_survives_an_application_with_nothing_recorded(client):
     assert pack.catalogue is None
     assert pack.warning_block() is None
     assert pack.record_counts()["impact measures"] == 0
+
+
+async def test_gather_loads_confirmed_claims_and_their_evidence(client):
+    """The organisation's own facts reach the pack, with their chunk attached.
+
+    This is the DB half of phase 2: the worker's offline tests prove what the
+    model is told, and this proves the right facts get that far.
+    """
+    tenant, headers = await make_tenant(client, "gatherclaims")
+    application_id = await create_application(client, headers)
+
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        chunk_id = await conn.fetchval(
+            """
+            insert into doc_chunks (tenant_id, document_id, content, page_start, page_end)
+            values ($1, $2, $3, 12, 12) returning id
+            """,
+            tenant.id,
+            tenant.document_id,
+            "Total income for the year was £847,000.",
+        )
+        # One confirmed claim read from a document, one from a register, and
+        # one proposal nobody has ticked.
+        await conn.execute(
+            """
+            insert into claims (tenant_id, kind, statement, status, source,
+                                source_document_id, source_chunk_id, created_by)
+            values ($1, 'annual_income', $2, 'confirmed', 'document', $3, $4, $5)
+            """,
+            tenant.id,
+            "The organisation's annual income was £847,000.",
+            tenant.document_id,
+            chunk_id,
+            tenant.owner_id,
+        )
+        await conn.execute(
+            """
+            insert into claims (tenant_id, kind, statement, status, source, source_ref,
+                                created_by)
+            values ($1, 'charity_number', $2, 'confirmed', 'register', $3, $4)
+            """,
+            tenant.id,
+            "The organisation is a registered charity, number 1234567.",
+            "https://register.example/1234567",
+            tenant.owner_id,
+        )
+        await conn.execute(
+            """
+            insert into claims (tenant_id, kind, statement, status, source, created_by)
+            values ($1, 'volunteers', $2, 'proposed', 'document', $3)
+            """,
+            tenant.id,
+            "The organisation works with 40 volunteers.",
+            tenant.owner_id,
+        )
+
+        pack = await gather(conn, UUID(application_id), "case_for_support", {}, TODAY)
+
+    kinds = {c.kind for c in pack.claims}
+    assert {"annual_income", "charity_number"} <= kinds
+    # A proposal is not something the workspace asserts, so it must not reach a
+    # draft — that is the whole point of the confirm step.
+    assert "volunteers" not in kinds
+
+    # The document-backed claim carries its chunk; the register one does not,
+    # and that is what decides whether the model may cite each.
+    income = next(c for c in pack.claims if c.kind == "annual_income")
+    charity = next(c for c in pack.claims if c.kind == "charity_number")
+    assert income.chunk_id == chunk_id
+    assert charity.chunk_id is None
+    assert charity.source_ref == "https://register.example/1234567"
+
+    # And the evidence is on the pack ready for the engine to merge.
+    assert [e.chunk_id for e in pack.claim_excerpts] == [chunk_id]
+    assert pack.claim_excerpts[0].page_start == 12
+
+    # The register fact is attributed in the Data sources appendix, since it
+    # has no citation to appear under on the References page.
+    notes = " ".join(pack.source_notes())
+    assert "https://register.example/1234567" in notes
+
+
+async def test_gather_does_not_load_another_tenants_claims(client):
+    """RLS is the boundary, and this is the query that would prove it wrong."""
+    tenant, headers = await make_tenant(client, "claimsmine")
+    other = await seed_tenant(client, f"claimstheirs-{uuid4().hex[:6]}")
+    application_id = await create_application(client, headers)
+
+    async with db.tenant_tx(other.owner_id, other.id) as conn:
+        await conn.execute(
+            """
+            insert into claims (tenant_id, kind, statement, status, source, created_by)
+            values ($1, 'charitable_objects', $2, 'confirmed', 'typed', $3)
+            """,
+            other.id,
+            "The organisation's charitable objects are: to advance Somebody Else Ltd.",
+            other.owner_id,
+        )
+
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        pack = await gather(conn, UUID(application_id), "case_for_support", {}, TODAY)
+
+    assert "Somebody Else Ltd" not in " ".join(c.statement for c in pack.claims)

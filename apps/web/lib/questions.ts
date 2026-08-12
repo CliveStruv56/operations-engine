@@ -49,6 +49,14 @@ export type Answer = {
   over_by: number;
   to_confirm: number;
   citations: Citation[];
+  /**
+   * Where the answer came from. `claim` means the register answered it
+   * outright with no model call; `claim_assisted` means a model wrote it with
+   * the register's facts in hand — a real difference, and calling the second
+   * one "from your register" would overclaim.
+   */
+  origin: "drafted" | "claim" | "claim_assisted";
+  claim_ids: string[];
 };
 
 export type AnswerSheet = {
@@ -57,6 +65,8 @@ export type AnswerSheet = {
   answers: Answer[];
   over_limit: number;
   to_confirm: number;
+  /** Answers the register filled in outright — the one good-news number here. */
+  from_register: number;
 };
 
 export type Proposal = {

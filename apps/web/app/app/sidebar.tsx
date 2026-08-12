@@ -10,6 +10,7 @@ import {
   HomeIcon,
   PeopleIcon,
   PulseIcon,
+  SealIcon,
   SearchIcon,
   TargetIcon,
   VaultIcon,
@@ -132,6 +133,18 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           >
             <FormIcon />
             Funder forms
+          </Link>
+          {/* Unflagged for the same reason, and one more: this is the spine
+              every module reads its organisation facts from, so gating it on
+              any one of them would hide a workspace's own facts from the rest. */}
+          <Link
+            href="/app/claims"
+            className={`${item} mt-0.5 ${
+              pathname.startsWith("/app/claims") ? itemActive : itemRest
+            }`}
+          >
+            <SealIcon />
+            Your organisation
           </Link>
           {tenant.features?.contacts === true && (
             <Link

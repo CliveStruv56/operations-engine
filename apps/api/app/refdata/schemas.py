@@ -142,6 +142,16 @@ class AnswerOut(BaseModel):
     over_by: int
     to_confirm: int
     citations: list[Citation] = Field(default_factory=list)
+    #: Where the answer came from. `claim` means the register answered it
+    #: outright with no model call; `claim_assisted` means a model wrote it
+    #: with the register's facts in hand — a real difference, and rounding it
+    #: to "from your register" would overclaim.
+    #:
+    #: Defaulted, and it must stay that way: stored sheets are jsonb read back
+    #: through `AnswerOut(**a)`, so a required field here would 500 every
+    #: answer sheet written before this existed.
+    origin: str = "drafted"
+    claim_ids: list[UUID] = Field(default_factory=list)
 
 
 class AnswerSheetOut(BaseModel):
@@ -151,6 +161,10 @@ class AnswerSheetOut(BaseModel):
     #: Counts the UI leads with, so nobody has to scroll to find the problems.
     over_limit: int
     to_confirm: int
+    #: How many answers the register filled in outright. The one number on
+    #: this sheet that is good news, so it is counted rather than left to be
+    #: noticed one badge at a time.
+    from_register: int = 0
 
 
 class QuestionSetOut(BaseModel):

@@ -189,7 +189,13 @@ def _data_sources(doc: Document, pack: DraftPackBase, index: CitationIndex) -> N
         doc.add_paragraph(note)
 
 
-def _answer_entry(section: Section, resolved: str, index: CitationIndex) -> dict:
+def _answer_entry(
+    section: Section,
+    resolved: str,
+    index: CitationIndex,
+    origin: str = "drafted",
+    claim_ids: list[str] | None = None,
+) -> dict:
     """One row of the answer sheet: prose a person can paste, plus what backs it.
 
     `text` has the endnote markers taken back out. They exist for a document
@@ -231,6 +237,11 @@ def _answer_entry(section: Section, resolved: str, index: CitationIndex) -> dict
         "over_by": over_by,
         "to_confirm": len(TO_CONFIRM_RE.findall(plain)),
         "citations": [e for e in index.references() if e["n"] in cited],
+        # Where the answer came from, so the sheet can say "from your register"
+        # against the ones nobody had to write — and so a claim corrected later
+        # can find every answer that leaned on it.
+        "origin": origin,
+        "claim_ids": claim_ids or [],
     }
 
 
@@ -240,6 +251,8 @@ def assemble_docx(
     generated_on: date,
     tables: dict[str, TableRenderer] | None = None,
     answer_sheet: bool = False,
+    prefilled_keys: set[str] | None = None,
+    claim_ids: dict[str, list[str]] | None = None,
 ) -> AssembledDraft:
     index = CitationIndex(pack.excerpts)
     doc = Document()
@@ -269,8 +282,28 @@ def assemble_docx(
     # Built after the loop, not inside it: `index.references()` is only
     # complete once every section has been resolved, and an answer's citation
     # numbers have to agree with the document's.
+    # `claim_assisted` is a deliberate third state, not a rounding of the other
+    # two: the register supplied the facts but a model wrote the sentences, and
+    # telling a user it came "from your register" would overclaim.
+    prefilled = prefilled_keys or set()
+    behind = claim_ids or {}
     answers = (
-        [_answer_entry(s, resolved, index) for s, resolved in resolved_sections]
+        [
+            _answer_entry(
+                s,
+                resolved,
+                index,
+                origin=(
+                    "claim"
+                    if s.key in prefilled
+                    else "claim_assisted"
+                    if s.key in behind
+                    else "drafted"
+                ),
+                claim_ids=behind.get(s.key),
+            )
+            for s, resolved in resolved_sections
+        ]
         if answer_sheet
         else []
     )

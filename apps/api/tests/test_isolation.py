@@ -40,6 +40,8 @@ TENANT_TABLES = [
     "grant_impact_measures",
     "grant_outcomes",
     "grant_draft_jobs",
+    "claims",
+    "claim_revisions",
 ]
 
 
@@ -96,6 +98,15 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("POST", f"/api/v1/grants/applications/{b.application_id}/drafts"),
         ("GET", f"/api/v1/grants/applications/{b.application_id}/drafts"),
         ("POST", f"/api/v1/grants/applications/{b.application_id}/impact-card"),
+        ("GET", "/api/v1/claims"),
+        ("POST", "/api/v1/claims"),
+        ("GET", "/api/v1/claims/kinds"),
+        ("GET", f"/api/v1/claims/{b.claim_id}"),
+        ("PATCH", f"/api/v1/claims/{b.claim_id}"),
+        ("DELETE", f"/api/v1/claims/{b.claim_id}"),
+        ("POST", "/api/v1/claims/import/companies-house"),
+        ("POST", "/api/v1/claims/import/charity-commission"),
+        ("POST", "/api/v1/claims/import/oscr"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
@@ -148,6 +159,44 @@ async def test_direct_object_reference_attacks(client, two_tenants):
 
     docs = (await client.get("/api/v1/documents", headers=headers)).json()
     assert str(b.document_id) not in {d["id"] for d in docs}
+
+    # Claims: B's claim id under A's context must 404 on every verb. What this
+    # is really guarding is the register itself — a workspace's own trustees,
+    # income and accreditations are the most sensitive thing the product holds
+    # about the tenant rather than about its clients.
+    for method, path in [
+        ("GET", f"/api/v1/claims/{b.claim_id}"),
+        ("PATCH", f"/api/v1/claims/{b.claim_id}"),
+        ("DELETE", f"/api/v1/claims/{b.claim_id}"),
+    ]:
+        resp = await client.request(method, path, headers=headers, json={"statement": "mine now"})
+        assert resp.status_code == 404, f"{method} {path} -> {resp.status_code}"
+
+    claims = (await client.get("/api/v1/claims", headers=headers)).json()
+    assert str(b.claim_id) not in {c["id"] for c in claims}
+    assert str(a.claim_id) in {c["id"] for c in claims}
+
+
+async def test_claim_cannot_cite_another_tenants_document(client, two_tenants):
+    """A claim's evidence link must be checked in the tenant's RLS context.
+
+    Postgres validates foreign keys with RLS bypassed, so the constraint on
+    `source_document_id` would happily accept B's document id and silently
+    confirm it exists — attaching another workspace's document to A's claim as
+    its evidence, and leaking the fact that the document exists at all.
+    """
+    a, b = two_tenants
+    resp = await client.post(
+        "/api/v1/claims",
+        json={
+            "kind": "annual_income",
+            "statement": "The organisation's annual income was £1.",
+            "source_document_id": str(b.document_id),
+        },
+        headers=auth(a.owner_id, a.id),
+    )
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "not_found"
 
 
 async def test_shared_conversation_does_not_cross_tenants(client, two_tenants):

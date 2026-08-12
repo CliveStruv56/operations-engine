@@ -1,10 +1,11 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-04 (**§6h is the latest state**; §1–6g are history,
+**Handoff date:** 2026-08-12 (**§6k is the latest state**; §1–6j are history,
 oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
-rename, module-kit, Grantwork and smoke-test sessions
+rename, module-kit, Grantwork and smoke-test sessions, and the 12 Aug
+claims-register build
 **Purpose:** Resume in a new context window without re-deriving this work.
 **Start at §7** — it names the active task and the order to read things in.
 
@@ -1084,22 +1085,139 @@ backlog to burn down.
 - **A GLM-shaped `reasoning_effort` workaround** — unnecessary, the parameter
   is honoured as sent (ASSUMPTIONS #26).
 
+## 6k. Claims register — built end to end (12 August 2026)
+
+**This is the latest state. Start here.**
+
+### What it is, in one sentence
+
+A workspace types its charity or company number and gets ~24 cited facts about
+itself back from the public register; those facts then ground the drafting
+sections that are *about the organisation*, and answer the identity questions on
+a funder's form with no model call at all.
+
+### Why it was built
+
+`docs/claims-register-brief.md` had sat at "proposed, not approved" since 11
+Aug. The user identified auto-populating organisation facts as the product's
+key differentiator and its adoption lever — nobody should face a blank form of
+fifty fields. Measured gap before the work: the product stored **one**
+organisational fact (`tenants.name`), named 31 more across seed fixtures and
+prompt skeletons, and grounded **none**. The four drafting sections about the
+applicant organisation had no `uses_vault`, no data table and no pack field
+behind them.
+
+### Four commits, branch `claims-register` off `main`, all green
+
+| Commit | What |
+|---|---|
+| `cef54ce` | Migration **0016** (`ref_claim_kinds`, `claims`, `claim_revisions` + RLS), claim-kind fixture + seeder, `app/claims/` (schemas, three register clients, service), `/api/v1/claims` + three import routes, `/app/claims`, settings section, isolation coverage |
+| `9fea88c` | `Section.uses_claims`, `<organisation-claims>` block, `claims`/`claim_excerpts` on `DraftPackBase`, excerpt merge in the engine, stale-claim warning on page one |
+| `be4e8e4` | `worker/drafting/prefill.py`, partition before `plan_calls`, `AnswerOut.origin`/`claim_ids`, "From your register" stamps |
+| `0d85908` | Migration **0017** (`usage_events.kind = 'extract'`), `worker/claims/extract.py` + `harvest.py`, ingest hook, submit trigger, `disown_claims` |
+
+Suite counts after: **api 331, worker 182, web 63**, plus web
+lint/typecheck/build. Rulings in `docs/groundwork/ASSUMPTIONS.md` **#30–#43**.
+
+### The five design rulings not to relitigate
+
+1. **Claims are typed** — `kind` from a seeded catalogue, plus a machine `value`
+   and a human `statement`. Free prose cannot be matched to a register field or
+   a funder's question, and matching is the whole feature (#31).
+2. **`kind` is validated in the router, never by a check constraint** — so a new
+   fact type is a fixture row, and a retired one leaves its claims readable
+   instead of breaking the register (#31).
+3. **Identity is `(tenant_id, kind, subject, period)`**, and only *confirmed*
+   rows are unique. A proposal contradicting a confirmed claim is how a changed
+   figure surfaces, not a collision (#32).
+4. **Nothing is asserted without a person.** Every import, extraction and
+   harvest writes `proposed`. Confirming is the separate act that supersedes.
+5. **Trustee/director data is name, role and appointment date only** — never the
+   partial DOB, nationality and occupation the registers also return (#35).
+
+### Three traps that were found and fixed (do not reintroduce)
+
+- **The excerpt merge must sit outside the `if queries:` branch** in
+  `engine.run_draft`. `retrieve_excerpts` *assigns* `pack.excerpts` and only
+  runs when there is something to retrieve, so merging inside it silently drops
+  every claim citation for any kind with no vault retrieval.
+- **`plan_calls` must solo a `uses_claims` section**, as it already did for
+  `uses_vault`. The batched prompt carries only shared project data, so a
+  batched form question would answer "who are you" from nothing (#37).
+- **Tier-A pre-fill is gated on the size of the funder's box** (120 chars), not
+  merely on "does the answer fit". A 750-character prose question matched a
+  one-line charity number, fit the box, passed every other check and answered a
+  different question from the one asked (#36).
+
+### Jurisdictions — verified 12 Aug 2026
+
+Companies House, Charity Commission (England & Wales) and **OSCR (Scotland)**
+are all live and all free, all under the Open Government Licence. Scotland was
+added because the user named it critical, and it turned out to be the *richest*
+of the three: OSCR's annual return carries a multi-year finance series (which is
+what the `period` discriminator is for) and staff numbers, which no other UK
+register publishes.
+
+**Northern Ireland (CCNI) is deliberately not built** — no per-charity API, only
+a CSV export, so it needs an operator-refreshed snapshot rather than a live
+lookup. ~half a day. The UI says so rather than failing.
+
+### Outstanding, and owned by the user
+
+1. **Three API keys.** Companies House and the Charity Commission are self-serve
+   and instant. **OSCR is issued on an approval request** and has lead time —
+   this is the one dependency outside our control. Until it lands, the Scottish
+   route 503s honestly and a Scottish charitable *company* can still use the
+   Companies House route (its directors are its trustees; a SCIO has no such
+   fallback).
+2. **Confirm OSCR returns trustee names in the API payload.** The API predates
+   the 9 Mar 2026 register change that published them. The client already treats
+   trustees as an optional block; do not promise Scottish trustee auto-fill
+   until a live response is checked.
+
+### Next work: two follow-ups, planned but NOT built
+
+Both are specified in **`docs/claims-register-brief.md` §14** — read it before
+starting either.
+
+- **§14.1 Surfacing overdue claims regularly.** No digest infrastructure exists
+  anywhere in the codebase (no scheduler, no email transport) — verify that is
+  still true first. Three steps, cheapest first: an in-app count on the sidebar
+  (half a day, no dependencies, **do this one first**), an arq `cron_jobs` sweep
+  writing `claims.review_due` to `audit_log` (note `FEED_PATTERNS` in
+  `app/modules.py` must gain `claims.*` or the row is written and never shown),
+  and email only if the first two are not enough.
+- **§14.2 Telling people when a departing member's claims are released.**
+  `disown_claims` already nulls the owner and puts the count in the
+  `member.remove` audit meta, but `member.*` is not in `FEED_PATTERNS` so nobody
+  is told. Wants an unowned filter on `/app/claims` and the removal response to
+  carry the count. **Settle first:** the schema cannot distinguish "never had an
+  owner" from "lost its owner", and that decides whether this is a filter or an
+  alert.
+
+---
+
 ## 7. Read first in a new session
 
-**There is no active work brief.** `docs/drafting-engine-brief.md` closed on
-4 Aug 2026 with both its items fixed.
+**Active work brief:** `docs/claims-register-brief.md` **§14** — two proposed,
+unbuilt follow-ups. Nothing else is in flight.
 
-1. This file — **§6j** first (the latency work: chat and drafting are both
-   measured and fixed, and it lists what measurement *disproved* so it is not
-   re-attempted), then **§6i**, then **§6g** for where Grantwork stands
-   overall.
-2. `docs/groundwork/ASSUMPTIONS.md` (items 20–24 are the newest rulings; #24
-   governs the funder catalogue and is easy to break by accident).
-3. `CLAUDE.md` (unchanged conventions: RLS, LiteLLM-only, commit-on-green).
-4. `docs/vertical-module-roadmap.md` if the next move is a new module rather
-   than the open items — Tenderhouse and Assurance are the researched
-   candidates (`docs/modules/`).
+1. This file — **§6k** first (the claims register: what was built, the five
+   rulings not to relitigate, the three traps not to reintroduce, and what the
+   user still owes). Then **§6j** if touching latency, **§6g** for Grantwork.
+2. `docs/claims-register-brief.md` — **§13** for what shipped, **§14** for the
+   two proposed follow-ups with their recommended shapes and the decisions to
+   settle first.
+3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#43** are the claims-register
+   rulings and the newest in the file. #36, #37 and #43 each record a specific
+   failure and are easy to undo by accident.
+4. `CLAUDE.md` (unchanged conventions: RLS with an isolation test per table,
+   LiteLLM-only for models, cost telemetry on every LLM call, commit-on-green).
+5. `docs/vertical-module-roadmap.md` if the next move is a new module.
+   **Tenderhouse is now cheaper than the roadmap assumes** — it was to build its
+   own answer library, and the claims register is that spine already built and
+   unflagged. `bid_*` questions should *reference* claims via `claim_ids`, not
+   be claims (brief §12.5, settled).
 
-Grantwork itself (§6f, `docs/modules/grantwork-prd.md`,
-`docs/vertical-module-roadmap.md` §1) is background now — all five of its
-build steps are done. Its own remaining items are listed at the end of §6g.
+Grantwork (§6f, §6g) and the drafting engine (§6i) are background — done.
+

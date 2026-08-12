@@ -211,4 +211,5 @@ def answer_sheet(row: asyncpg.Record) -> AnswerSheetOut:
         answers=parsed,
         over_limit=sum(1 for a in parsed if a.over_by > 0),
         to_confirm=sum(a.to_confirm for a in parsed),
+        from_register=sum(1 for a in parsed if a.origin == "claim"),
     )

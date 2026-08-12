@@ -42,6 +42,23 @@ class IngestQueue:
             _job_id=f"ingest:{document_id}",
         )
 
+    async def enqueue_harvest(self, tenant_id: UUID, application_id: UUID, user_id: UUID) -> None:
+        """Read a just-submitted application for facts worth keeping on file.
+
+        Fire-and-forget by design: harvesting is a by-product of work somebody
+        has already finished, so it must never be able to fail the act of
+        marking an application submitted. Callers suppress its errors, and the
+        `_job_id` makes marking the same application submitted twice a no-op.
+        """
+        pool = await self._conn()
+        await pool.enqueue_job(
+            "harvest_claims_from_application",
+            str(tenant_id),
+            str(application_id),
+            str(user_id),
+            _job_id=f"harvest:{application_id}",
+        )
+
     async def enqueue_draft(
         self, tenant_id: UUID, project_id: UUID, job_id: UUID, user_id: UUID
     ) -> None:

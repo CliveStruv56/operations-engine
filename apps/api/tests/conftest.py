@@ -1,3 +1,4 @@
+import json
 import os
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -26,8 +27,13 @@ os.environ["LITELLM_MASTER_KEY"] = ""
 os.environ["LITELLM_KEY_ENCRYPTION_KEY"] = ""
 os.environ["STORAGE_ENDPOINT"] = ""
 # A developer .env with a live Exa key must not turn the search unit tests
-# into integration tests.
+# into integration tests. The register keys are blanked for the same reason,
+# and with sharper teeth: a live key would make the claims tests hit Companies
+# House, the Charity Commission and OSCR on every run.
 os.environ["EXA_API_KEY"] = ""
+os.environ["COMPANIES_HOUSE_API_KEY"] = ""
+os.environ["CHARITY_COMMISSION_API_KEY"] = ""
+os.environ["OSCR_API_KEY"] = ""
 # Operator console: tokens minted with this email are platform admins.
 os.environ["PLATFORM_ADMIN_EMAILS"] = "operator@example.com"
 os.environ["OPEN_SIGNUP"] = "true"
@@ -55,6 +61,26 @@ def test_database():
         "script_location", os.path.join(os.path.dirname(__file__), "..", "migrations")
     )
     command.upgrade(cfg, "head")
+
+    # The claim-kind catalogue is platform reference data every claims route
+    # reads, so the test database needs it for the same reason production
+    # does. Loading it through the real seeder rather than a fixture literal
+    # means a malformed claim_kinds.json fails the suite, which is where a
+    # fixture error should surface.
+    import asyncio
+
+    import asyncpg
+
+    from app.refdata.seeds import seed_claim_kinds
+
+    async def _seed() -> None:
+        conn = await asyncpg.connect(OWNER_URL)
+        try:
+            await seed_claim_kinds(conn)
+        finally:
+            await conn.close()
+
+    asyncio.run(_seed())
     yield
 
 
@@ -99,6 +125,7 @@ class Tenant:
     contact_id: UUID
     funder_id: UUID
     application_id: UUID
+    claim_id: UUID
 
 
 async def _seed_grantwork(conn, tenant_id: UUID, owner_id: UUID, project_id: UUID, name: str):
@@ -313,6 +340,34 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         funder_id, application_id = await _seed_grantwork(
             conn, tenant_id, owner_id, project_id, name
         )
+        # One confirmed claim and its opening revision. Both tables need a row
+        # apiece or `test_sql_level_rls_per_table` can only prove that nothing
+        # leaked, never that the policy lets a tenant read its own.
+        claim_id = await conn.fetchval(
+            """
+            insert into claims (tenant_id, kind, statement, value, status, source,
+                                last_verified, next_review, created_by)
+            values ($1, 'registered_name', $2, $3, 'confirmed', 'typed',
+                    current_date, current_date + 365, $4)
+            returning id
+            """,
+            tenant_id,
+            f"The organisation's registered name is {name} Ltd.",
+            json.dumps(f"{name} Ltd"),
+            owner_id,
+        )
+        await conn.execute(
+            """
+            insert into claim_revisions (tenant_id, claim_id, statement, value,
+                                         source, changed_by, note)
+            values ($1, $2, $3, $4, 'typed', $5, 'created')
+            """,
+            tenant_id,
+            claim_id,
+            f"The organisation's registered name is {name} Ltd.",
+            json.dumps(f"{name} Ltd"),
+            owner_id,
+        )
     return Tenant(
         id=tenant_id,
         owner_id=owner_id,
@@ -326,6 +381,7 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         contact_id=contact_id,
         funder_id=funder_id,
         application_id=application_id,
+        claim_id=claim_id,
     )
 
 

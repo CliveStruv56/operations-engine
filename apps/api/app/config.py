@@ -35,8 +35,27 @@ class Settings(BaseSettings):
     # research messages return 503, matching the gateway/storage convention.
     exa_api_key: str = ""
 
+    # UK public registers, for seeding the claims register. Same convention:
+    # an empty key disables that register's lookup route with a 503 naming it,
+    # rather than failing obscurely at the network.
+    #
+    # These are PLATFORM keys, shared across every workspace — one tenant's
+    # lookups spend the same allowance as another's, which is what
+    # register_lookup_rate_limit_per_hour bounds. All three are free.
+    # Companies House: developer hub, HTTP Basic, 600 requests / 5 minutes.
+    companies_house_api_key: str = ""
+    # Charity Commission for England and Wales: API portal subscription key.
+    charity_commission_api_key: str = ""
+    # OSCR (Scotland): issued on an approval request, so it arrives later than
+    # the other two — the Scottish route 503s honestly until it does.
+    oscr_api_key: str = ""
+
     chat_rate_limit_per_min: int = 60
     upload_rate_limit_per_hour: int = 20
+    # A workspace looks its own organisation up once or twice in its life, so
+    # this is generous for real use and still bounds the damage a loop could do
+    # to an allowance every other workspace shares.
+    register_lookup_rate_limit_per_hour: int = 10
 
     # Comma-separated browser origins; prod sets the tenant-facing domain(s).
     # Wildcards are rejected — origins must be enumerated explicitly.

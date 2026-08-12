@@ -20,6 +20,7 @@ from uuid import UUID
 import asyncpg
 from pydantic import BaseModel, Field
 
+from worker.claims.facts import claim_source_notes, claims_warning, load_claims
 from worker.drafting.pack import DraftPackBase
 from worker.drafting.questions import load_question_set, source_note_for, warning_for
 
@@ -313,7 +314,15 @@ class GrantPack(DraftPackBase):
         Seeded rows ship `status='unverified'` and stale (ASSUMPTIONS #24), so
         this fires by default until an operator has actually verified the
         funder's criteria — which is the whole point of that convention.
+
+        A fact the draft leans on going off is a separate problem deserving the
+        same slot, so the two are joined rather than one winning.
         """
+        warnings = [self._catalogue_warning(), claims_warning(self.claims)]
+        present = [w for w in warnings if w]
+        return "\n".join(present) if present else None
+
+    def _catalogue_warning(self) -> str | None:
         if self.kind == "application_form":
             return warning_for(self.question_set)
         if self.kind != "funding_application" or self.catalogue is None:
@@ -328,7 +337,7 @@ class GrantPack(DraftPackBase):
         )
 
     def source_notes(self) -> list[str]:
-        notes = source_note_for(self.question_set)
+        notes = source_note_for(self.question_set) + claim_source_notes(self.claims)
         if self.catalogue is None:
             return notes
         note = (
@@ -463,10 +472,14 @@ async def gather(
         if question_set is None:
             raise ValueError("Question set not found")
 
+    claims, claim_excerpts = await load_claims(conn, today)
+
     return GrantPack(
         kind=kind,
         generated_on=today,
         question_set=question_set,
+        claims=claims,
+        claim_excerpts=claim_excerpts,
         application=application,
         stages=stages,
         tasks=tasks,

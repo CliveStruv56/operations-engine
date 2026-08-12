@@ -32,6 +32,7 @@ import asyncpg
 
 FIXTURES = Path(__file__).parent / "fixtures"
 QUESTION_SET_FILE = "question_sets.json"
+CLAIM_KIND_FILE = "claim_kinds.json"
 
 #: The only status a fixture row may ship as. Asserted by the test suite: a
 #: fixture claiming `status='open'` would put unchecked question wording and
@@ -71,6 +72,51 @@ async def seed_question_sets(conn: asyncpg.Connection) -> int:
     return len(fixture["question_sets"])
 
 
+async def seed_claim_kinds(conn: asyncpg.Connection) -> int:
+    """Load the catalogue of fact types the claims register recognises.
+
+    Unlike question sets, this fixture carries no external facts and so needs
+    no `status`/`last_verified` machinery: a row says that annual income is a
+    money-valued thing reviewed on the filing calendar, never what anybody's
+    income is. Nothing here is a claim about a tenant, so there is nothing to
+    verify and nothing to go stale.
+
+    The upsert refreshes every descriptive column, because correcting a
+    question hint or a statement template should reach existing installs — a
+    kind row holds no operator judgement that a re-seed could overwrite.
+    """
+    fixture = json.loads((FIXTURES / CLAIM_KIND_FILE).read_text())
+    for row in fixture["claim_kinds"]:
+        await conn.execute(
+            """
+            insert into ref_claim_kinds (key, label, category, value_kind, unit, cardinality,
+                periodic, review_days, statement_template, question_hints, register, notes)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            on conflict (key) do update set
+                label = excluded.label, category = excluded.category,
+                value_kind = excluded.value_kind, unit = excluded.unit,
+                cardinality = excluded.cardinality, periodic = excluded.periodic,
+                review_days = excluded.review_days,
+                statement_template = excluded.statement_template,
+                question_hints = excluded.question_hints, register = excluded.register,
+                notes = excluded.notes
+            """,
+            row["key"],
+            row["label"],
+            row["category"],
+            row["value_kind"],
+            row["unit"],
+            row["cardinality"],
+            row["periodic"],
+            row["review_days"],
+            row["statement_template"],
+            row["question_hints"],
+            row["register"],
+            row["notes"],
+        )
+    return len(fixture["claim_kinds"])
+
+
 async def _main() -> None:
     from app.config import get_settings
 
@@ -87,6 +133,8 @@ async def _main() -> None:
             "  published question list, copy each question verbatim with its stated\n"
             "  limit, record source_url, and insert with status='unverified'."
         )
+        kinds = await seed_claim_kinds(conn)
+        print(f"Seeded {kinds} claim kind(s) from the fixture")
     finally:
         await conn.close()
 

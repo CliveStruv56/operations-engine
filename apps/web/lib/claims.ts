@@ -1,0 +1,178 @@
+// The claims register: what this workspace asserts about itself.
+//
+// Unflagged core, like funder forms and unlike the drafting modules that read
+// from it. Every vertical needs these facts, so the types and fetchers live
+// here rather than inside any one module's lib.
+import { api } from "@/lib/api";
+import { tenantId } from "@/lib/groundwork";
+
+const cl = <T,>(path: string, init: RequestInit = {}) =>
+  api<T>(path, init, tenantId() ?? undefined);
+
+export type ClaimKind = {
+  key: string;
+  label: string;
+  category: "identity" | "governance" | "finance" | "people" | "assurance" | "delivery";
+  value_kind: "text" | "number" | "money" | "date" | "list" | "boolean";
+  unit: string | null;
+  cardinality: "single" | "multi";
+  periodic: boolean;
+  review_days: number | null;
+  statement_template: string;
+  question_hints: string[];
+  register_key: string | null;
+  notes: string | null;
+};
+
+export type ClaimStatus = "proposed" | "confirmed" | "rejected" | "superseded";
+
+export type Claim = {
+  id: string;
+  kind: string;
+  label: string;
+  category: ClaimKind["category"];
+  /** Which instance of a multi-valued kind — a trustee's name, a policy. */
+  subject: string | null;
+  /** Which slice of a series — "2024/25". Null for the current standing fact. */
+  period: string | null;
+  statement: string;
+  value: unknown;
+  unit: string | null;
+  as_of: string | null;
+  expires_on: string | null;
+  status: ClaimStatus;
+  source: "register" | "document" | "draft" | "typed";
+  /** Public register page, for a register-sourced claim. */
+  source_ref: string | null;
+  source_document_id: string | null;
+  source_document_title: string | null;
+  source_chunk_id: string | null;
+  owner_membership_id: string | null;
+  last_verified: string | null;
+  next_review: string | null;
+  notes: string | null;
+  /** Derived, never stored — past its review date. */
+  stale: boolean;
+  /** Derived — the certificate behind it has lapsed. */
+  expired: boolean;
+};
+
+export type RegisterImport = {
+  register_key: "companies_house" | "charity_commission" | "oscr" | "ccni";
+  source_url: string;
+  registration_status: string;
+  /** The register's record is not live. The UI must lead with this. */
+  inactive: boolean;
+  proposed: Claim[];
+  unchanged: number;
+  skipped_unknown_kinds: string[];
+};
+
+export type ClaimBody = {
+  kind: string;
+  subject?: string | null;
+  period?: string | null;
+  statement: string;
+  value?: unknown;
+  unit?: string | null;
+  as_of?: string | null;
+  expires_on?: string | null;
+  notes?: string | null;
+  source_document_id?: string | null;
+};
+
+export const listClaims = () => cl<Claim[]>("/claims");
+
+export const listClaimKinds = () => cl<ClaimKind[]>("/claims/kinds");
+
+export const createClaim = (body: ClaimBody) =>
+  cl<Claim>("/claims", { method: "POST", body: JSON.stringify(body) });
+
+export const updateClaim = (
+  id: string,
+  body: Partial<ClaimBody> & { status?: "confirmed" | "rejected"; verified?: boolean },
+) => cl<Claim>(`/claims/${id}`, { method: "PATCH", body: JSON.stringify(body) });
+
+export const deleteClaim = (id: string) => cl<void>(`/claims/${id}`, { method: "DELETE" });
+
+/** The three registers a workspace can seed itself from, and who each is for. */
+export const REGISTERS = [
+  {
+    route: "companies-house",
+    label: "Companies House",
+    hint: "Any UK company — England, Wales, Scotland or Northern Ireland.",
+    placeholder: "07123456",
+  },
+  {
+    route: "charity-commission",
+    label: "Charity Commission",
+    hint: "Charities registered in England and Wales.",
+    placeholder: "1234567",
+  },
+  {
+    route: "oscr",
+    label: "OSCR",
+    hint: "Charities registered in Scotland.",
+    placeholder: "SC012345",
+  },
+] as const;
+
+export const importFromRegister = (route: string, number: string, allowInactive = false) =>
+  cl<RegisterImport>(`/claims/import/${route}`, {
+    method: "POST",
+    body: JSON.stringify({ number, allow_inactive: allowInactive }),
+  });
+
+/**
+ * The caveat to show against a claim, or null when there is nothing to say.
+ *
+ * Expiry and staleness are different problems and saying the wrong one is
+ * worse than saying nothing: lapsed cover is a fact that is now false, while
+ * an overdue review is a fact nobody has checked lately.
+ */
+export function claimNote(claim: Claim): string | null {
+  if (claim.expired)
+    return `This lapsed on ${claim.expires_on}. It should not be relied on in anything you send out.`;
+  if (claim.status === "proposed") return null; // the row already reads as a question
+  if (claim.stale)
+    return claim.last_verified
+      ? `Last checked ${claim.last_verified}, and now past review.`
+      : "Nobody has checked this yet.";
+  if (!claim.last_verified) return "Nobody has checked this yet.";
+  return null;
+}
+
+/** Where a claim came from, in words a non-technical reader can act on. */
+export function sourceLabel(claim: Claim): string {
+  switch (claim.source) {
+    case "register":
+      return "from the public register";
+    case "document":
+      return claim.source_document_title
+        ? `read from ${claim.source_document_title}`
+        : "read from a document";
+    case "draft":
+      return "found in a document you produced";
+    default:
+      return "entered here";
+  }
+}
+
+/** Group claims for display. A register is a list, not a dashboard. */
+export const CATEGORY_ORDER: ClaimKind["category"][] = [
+  "identity",
+  "governance",
+  "finance",
+  "people",
+  "assurance",
+  "delivery",
+];
+
+export const CATEGORY_LABELS: Record<ClaimKind["category"], string> = {
+  identity: "Who you are",
+  governance: "Governance",
+  finance: "Finances",
+  people: "People",
+  assurance: "Policies and cover",
+  delivery: "What you do",
+};

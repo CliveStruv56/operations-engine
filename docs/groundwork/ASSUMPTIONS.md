@@ -516,3 +516,234 @@ and every divergence is recorded here.
     date, and **no question may be missing its limit**. A blank limit is
     honest in a workspace's own copy, where whoever left it blank knows it is
     blank; published, it is a silent gap in a stranger's draft.
+
+30. **The claims register's tables are `claims`, `claim_revisions` and
+    `ref_claim_kinds` — not the brief's `claim_*` prefix.**
+
+    `docs/claims-register-brief.md` §0.1 says "New tables prefixed `claim_`",
+    following the module convention (`proj_*`, `grant_*`, `bid_*`).
+
+    **Why the repo wins.** In this codebase a table prefix *means* "belongs to
+    a feature-flagged module", and the brief's own §6 insists this is not a
+    module: it carries no flag, every vertical reads it, and a workspace with
+    no vertical modules still benefits. `claims` sits beside `documents` and
+    `projects` as core, and `ref_claim_kinds` follows the `ref_*` platform
+    catalogue convention already set by `ref_question_sets`. `claim_revisions`
+    keeps the prefix because it genuinely is a child of `claims`.
+
+31. **Claims are typed against a seeded catalogue, and `kind` is validated in
+    the router rather than by a check constraint.**
+
+    A claim carries `kind` (a `ref_claim_kinds` key), a machine-readable
+    `value` and a human-readable `statement` — all three, not one.
+
+    **Why:** the feature's whole promise is that facts arrive filled in. That
+    only works if a fact can be matched to the thing that wants it — a
+    register field to import it from, a funder's question to pre-fill, a
+    review rule to age it. Matching free prose is guesswork, and a wrongly
+    auto-filled answer on a funder's form is worse than a blank box.
+
+    **Why not a check constraint:** the same reasoning `0014` records for
+    `tenant_question_sets.ref_key`. A hard constraint means a migration every
+    time we learn a new fact type, and each vertical brings a dozen —
+    Tenderhouse alone adds contract values, framework memberships and TUPE
+    positions. Validating at the edge (422 `unknown_claim_kind`) means new
+    kinds ship as fixture rows, and a *retired* kind leaves its claims
+    readable-but-unmatched rather than breaking the register screen for every
+    workspace that already holds one.
+
+32. **A claim's identity is `(tenant_id, kind, subject, period)`, and only
+    confirmed rows are unique.**
+
+    `subject` names which instance of a multi-valued kind (a trustee, a named
+    policy, "Public liability"); `period` names which slice of a series
+    ("2024/25"). Both are null for the ordinary standing fact.
+
+    **Why both exist from day one:** the brief's §7 payoff — the July
+    monitoring report using the *current* beneficiary number rather than
+    January's — requires exactly one row a consumer reads with no
+    period-selection logic. But "income for each of the last three years" is a
+    real funder question, and OSCR returns exactly that. Retrofitting either
+    column under live tenant data is precisely the migration §9 warns the
+    window closes on, so they are cheap now and expensive later.
+
+    **Why uniqueness binds `status = 'confirmed'` only:** a proposal that
+    duplicates a confirmed claim is not a collision to reject — it is how a
+    changed figure gets noticed ("the register now says £912,000; you hold
+    £847,000"). Confirming supersedes the old row rather than deleting it, so
+    "what did we tell the funder in January" stays answerable.
+
+33. **Value history lives in `claim_revisions`, not in `audit_log`, and
+    re-verifying a claim writes no revision.**
+
+    **Why not `audit_log`:** those rows are activity-feed material and are
+    already scrubbed in place (see `0011_scrub_unshare_audit_titles.py`), so
+    their `meta` is not a contract anything may query. The value that answers
+    "what did we assert last spring" has to be a first-class row.
+
+    **Why re-verification writes nothing:** moving `last_verified` means
+    "still true"; writing a revision means "now different". Conflating them
+    would fill the history with non-events and bury the changes, which are the
+    only reason the table exists.
+
+34. **Public-register lookups are the second sanctioned third-party HTTP
+    client, and their API keys are platform-level rather than per-tenant.**
+
+    `app/claims/registers.py` follows `app/search.py` exactly — plain `httpx`,
+    one timeout, no retry, a missing key is a 503 naming the register, an
+    upstream failure is a 502, and the client is injectable so tests never
+    touch the network. Hard constraint 3 (LiteLLM only) does not bind, for the
+    reason `search.py` already records: a register is not a model provider.
+
+    **Why platform keys:** Companies House, the Charity Commission and OSCR
+    all issue one key per *application*, not per end user, and the data is
+    public and OGL-licensed either way. The cost is that one workspace's
+    lookups spend an allowance every workspace shares — Companies House caps
+    at 600 requests per five minutes and suspends applications that habitually
+    exceed it. Hence `register_lookup_rate_limit_per_hour`, the one rate limit
+    in the codebase whose job is to protect *other tenants* rather than us.
+
+    **Why no SSRF defence in the client:** the identifiers are validated
+    against fixed patterns in the router before any URL is built, and a value
+    matching `^[A-Z0-9]{8}$`, `^\d{6,8}$` or `^SC\d{6}$` cannot express a path
+    segment or a host. The URL-supplied-by-user hazard in
+    `docs/modules/form-fetch-prd.md` §4 does not arise here.
+
+35. **Trustee and director claims store name, role and appointment date only.**
+
+    Companies House also returns a partial date of birth, nationality and
+    occupation for every officer; `registers.py` reads past all three.
+
+    **Why:** it is all public data, so this is a choice rather than a
+    requirement — but the cheapest place to not hold personal data is before
+    it arrives, and nothing downstream wants it. No funder form asks for a
+    trustee's date of birth. Holding one for every client's whole board, in
+    every workspace, would be a data-protection surface bought for nothing.
+
+    **Scotland note:** trustee names have appeared on the Scottish Charity
+    Register only since 9 March 2026 (Charities (Regulation and
+    Administration) (Scotland) Act 2023), and a trustee may hold an exemption
+    where publication would put them at risk. So an OSCR import returning no
+    trustees is normal and must never be surfaced as a failure.
+
+36. **A funder's question is answered from the register only when the size of
+    the field says it is a lookup.**
+
+    Pre-fill has two tiers. Tier A returns the claim as the answer with no
+    model call; tier B marks the section `uses_claims` so a model drafts it
+    *with* the facts. The line between them is `PREFILL_MAX_LIMIT` (120
+    characters), plus: exactly one claim matched, a scalar value kind, single
+    cardinality, not expired, not a vault question, and the text fits.
+
+    **Why the field size and not just "does it fit":** "Who is the applicant
+    organisation, and what is its legal form?" at 750 characters matched a
+    single charity-number claim in an early build, and the one-line answer fit
+    the box and passed every other check — while answering a different question
+    from the one asked. The funder chose that box size, and a large one is the
+    clearest statement we have that they want prose. Caught by a test before it
+    reached anything real, and the test is still there.
+
+    **Why so conservative overall:** every condition is a way an answer could
+    be wrong in a field somebody then submits over their own name. A blank the
+    consultant fills is a far cheaper failure than a confident wrong one.
+
+37. **`uses_claims` forces a solo model call, exactly as `uses_vault` does.**
+
+    `plan_calls` batches small, self-contained questions to save calls, and the
+    batched prompt carries only the shared project data — no vault excerpts and
+    no claims block.
+
+    **Why:** a 750-character "Who is the applicant organisation?" is precisely
+    the shape `plan_calls` likes to batch, and batched it would answer from
+    nothing, which is the failure claims exist to fix. Skeleton sections were
+    never at risk (no limit means always solo); form questions are, and phase 3
+    is what starts setting the flag on them.
+
+38. **An answer sheet records where each answer came from, in three states.**
+
+    `AnswerOut.origin` is `claim` (the register answered it outright),
+    `claim_assisted` (a model wrote it with the register's facts) or `drafted`.
+    `from_register` on the sheet counts only the first.
+
+    **Why three and not two:** rounding `claim_assisted` up to "from your
+    register" would tell a user a paragraph of model prose needs no checking.
+    Rounding it down to "drafted" would hide the thing that makes keeping the
+    register current worth doing. Both fields carry defaults and must keep
+    them — stored sheets are jsonb read back through `AnswerOut(**a)`, so a
+    required field would 500 every sheet written before this shipped.
+
+    `claim_ids` is on each answer for Tenderhouse (brief §12.5): a bid question
+    references claims rather than being one, so re-verifying a claim can later
+    flag every stored answer that leaned on it.
+
+39. **Extraction and harvesting are gated on a keyword score, not run on
+    everything.**
+
+    A document proposes claims only if some chunk mentions at least
+    `MIN_CHUNK_SCORE` (2) distinct fact kinds, whole-word. Below that the
+    upload makes **zero** model calls.
+
+    **Why:** most uploads are site plans, meeting notes and photographs of
+    noticeboards, not annual accounts. Running a model over every one would put
+    a per-upload charge on the whole vault to find facts in a tenth of it —
+    which is the difference between a feature and a tax on uploading. One hint
+    is too loose ("income" appears in a tenancy note about somebody else);
+    three would miss a clean table of registered details.
+
+    **Corollary:** the `extract` usage kind is separate from `summary` even
+    though both fire on upload and use the same alias, because the whole cost
+    argument rests on being able to see the difference on the usage screen.
+
+40. **A proposal's quote must appear in the text it claims to come from, and
+    the parser enforces it.**
+
+    Every extracted or harvested fact carries a `locator` — a `doc_chunks` id
+    when reading an upload, a question id when harvesting a submitted draft —
+    and a verbatim quote. Four things are dropped silently: an unknown kind, an
+    unquotable fact, a locator we never supplied, and a quote that does not
+    appear at that locator (compared whitespace- and case-insensitively,
+    because models reflow quotes out of PDF tables).
+
+    **Why in the parser and not the prompt:** a rule the parser applies is a
+    rule; a rule the prompt states is a request. The failure that matters is a
+    plausible figure pinned to a *real* chunk it did not come from — hardest to
+    notice, worst to submit, and the one no prompt instruction reliably stops.
+
+41. **A harvested claim carries no citation, and says where it came from.**
+
+    Claims harvested from a submitted application land `source='draft'` with no
+    `source_chunk_id` and no `source_document_id`: the generated document is
+    not a chunked vault upload, so there is nothing citable to point at. That
+    puts a harvested fact in the same position as a register fact — usable,
+    attributable in prose, never given a `[c:]` marker.
+
+    The distinction is kept on the row rather than flattened to "document"
+    because it is real: an uploaded certificate is evidence, while a bid is the
+    organisation repeating a claim it made somewhere else. Worth keeping, worth
+    checking a little harder.
+
+42. **Harvesting is fire-and-forget, and failing at it is invisible.**
+
+    Marking an application submitted enqueues `harvest_claims_from_application`
+    inside `contextlib.suppress`, and the job itself never raises into arq.
+
+    **Why:** harvesting is a by-product of work somebody has already finished.
+    No Redis, no worker, or a model that returns nonsense must not be able to
+    stop somebody recording that they submitted their application — that is the
+    thing that mattered, and it has already happened.
+
+43. **Removing a member releases their claims explicitly, and counts them.**
+
+    `owner_membership_id … on delete set null` means the foreign key would do
+    this anyway and nothing would break. `disown_claims` does it first so the
+    count can go into the `member.remove` audit meta.
+
+    **Why:** "nothing breaks" is how a register quietly stops being anybody's
+    job. Removing somebody is the one moment an admin could reassign what they
+    owned, so it is the moment worth recording.
+
+    **What is deliberately not done:** unowned claims are *not* counted as
+    needing attention. Ownership is optional and most claims never have an
+    owner, so counting them would put a permanent warning on every workspace —
+    and a warning that is always there is not read, which is the same rule the
+    drafting warning follows.
