@@ -32,10 +32,12 @@ from app.claims.schemas import (
     ClaimKindOut,
     ClaimOut,
     ClaimPatch,
+    ClaimSummaryOut,
     RegisterImportIn,
     RegisterImportOut,
 )
 from app.claims.service import (
+    claims_summary,
     create_claim,
     delete_claim,
     get_claim,
@@ -71,6 +73,23 @@ async def list_kinds(
     match — otherwise "kinds" is parsed as a claim id and 422s.
     """
     return list((await load_kinds(conn)).values())
+
+
+@router.get("/claims/summary", response_model=ClaimSummaryOut)
+async def summary(
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """What the register is waiting on, for a count shown outside the register.
+
+    Declared before `/claims/{claim_id}` for the same reason as `kinds` — a
+    literal path registered after the parameterised one never matches.
+
+    Member-level like the rest: a count of facts needing a check is exactly the
+    thing every member should see, and it reveals nothing a member cannot
+    already read on the register screen.
+    """
+    return await claims_summary(conn, date.today())
 
 
 @router.get("/claims/{claim_id}", response_model=ClaimOut)

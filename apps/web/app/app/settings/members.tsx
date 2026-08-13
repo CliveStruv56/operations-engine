@@ -1,17 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { api, ApiError } from "@/lib/api";
 import { Spinner } from "@/components/activity";
+import type { Member, MemberRemoved } from "@/lib/members";
 import type { Tenant } from "../workspace";
-
-type Member = {
-  id: string;
-  user_id: string;
-  role: "owner" | "admin" | "member";
-  email: string | null;
-  created_at: string;
-};
 
 type Invite = { id: string; email: string; role: string; token: string; expires_at: string };
 
@@ -24,6 +18,7 @@ export default function Members({ tenant }: { tenant: Tenant }) {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [released, setReleased] = useState<{ email: string | null; count: number } | null>(null);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
@@ -87,8 +82,19 @@ export default function Members({ tenant }: { tenant: Tenant }) {
   async function remove(member: Member) {
     setBusyId(member.id);
     setError(null);
+    setReleased(null);
     try {
-      await api(`/members/${member.id}`, { method: "DELETE" }, tenant.id);
+      const result = await api<MemberRemoved>(
+        `/members/${member.id}`,
+        { method: "DELETE" },
+        tenant.id
+      );
+      // Their facts are still true; they are simply nobody's now. This is the
+      // one moment an admin can hand them to somebody else, and until the
+      // count came back in the response it only reached the audit log.
+      if (result.claims_disowned > 0) {
+        setReleased({ email: member.email, count: result.claims_disowned });
+      }
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -170,6 +176,21 @@ export default function Members({ tenant }: { tenant: Tenant }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {released && (
+        <div className="mt-3 rounded-[10px] bg-accent-soft px-3 py-2 text-sm">
+          <p>
+            {released.count} {released.count === 1 ? "fact" : "facts"} about your organisation
+            {released.email ? ` that ${released.email} looked after ` : " "}
+            {released.count === 1 ? "has" : "have"} nobody looking after{" "}
+            {released.count === 1 ? "it" : "them"} now. {released.count === 1 ? "It is" : "They are"}{" "}
+            still in your register and still used in drafts.
+          </p>
+          <Link href="/app/claims?owner=none" className="mt-1 inline-block font-medium underline">
+            Hand {released.count === 1 ? "it" : "them"} to somebody →
+          </Link>
         </div>
       )}
 

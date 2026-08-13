@@ -747,3 +747,83 @@ and every divergence is recorded here.
     owner, so counting them would put a permanent warning on every workspace —
     and a warning that is always there is not read, which is the same rule the
     drafting warning follows.
+
+## Recorded while surfacing overdue claims (12 Aug 2026)
+
+44. **`/claims/summary` returns four numbers, not the brief's two, and the
+    sidebar badge adds two of them together.**
+
+    `docs/claims-register-brief.md` §14.1 step 1 specifies
+    `{needs_attention, proposals}`. The endpoint also returns `stale` and
+    `expired`, which break `needs_attention` down rather than adding to it —
+    one claim can be both, so the three do not sum.
+
+    **Why the repo wins.** The rule the brief itself sets is that whatever
+    surfaces this must name the problem, not gesture at staleness
+    (`claims_warning`, #43). Two numbers cannot: "3" cannot tell lapsed
+    insurance apart from an overdue review, and those send somebody to
+    different places. With the breakdown the badge's own label reads "1 lapsed,
+    1 past review, 3 to check".
+
+    **The badge counts `needs_attention + proposals`** — everything waiting on
+    a person, the way an inbox counts unread — but it is only warn-coloured
+    when `needs_attention > 0`. A pile of proposals is an opportunity, not a
+    fault, and colouring the two alike is how a warning stops being read.
+
+    **The trap:** the summary's two predicates are the same two lines as
+    `_row_out`'s `stale`/`expired`, and must stay that way. A badge that
+    disagrees with the screen it links to is worse than no badge. It counts in
+    Postgres (`claims_review_idx`, `claims_tenant_status_idx`) rather than
+    pulling every claim back, because it is read on every workspace load.
+
+    **Steps 2 and 3 of §14.1 are still unbuilt** — the arq `cron_jobs` sweep
+    and email. Verified again on 12 Aug 2026: there is still no scheduler and
+    no email transport in the codebase, so neither is a small change.
+
+45. **A claim does not learn when it lost its owner. Unowned stays a view
+    somebody opts into, and the person who removed the member is told at the
+    moment of removal instead.**
+
+    `docs/claims-register-brief.md` §14.2 asks this to be settled before
+    building either half: the schema cannot tell "never had an owner" from
+    "lost its owner", and `on delete set null` erases the difference.
+
+    **Two things found first, neither of which the brief knew.** Ownership was
+    *unreachable from the UI* — `owner_membership_id` was settable only over the
+    API and nothing in `apps/web` sent it, so every claim was unowned and the
+    filter as specified would have matched everything. And an owner could not be
+    *cleared*: `update_claim` tested `if body.owner_membership_id is not None`,
+    so the only owned→unowned path in the whole system was removing the person.
+
+    **Why no `owner_lost_at`.** Not cost — the second finding makes it cheap,
+    one write site and one clear site. Meaning: a claim that lost its owner is
+    **not a fact that has gone off**. Its content is still true. It cannot join
+    `needs_attention` (#44) without wrecking a count that means "this may be
+    false", and giving it a permanent number of its own is precisely the badge
+    nobody reads (#43). What it needs is one person told at the one moment they
+    can act, and that is a response body, not a column. The decision stays
+    reversible: `audit_log` holds every `member.remove` with its
+    `claims_disowned` count, so the column can be added later and backfilled if
+    a pilot user asks to be chased about it.
+
+    **So three changes, and two are contracts:**
+
+    - `ClaimPatch.owner_membership_id` is **the only field on any patch model in
+      this codebase where an explicit null means "clear it"**. `update_claim`
+      reads `model_fields_set` for that one field; every other field keeps the
+      `is not None` test, because a fact with no statement is not a fact.
+      Handing something back to nobody is a real act.
+    - `DELETE /members/{membership_id}` answers **200 with
+      `{claims_disowned: N}`**, not 204. 204 is honest about the membership and
+      silent about everything the person was responsible for.
+    - `owner_membership_id` needed `_check_owned_membership`, the same hole as
+      `_check_owned_document`: Postgres validates foreign keys with RLS
+      bypassed, so the constraint alone would accept another workspace's
+      membership id and quietly make one of their people responsible for one of
+      our facts. Any future FK on a tenant table needs the same check.
+
+    **Deliberately not done:** `member.*` is still absent from `FEED_PATTERNS`.
+    Putting membership churn into every tenant's activity feed is a platform
+    decision about what that feed is for, and §14.2 does not need it — the two
+    things it asked for are a findable view and the admin being told, and
+    neither runs through the feed.

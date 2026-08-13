@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from app.audit import write_audit
 from app.claims.service import disown_claims
 from app.errors import ApiError
-from app.schemas import MemberOut, MemberRolePatch
+from app.schemas import MemberOut, MemberRemoveOut, MemberRolePatch
 from app.tenant import TenantContext, get_conn, require_role
 
 router = APIRouter(tags=["members"])
@@ -78,7 +78,7 @@ async def change_member_role(
     return dict(row)
 
 
-@router.delete("/members/{membership_id}", status_code=204)
+@router.delete("/members/{membership_id}", response_model=MemberRemoveOut)
 async def remove_member(
     membership_id: UUID,
     ctx: TenantContext = Depends(require_role("admin")),
@@ -108,7 +108,8 @@ async def remove_member(
     # Release their claims before the row goes. The foreign key would null
     # these anyway (`on delete set null`), but doing it here is what lets us
     # say how many — and the moment somebody is being removed is the only
-    # moment an admin can actually reassign them.
+    # moment an admin can actually reassign them. The count is returned as well
+    # as audited for that reason: an audit row nobody reads is not being told.
     disowned = await disown_claims(conn, membership_id)
 
     deleted = await conn.fetchval(
@@ -125,3 +126,4 @@ async def remove_member(
         str(membership_id),
         meta={"removed_user_id": str(target["user_id"]), "claims_disowned": disowned},
     )
+    return MemberRemoveOut(claims_disowned=disowned)

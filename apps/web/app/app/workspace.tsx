@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { api, ApiError } from "@/lib/api";
+import type { ClaimSummary } from "@/lib/claims";
 
 export type Tenant = {
   id: string;
@@ -59,6 +60,10 @@ export type WorkspaceState = {
   /** False until a /conversations fetch has succeeded — an empty list alone
    *  cannot tell "no chats" apart from "the fetch failed". */
   conversationsLoaded: boolean;
+  /** How much of the organisation's register is waiting for somebody. Null
+   *  while unknown, and on failure — a count nobody can trust is worse than no
+   *  count, so the badge stays away rather than showing a stale or wrong one. */
+  claimSummary: ClaimSummary | null;
   error: string | null;
   setError: (e: string | null) => void;
   selectTenant: (tenantId?: string) => Promise<void>;
@@ -66,6 +71,7 @@ export type WorkspaceState = {
   createProject: (name: string) => Promise<Project | null>;
   refreshProjects: () => Promise<void>;
   refreshConversations: () => Promise<void>;
+  refreshClaimSummary: () => Promise<void>;
   refreshTenant: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -90,6 +96,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
+  const [claimSummary, setClaimSummary] = useState<ClaimSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // A failing list must not take down the workspace, but it should be visible:
@@ -116,6 +123,18 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Unlike the two above, a failing count raises nothing: it is a badge on a
+  // nav item, and a red banner across the workspace because a number could not
+  // be fetched would be wildly out of proportion. It hides instead.
+  const loadClaimSummary = useCallback(async (tenantId: string) => {
+    try {
+      setClaimSummary(await api<ClaimSummary>("/claims/summary", {}, tenantId));
+    } catch (err) {
+      console.error("Failed to load the claims summary", err);
+      setClaimSummary(null);
+    }
+  }, []);
+
   const selectTenant = useCallback(
     async (tenantId?: string) => {
       try {
@@ -127,7 +146,11 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         // Groundwork pages read the tenant from localStorage, so persist it
         // even when it was resolved by sole-membership fallback.
         localStorage.setItem("tenantId", me.id);
-        await Promise.all([loadProjects(me.id), loadConversations(me.id)]);
+        await Promise.all([
+          loadProjects(me.id),
+          loadConversations(me.id),
+          loadClaimSummary(me.id),
+        ]);
       } catch (e) {
         if (e instanceof ApiError && e.code === "tenant_required") {
           const list = (e.payload as { memberships?: MembershipRef[] })?.memberships ?? [];
@@ -145,7 +168,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    [loadProjects, loadConversations]
+    [loadProjects, loadConversations, loadClaimSummary]
   );
 
   useEffect(() => {
@@ -198,6 +221,10 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     if (tenant) await loadConversations(tenant.id);
   }, [tenant, loadConversations]);
 
+  const refreshClaimSummary = useCallback(async () => {
+    if (tenant) await loadClaimSummary(tenant.id);
+  }, [tenant, loadClaimSummary]);
+
   const refreshTenant = useCallback(async () => {
     if (tenant) await selectTenant(tenant.id);
   }, [tenant, selectTenant]);
@@ -213,10 +240,13 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
       lastFocusRefetch.current = Date.now();
       refreshProjects();
       refreshConversations();
+      // Also tenant-shared, and time-dependent besides: a fact goes past
+      // review at midnight with nobody touching anything.
+      refreshClaimSummary();
     }
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);
-  }, [refreshProjects, refreshConversations]);
+  }, [refreshProjects, refreshConversations, refreshClaimSummary]);
 
   const logout = useCallback(async () => {
     await createClient().auth.signOut();
@@ -236,6 +266,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         projects,
         conversations,
         conversationsLoaded,
+        claimSummary,
         error,
         setError,
         selectTenant,
@@ -243,6 +274,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         createProject,
         refreshProjects,
         refreshConversations,
+        refreshClaimSummary,
         refreshTenant,
         logout,
       }}

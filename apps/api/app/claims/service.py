@@ -25,7 +25,7 @@ from uuid import UUID
 import asyncpg
 
 from app.claims.registers import RegisterFacts
-from app.claims.schemas import ClaimIn, ClaimKindOut, ClaimOut, ClaimPatch
+from app.claims.schemas import ClaimIn, ClaimKindOut, ClaimOut, ClaimPatch, ClaimSummaryOut
 from app.errors import ApiError
 
 #: Fallback review cycle for a kind that names none and whose fact carries no
@@ -169,6 +169,46 @@ async def list_claims(
     return [_row_out(r, kinds, today, document_title=r["source_document_title"]) for r in rows]
 
 
+async def claims_summary(conn: asyncpg.Connection, today: date) -> ClaimSummaryOut:
+    """How much of the register is waiting on somebody, in one round trip.
+
+    Read on every workspace load, so it counts in Postgres rather than pulling
+    every claim back to filter in Python — `claims_review_idx` covers the
+    review comparison and `claims_tenant_status_idx` the status splits.
+
+    The predicates are the same two lines as `_row_out`, and they have to stay
+    that way: a badge that disagrees with the screen it links to is worse than
+    no badge. Unowned claims are not attention (ASSUMPTIONS #43) — ownership is
+    optional and most claims never have an owner, so counting them would put a
+    permanent number on every workspace.
+    """
+    row = await conn.fetchrow(
+        """
+        select
+          count(*) filter (where status = 'proposed') as proposals,
+          count(*) filter (
+            where status = 'confirmed' and next_review is not null and next_review <= $1
+          ) as stale,
+          count(*) filter (
+            where status = 'confirmed' and expires_on is not null and expires_on < $1
+          ) as expired,
+          count(*) filter (
+            where status = 'confirmed'
+              and ((next_review is not null and next_review <= $1)
+                   or (expires_on is not null and expires_on < $1))
+          ) as needs_attention
+        from claims
+        """,
+        today,
+    )
+    return ClaimSummaryOut(
+        needs_attention=row["needs_attention"],
+        stale=row["stale"],
+        expired=row["expired"],
+        proposals=row["proposals"],
+    )
+
+
 async def get_claim(conn: asyncpg.Connection, claim_id: UUID, today: date) -> ClaimOut | None:
     kinds = await load_kinds(conn)
     row = await conn.fetchrow(
@@ -208,6 +248,21 @@ async def _check_owned_document(conn: asyncpg.Connection, document_id: UUID | No
         return
     if await conn.fetchval("select 1 from documents where id = $1", document_id) is None:
         raise ApiError(404, "not_found", "That document is not in this workspace's vault")
+
+
+async def _check_owned_membership(conn: asyncpg.Connection, membership_id: UUID | None) -> None:
+    """The same hole as `_check_owned_document`, on the same reasoning.
+
+    `owner_membership_id` has a foreign key to `memberships`, and Postgres
+    validates foreign keys with RLS bypassed — so the constraint alone would
+    accept another workspace's membership id and quietly make one of their
+    people responsible for one of our facts. This check runs inside the
+    tenant's own RLS context, so it is the one that binds.
+    """
+    if membership_id is None:
+        return
+    if await conn.fetchval("select 1 from memberships where id = $1", membership_id) is None:
+        raise ApiError(404, "not_found", "That person is not in this workspace")
 
 
 async def _supersede_existing(
@@ -336,7 +391,14 @@ async def update_claim(
             add(column, value)
     if body.value is not None:
         add("value", _dumps(body.value))
-    if body.owner_membership_id is not None:
+    # The one field on this model where null is an instruction rather than a
+    # silence. Every other field above reads "not None" and so cannot be
+    # cleared, which is fine for a statement or a date — a fact with no
+    # statement is not a fact. An owner is different: handing something back to
+    # nobody is a real act, and until this existed the only route out of
+    # ownership was removing the person from the workspace.
+    if "owner_membership_id" in body.model_fields_set:
+        await _check_owned_membership(conn, body.owner_membership_id)
         add("owner_membership_id", body.owner_membership_id)
 
     expires_on = body.expires_on or existing["expires_on"]

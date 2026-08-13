@@ -581,6 +581,81 @@ async def test_expiry_drives_review_and_shows_as_expired(client, two_tenants):
     assert created["stale"] is True
 
 
+async def test_summary_counts_only_what_somebody_can_act_on(client, two_tenants):
+    """Brief §14.1 step 1 — the count the sidebar shows all the time.
+
+    The rule it has to keep is `claims_warning`'s: never "you hold eighty
+    facts". A healthy confirmed claim and a claim nobody owns are both silent;
+    a lapsed one and an overdue one are not.
+    """
+    a, b = two_tenants
+    headers = auth(a.owner_id, a.id)
+
+    async def post(kind, statement, **extra):
+        resp = await client.post(
+            "/api/v1/claims", json={"kind": kind, "statement": statement, **extra}, headers=headers
+        )
+        assert resp.status_code == 201
+        return resp.json()
+
+    healthy = await post("volunteers", "The organisation works with 40 volunteers.", value=40)
+    overdue = await post("people_served", "The organisation supported 1,240 people.", value=1240)
+    await post(
+        "insurance_policy",
+        "The organisation holds Public liability cover of £5,000,000.",
+        subject="Public liability",
+        value=5000000,
+        expires_on=(date.today() - timedelta(days=30)).isoformat(),
+    )
+
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        await conn.execute(
+            "update claims set next_review = $2 where id = $1",
+            overdue["id"],
+            date.today() - timedelta(days=1),
+        )
+        # Owned by nobody and perfectly current: ASSUMPTIONS #43 — ownership is
+        # optional, so this must not put a permanent number on the sidebar.
+        assert await conn.fetchval(
+            "select owner_membership_id is null from claims where id = $1", healthy["id"]
+        )
+        chunk_id = await conn.fetchval(
+            "insert into doc_chunks (tenant_id, document_id, content) values ($1, $2, $3)"
+            " returning id",
+            a.id,
+            a.document_id,
+            "The organisation employs 12 people.",
+        )
+        await save_proposals(
+            conn,
+            str(a.id),
+            str(a.document_id),
+            str(a.owner_id),
+            [
+                ExtractedFact(
+                    kind="employees_headcount",
+                    value=12,
+                    locator=str(chunk_id),
+                    quote="The organisation employs 12 people",
+                )
+            ],
+        )
+
+    summary = (await client.get("/api/v1/claims/summary", headers=headers)).json()
+    # The lapsed policy is expired *and* overdue — one claim, counted once.
+    assert summary == {"needs_attention": 2, "stale": 2, "expired": 1, "proposals": 1}
+
+    # It agrees with the screen it links to: same two predicates, same answer.
+    listed = (await client.get("/api/v1/claims", headers=headers)).json()
+    confirmed = [c for c in listed if c["status"] == "confirmed"]
+    assert len([c for c in confirmed if c["stale"] or c["expired"]]) == summary["needs_attention"]
+    assert len([c for c in listed if c["status"] == "proposed"]) == summary["proposals"]
+
+    # A literal path declared after `/claims/{claim_id}` would 422 here instead.
+    other = await client.get("/api/v1/claims/summary", headers=auth(b.owner_id, b.id))
+    assert other.json() == {"needs_attention": 0, "stale": 0, "expired": 0, "proposals": 0}
+
+
 async def test_single_valued_kind_rejects_a_subject(client, two_tenants):
     a, _ = two_tenants
     resp = await client.post(
@@ -829,7 +904,11 @@ async def test_removing_a_member_releases_the_claims_they_owned(client, two_tena
         )
 
     resp = await client.delete(f"/api/v1/members/{leaver}", headers=headers)
-    assert resp.status_code == 204
+    # Told, not merely audited (§14.2): the admin doing the removal is the only
+    # person who can hand these facts to somebody else, and this is the only
+    # moment they are looking. 204 said nothing.
+    assert resp.status_code == 200
+    assert resp.json() == {"claims_disowned": 1}
 
     claim = (await client.get(f"/api/v1/claims/{a.claim_id}", headers=headers)).json()
     # Released, not deleted: the fact is still true, it just has no owner.
@@ -842,6 +921,63 @@ async def test_removing_a_member_releases_the_claims_they_owned(client, two_tena
             " order by created_at desc limit 1"
         )
     assert json.loads(meta)["claims_disowned"] == 1
+
+
+async def test_a_fact_can_be_handed_to_somebody_and_handed_back(client, two_tenants):
+    """§14.2 — null means "clear it" for this one field, and only this one.
+
+    Every other field on `ClaimPatch` reads "not None", so it cannot be cleared;
+    a fact with no statement is not a fact. Handing something back to nobody is
+    a real act, and before this the only route out of ownership was removing the
+    person from the workspace.
+    """
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        colleague = await conn.fetchval(
+            "insert into memberships (tenant_id, user_id, role, email)"
+            " values ($1, $2, 'member', 'ade@example.com') returning id",
+            a.id,
+            uuid4(),
+        )
+
+    assigned = await client.patch(
+        f"/api/v1/claims/{a.claim_id}",
+        json={"owner_membership_id": str(colleague)},
+        headers=headers,
+    )
+    assert assigned.json()["owner_membership_id"] == str(colleague)
+
+    # Omitted, so untouched — the distinction the whole field rests on.
+    verified = await client.patch(
+        f"/api/v1/claims/{a.claim_id}", json={"verified": True}, headers=headers
+    )
+    assert verified.json()["owner_membership_id"] == str(colleague)
+
+    handed_back = await client.patch(
+        f"/api/v1/claims/{a.claim_id}", json={"owner_membership_id": None}, headers=headers
+    )
+    assert handed_back.json()["owner_membership_id"] is None
+
+
+async def test_a_fact_cannot_be_made_another_workspaces_problem(client, two_tenants):
+    """The `_check_owned_document` hole, on `owner_membership_id`.
+
+    Postgres validates foreign keys with RLS bypassed, so the constraint alone
+    would accept B's membership id and quietly make one of their people
+    responsible for one of A's facts.
+    """
+    a, b = two_tenants
+    resp = await client.patch(
+        f"/api/v1/claims/{a.claim_id}",
+        json={"owner_membership_id": str(b.membership_id)},
+        headers=auth(a.owner_id, a.id),
+    )
+    assert resp.status_code == 404
+
+    headers = auth(a.owner_id, a.id)
+    claim = (await client.get(f"/api/v1/claims/{a.claim_id}", headers=headers)).json()
+    assert claim["owner_membership_id"] is None
 
 
 async def test_harvested_facts_arrive_as_proposals_with_no_citation(client, two_tenants):

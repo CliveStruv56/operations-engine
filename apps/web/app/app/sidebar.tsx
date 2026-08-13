@@ -15,6 +15,7 @@ import {
   TargetIcon,
   VaultIcon,
 } from "@/components/icons";
+import { claimsWaiting, claimsWaitingLabel } from "@/lib/claims";
 import SidebarChats, { href, item, itemActive, itemRest, navLabel } from "./sidebar-chats";
 import { useWorkspace } from "./workspace";
 
@@ -34,6 +35,13 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const convId = sp.get("c");
   const onWorkspace = pathname === "/app";
   const onDevPages = pathname.startsWith("/app/projects");
+
+  // What the register is waiting on. A fact only gets updated if somebody is
+  // told it has gone off before they need it, and this is the one place that is
+  // in front of them without their having gone looking.
+  const claims = ws.claimSummary;
+  const claimsCount = claims ? claimsWaiting(claims) : 0;
+  const claimsNote = claims ? claimsWaitingLabel(claims) : null;
 
   const devProjects = tenant.features?.projects === true
     ? ws.projects.filter((p) => !p.archived && p.is_development)
@@ -139,12 +147,28 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               any one of them would hide a workspace's own facts from the rest. */}
           <Link
             href="/app/claims"
+            aria-label={claimsNote ? `Your organisation — ${claimsNote}` : undefined}
             className={`${item} mt-0.5 ${
               pathname.startsWith("/app/claims") ? itemActive : itemRest
             }`}
           >
             <SealIcon />
             Your organisation
+            {claimsCount > 0 && (
+              // Warn colours only when something has actually gone off. A pile
+              // of proposals is an opportunity, not a fault, and colouring the
+              // two the same is how a warning stops being read.
+              <span
+                title={claimsNote ?? undefined}
+                className={`ml-auto rounded-full px-1.5 py-px text-[10.5px] font-bold ${
+                  claims && claims.needs_attention > 0
+                    ? "bg-warn-soft text-warn"
+                    : "bg-accent-soft text-accent-deep"
+                }`}
+              >
+                {claimsCount}
+              </span>
+            )}
           </Link>
           {tenant.features?.contacts === true && (
             <Link
