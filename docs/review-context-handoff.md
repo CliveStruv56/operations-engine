@@ -1187,13 +1187,9 @@ starting either.
   must gain `claims.*` or the row is written and never shown), and email only if
   the first two are not enough. Re-verified 12 Aug 2026: still no scheduler and
   no email transport anywhere in the codebase, so neither is a small change.
-- **§14.2 Telling people when a departing member's claims are released.**
-  `disown_claims` already nulls the owner and puts the count in the
-  `member.remove` audit meta, but `member.*` is not in `FEED_PATTERNS` so nobody
-  is told. Wants an unowned filter on `/app/claims` and the removal response to
-  carry the count. **Settle first:** the schema cannot distinguish "never had an
-  owner" from "lost its owner", and that decides whether this is a filter or an
-  alert.
+- **§14.2 Telling people when a departing member's claims are released — now
+  built.** See §6m below, and ASSUMPTIONS #45 for the owner question and how it
+  was settled (no `owner_lost_at`).
 
 ---
 
@@ -1236,20 +1232,70 @@ also covers it.
 
 ---
 
+## 6m. Facts have owners now — §14.2 (12 August 2026)
+
+Same branch `claims-summary-badge`, second commit, green: **api 334, web 82**.
+Ruling: ASSUMPTIONS **#45**.
+
+**Two findings before any code, and they changed the shape:**
+
+1. **Ownership was unreachable from the UI.** `owner_membership_id` was settable
+   only over the API and nothing in `apps/web` ever sent it — so every claim was
+   unowned, and the brief's "unowned filter" would have matched everything.
+2. **An owner could not be cleared.** `update_claim` tested
+   `if body.owner_membership_id is not None`, so null read as "unchanged". The
+   only owned→unowned path in the system was removing the person.
+
+**The owner question, settled: no `owner_lost_at` column.** Finding 2 makes it
+cheap, so cost is not the reason — meaning is. A claim that lost its owner is
+not a fact that has gone off; its content is still true. It cannot join
+`needs_attention` without wrecking a count that means "this may be false", and a
+permanent number of its own is the badge nobody reads (#43). One person told at
+the one moment they can act is a response body, not a column. Reversible:
+`audit_log` holds every `member.remove` with its count, so the column can be
+added and backfilled if a pilot user asks to be chased.
+
+**What shipped:** an owner picker on every confirmed row; an opt-in
+`?owner=none` view (a URL, because Settings links straight to it); the removal
+notice naming the count with a link to reassign.
+
+**Three things not to undo:**
+
+- **`ClaimPatch.owner_membership_id` is the only field on any patch model in the
+  codebase where an explicit null means "clear it"** — `update_claim` reads
+  `model_fields_set` for that one field. Reverting it to the `is not None` test
+  every neighbouring field uses silently removes the ability to hand a fact
+  back, and no type error will tell you.
+- **`DELETE /members/{membership_id}` answers 200 with `{claims_disowned: N}`**,
+  not 204. One test asserted the 204 and was updated.
+- **`_check_owned_membership`** — the fourth instance of the same hole as
+  `_check_owned_document`: Postgres validates foreign keys with RLS bypassed, so
+  the constraint alone accepts another workspace's membership id. Any future FK
+  on a tenant table needs the same check, and the test for it is
+  `test_a_fact_cannot_be_made_another_workspaces_problem`.
+
+**Deliberately not done:** `member.*` is still not in `FEED_PATTERNS`. Putting
+membership churn in every tenant's activity feed is a platform decision about
+what that feed is for, and neither thing §14.2 asked for runs through it.
+
+---
+
 ## 7. Read first in a new session
 
-**Active work brief:** `docs/claims-register-brief.md` **§14** — §14.1 steps 2–3
-and all of §14.2 remain unbuilt. Nothing else is in flight.
+**Active work brief:** `docs/claims-register-brief.md` **§14** — only §14.1
+steps 2–3 (the arq cron sweep, then email) remain unbuilt, and both are blocked
+on infrastructure that does not exist. Nothing else is in flight.
 
 1. This file — **§6k** first (the claims register: what was built, the five
    rulings not to relitigate, the three traps not to reintroduce, and what the
-   user still owes), then **§6l** (the summary badge, and the fourth trap of the
-   same family). Then **§6j** if touching latency, **§6g** for Grantwork.
+   user still owes), then **§6l** (the summary badge) and **§6m** (ownership, and
+   the two contract changes in it). Then **§6j** if touching latency, **§6g** for
+   Grantwork.
 2. `docs/claims-register-brief.md` — **§13** for what shipped, **§14** for the
    two proposed follow-ups with their recommended shapes and the decisions to
    settle first.
-3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#44** are the claims-register
-   rulings and the newest in the file. #36, #37, #43 and #44 each record a
+3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#45** are the claims-register
+   rulings and the newest in the file. #36, #37, #43, #44 and #45 each record a
    specific failure and are easy to undo by accident.
 4. `CLAUDE.md` (unchanged conventions: RLS with an isolation test per table,
    LiteLLM-only for models, cost telemetry on every LLM call, commit-on-green).

@@ -87,6 +87,10 @@ class ClaimPatch(BaseModel):
     #: `last_verified` to today and `next_review` by the kind's own cycle.
     #: The one place either date may move forward.
     verified: bool | None = None
+    #: Who is responsible for keeping this true. The only field here where an
+    #: explicit null means "clear it" rather than "unchanged" — `update_claim`
+    #: reads `model_fields_set` for this one, so sending null hands the fact
+    #: back to nobody, and omitting it leaves the owner alone.
     owner_membership_id: UUID | None = None
 
 

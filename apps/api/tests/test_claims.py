@@ -904,7 +904,11 @@ async def test_removing_a_member_releases_the_claims_they_owned(client, two_tena
         )
 
     resp = await client.delete(f"/api/v1/members/{leaver}", headers=headers)
-    assert resp.status_code == 204
+    # Told, not merely audited (§14.2): the admin doing the removal is the only
+    # person who can hand these facts to somebody else, and this is the only
+    # moment they are looking. 204 said nothing.
+    assert resp.status_code == 200
+    assert resp.json() == {"claims_disowned": 1}
 
     claim = (await client.get(f"/api/v1/claims/{a.claim_id}", headers=headers)).json()
     # Released, not deleted: the fact is still true, it just has no owner.
@@ -917,6 +921,63 @@ async def test_removing_a_member_releases_the_claims_they_owned(client, two_tena
             " order by created_at desc limit 1"
         )
     assert json.loads(meta)["claims_disowned"] == 1
+
+
+async def test_a_fact_can_be_handed_to_somebody_and_handed_back(client, two_tenants):
+    """§14.2 — null means "clear it" for this one field, and only this one.
+
+    Every other field on `ClaimPatch` reads "not None", so it cannot be cleared;
+    a fact with no statement is not a fact. Handing something back to nobody is
+    a real act, and before this the only route out of ownership was removing the
+    person from the workspace.
+    """
+    a, _ = two_tenants
+    headers = auth(a.owner_id, a.id)
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        colleague = await conn.fetchval(
+            "insert into memberships (tenant_id, user_id, role, email)"
+            " values ($1, $2, 'member', 'ade@example.com') returning id",
+            a.id,
+            uuid4(),
+        )
+
+    assigned = await client.patch(
+        f"/api/v1/claims/{a.claim_id}",
+        json={"owner_membership_id": str(colleague)},
+        headers=headers,
+    )
+    assert assigned.json()["owner_membership_id"] == str(colleague)
+
+    # Omitted, so untouched — the distinction the whole field rests on.
+    verified = await client.patch(
+        f"/api/v1/claims/{a.claim_id}", json={"verified": True}, headers=headers
+    )
+    assert verified.json()["owner_membership_id"] == str(colleague)
+
+    handed_back = await client.patch(
+        f"/api/v1/claims/{a.claim_id}", json={"owner_membership_id": None}, headers=headers
+    )
+    assert handed_back.json()["owner_membership_id"] is None
+
+
+async def test_a_fact_cannot_be_made_another_workspaces_problem(client, two_tenants):
+    """The `_check_owned_document` hole, on `owner_membership_id`.
+
+    Postgres validates foreign keys with RLS bypassed, so the constraint alone
+    would accept B's membership id and quietly make one of their people
+    responsible for one of A's facts.
+    """
+    a, b = two_tenants
+    resp = await client.patch(
+        f"/api/v1/claims/{a.claim_id}",
+        json={"owner_membership_id": str(b.membership_id)},
+        headers=auth(a.owner_id, a.id),
+    )
+    assert resp.status_code == 404
+
+    headers = auth(a.owner_id, a.id)
+    claim = (await client.get(f"/api/v1/claims/{a.claim_id}", headers=headers)).json()
+    assert claim["owner_membership_id"] is None
 
 
 async def test_harvested_facts_arrive_as_proposals_with_no_citation(client, two_tenants):

@@ -779,3 +779,51 @@ and every divergence is recorded here.
     **Steps 2 and 3 of §14.1 are still unbuilt** — the arq `cron_jobs` sweep
     and email. Verified again on 12 Aug 2026: there is still no scheduler and
     no email transport in the codebase, so neither is a small change.
+
+45. **A claim does not learn when it lost its owner. Unowned stays a view
+    somebody opts into, and the person who removed the member is told at the
+    moment of removal instead.**
+
+    `docs/claims-register-brief.md` §14.2 asks this to be settled before
+    building either half: the schema cannot tell "never had an owner" from
+    "lost its owner", and `on delete set null` erases the difference.
+
+    **Two things found first, neither of which the brief knew.** Ownership was
+    *unreachable from the UI* — `owner_membership_id` was settable only over the
+    API and nothing in `apps/web` sent it, so every claim was unowned and the
+    filter as specified would have matched everything. And an owner could not be
+    *cleared*: `update_claim` tested `if body.owner_membership_id is not None`,
+    so the only owned→unowned path in the whole system was removing the person.
+
+    **Why no `owner_lost_at`.** Not cost — the second finding makes it cheap,
+    one write site and one clear site. Meaning: a claim that lost its owner is
+    **not a fact that has gone off**. Its content is still true. It cannot join
+    `needs_attention` (#44) without wrecking a count that means "this may be
+    false", and giving it a permanent number of its own is precisely the badge
+    nobody reads (#43). What it needs is one person told at the one moment they
+    can act, and that is a response body, not a column. The decision stays
+    reversible: `audit_log` holds every `member.remove` with its
+    `claims_disowned` count, so the column can be added later and backfilled if
+    a pilot user asks to be chased about it.
+
+    **So three changes, and two are contracts:**
+
+    - `ClaimPatch.owner_membership_id` is **the only field on any patch model in
+      this codebase where an explicit null means "clear it"**. `update_claim`
+      reads `model_fields_set` for that one field; every other field keeps the
+      `is not None` test, because a fact with no statement is not a fact.
+      Handing something back to nobody is a real act.
+    - `DELETE /members/{membership_id}` answers **200 with
+      `{claims_disowned: N}`**, not 204. 204 is honest about the membership and
+      silent about everything the person was responsible for.
+    - `owner_membership_id` needed `_check_owned_membership`, the same hole as
+      `_check_owned_document`: Postgres validates foreign keys with RLS
+      bypassed, so the constraint alone would accept another workspace's
+      membership id and quietly make one of their people responsible for one of
+      our facts. Any future FK on a tenant table needs the same check.
+
+    **Deliberately not done:** `member.*` is still absent from `FEED_PATTERNS`.
+    Putting membership churn into every tenant's activity feed is a platform
+    decision about what that feed is for, and §14.2 does not need it — the two
+    things it asked for are a findable view and the admin being told, and
+    neither runs through the feed.

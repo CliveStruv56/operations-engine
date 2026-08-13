@@ -175,6 +175,19 @@ class MemberRolePatch(BaseModel):
     role: str = Field(pattern="^(owner|admin|member)$")
 
 
+class MemberRemoveOut(BaseModel):
+    """What removing somebody left behind.
+
+    Removal used to answer 204, which is honest for the membership and silent
+    about everything the person was responsible for. The claims they owned are
+    released rather than deleted — still true, just nobody's — and the moment
+    an admin is removing them is the only moment they can hand those facts to
+    somebody else. So the count comes back, rather than only into `audit_log`.
+    """
+
+    claims_disowned: int
+
+
 class LogoUploadIn(BaseModel):
     mime: str
     size_bytes: int = Field(gt=0)

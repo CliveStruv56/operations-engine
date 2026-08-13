@@ -123,7 +123,13 @@ export const createClaim = (body: ClaimBody) =>
 
 export const updateClaim = (
   id: string,
-  body: Partial<ClaimBody> & { status?: "confirmed" | "rejected"; verified?: boolean },
+  body: Partial<ClaimBody> & {
+    status?: "confirmed" | "rejected";
+    verified?: boolean;
+    /** Who keeps this true. The one field where sending null means "clear it"
+     *  rather than "leave it alone" — omit it to leave the owner untouched. */
+    owner_membership_id?: string | null;
+  },
 ) => cl<Claim>(`/claims/${id}`, { method: "PATCH", body: JSON.stringify(body) });
 
 export const deleteClaim = (id: string) => cl<void>(`/claims/${id}`, { method: "DELETE" });

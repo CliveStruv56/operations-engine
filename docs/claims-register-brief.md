@@ -343,9 +343,10 @@ treats trustees as an optional block for that reason.
 
 ## 14. Proposed follow-ups
 
-Both were asked for on 12 Aug 2026. **§14.1 step 1 is now built** (commit on
-branch `claims-summary-badge`, ASSUMPTIONS #44); steps 2 and 3 of §14.1 and all
-of §14.2 remain unbuilt.
+Both were asked for on 12 Aug 2026. **§14.1 step 1 and all of §14.2 are now
+built** (branch `claims-summary-badge`, ASSUMPTIONS #44 and #45). Only §14.1
+steps 2 and 3 — the scheduled sweep and email — remain unbuilt, and both are
+blocked on infrastructure that does not exist.
 
 ### 14.1 Surfacing overdue claims on a regular basis
 
@@ -409,6 +410,30 @@ why unowned claims are excluded from attention counts for the same reason: a
 warning that is always there is not read.
 
 ### 14.2 Telling people when a departing member's claims are released
+
+> **Built, 12 Aug 2026 — and the caveat below was settled against adding the
+> column (ASSUMPTIONS #45).** Two findings this section did not know: ownership
+> was unreachable from the UI (nothing in `apps/web` ever sent
+> `owner_membership_id`, so *every* claim was unowned and the filter would have
+> matched everything), and an owner could not be cleared (`is not None` meant
+> null read as "unchanged"), so the only owned→unowned path was removing the
+> person.
+>
+> **The ruling: no `owner_lost_at`.** The second finding makes it cheap, so cost
+> is not the reason — meaning is. A claim that lost its owner is not a fact that
+> has gone off; its content is still true, so it cannot join `needs_attention`
+> without wrecking a count that means "this may be false", and a permanent
+> number of its own is the badge nobody reads. It stays reversible: `audit_log`
+> holds every `member.remove` with its count, so the column can be added and
+> backfilled if a pilot user asks to be chased.
+>
+> **What shipped instead:** an owner picker on every confirmed row (with
+> `ClaimPatch.owner_membership_id` the one field in the codebase where an
+> explicit null means "clear it"), an opt-in `?owner=none` view that Settings
+> links straight to, `DELETE /members/{id}` answering **200 with
+> `{claims_disowned: N}`** rather than 204, and a removal notice naming the
+> count with a link to reassign. `_check_owned_membership` closes the same
+> RLS-bypassed foreign-key hole as `_check_owned_document`.
 
 **What happens today.** `disown_claims` (`app/claims/service.py`) nulls
 `owner_membership_id` on every claim the removed member owned, and the count

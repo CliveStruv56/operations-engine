@@ -250,6 +250,21 @@ async def _check_owned_document(conn: asyncpg.Connection, document_id: UUID | No
         raise ApiError(404, "not_found", "That document is not in this workspace's vault")
 
 
+async def _check_owned_membership(conn: asyncpg.Connection, membership_id: UUID | None) -> None:
+    """The same hole as `_check_owned_document`, on the same reasoning.
+
+    `owner_membership_id` has a foreign key to `memberships`, and Postgres
+    validates foreign keys with RLS bypassed — so the constraint alone would
+    accept another workspace's membership id and quietly make one of their
+    people responsible for one of our facts. This check runs inside the
+    tenant's own RLS context, so it is the one that binds.
+    """
+    if membership_id is None:
+        return
+    if await conn.fetchval("select 1 from memberships where id = $1", membership_id) is None:
+        raise ApiError(404, "not_found", "That person is not in this workspace")
+
+
 async def _supersede_existing(
     conn: asyncpg.Connection, kind: str, subject: str | None, period: str | None
 ) -> None:
@@ -376,7 +391,14 @@ async def update_claim(
             add(column, value)
     if body.value is not None:
         add("value", _dumps(body.value))
-    if body.owner_membership_id is not None:
+    # The one field on this model where null is an instruction rather than a
+    # silence. Every other field above reads "not None" and so cannot be
+    # cleared, which is fine for a statement or a date — a fact with no
+    # statement is not a fact. An owner is different: handing something back to
+    # nobody is a real act, and until this existed the only route out of
+    # ownership was removing the person from the workspace.
+    if "owner_membership_id" in body.model_fields_set:
+        await _check_owned_membership(conn, body.owner_membership_id)
         add("owner_membership_id", body.owner_membership_id)
 
     expires_on = body.expires_on or existing["expires_on"]
