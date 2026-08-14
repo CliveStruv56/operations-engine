@@ -12,10 +12,12 @@ import asyncio
 import contextlib
 import logging
 import tempfile
+from datetime import date
 from pathlib import Path
 
 import asyncpg
 import sentry_sdk
+from arq import cron
 from arq.connections import RedisSettings
 
 from worker.blocks import estimate_tokens
@@ -23,8 +25,16 @@ from worker.chunking import chunk_blocks
 from worker.claims.extract import EXTRACT_ALIAS, ScorableChunk, extract_claims
 from worker.claims.facts import load_kind_specs, save_proposals
 from worker.claims.harvest import harvest_claims_from_application
+from worker.claims.sweep import (
+    digest_recipients,
+    due_claims,
+    proposals_count,
+    record_review_due,
+    render_digest,
+)
 from worker.db import tenant_tx
 from worker.drafts.job import draft_document
+from worker.email import send_email, unsubscribe_token
 from worker.embed import embed_texts
 from worker.grants.impact_card import generate_impact_card
 from worker.grants.job import grant_draft_document
@@ -242,6 +252,70 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
         raise
 
 
+async def _sweep_tenant_ids(pool: asyncpg.Pool, today: date) -> list[str]:
+    """Tenants with anything due, via the owner-run discovery function
+    (migration 0020) — the sweep itself then runs per tenant under RLS."""
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("select out_tenant_id from claims_sweep_tenants($1)", today)
+    return [str(r["out_tenant_id"]) for r in rows]
+
+
+async def sweep_claims(ctx: dict) -> str:
+    """Daily: put 'N facts need a check' on each affected tenant's activity
+    feed (claims brief §14.1 step 2). Dedupe lives in `record_review_due`."""
+    pool: asyncpg.Pool = ctx["pool"]
+    today = date.today()
+    tenant_ids = await _sweep_tenant_ids(pool, today)
+    written = 0
+    for tenant_id in tenant_ids:
+        async with tenant_tx(pool, tenant_id) as conn:
+            due = await due_claims(conn, today)
+            if await record_review_due(conn, tenant_id, due):
+                written += 1
+    return f"due:{len(tenant_ids)} feed_rows:{written}"
+
+
+async def send_claims_digest(ctx: dict) -> str:
+    """Weekly: the same picture, emailed to each workspace's admins and
+    owners (brief §14.1 step 3). No transport configured = a clean no-op."""
+    settings = get_settings()
+    if not settings.resend_api_key:
+        return "email off"
+    if not settings.email_unsubscribe_secret:
+        # A digest whose unsubscribe link cannot be signed is not sent — same
+        # rule the API enforces at boot; the worker logs instead of crashing
+        # so document jobs keep running.
+        logging.getLogger("worker.email").error(
+            "EMAIL_UNSUBSCRIBE_SECRET is unset; skipping the claims digest"
+        )
+        return "no unsubscribe secret"
+    pool: asyncpg.Pool = ctx["pool"]
+    today = date.today()
+    sent = 0
+    tenant_ids = await _sweep_tenant_ids(pool, today)
+    for tenant_id in tenant_ids:
+        async with tenant_tx(pool, tenant_id) as conn:
+            workspace = await conn.fetchval("select name from tenants where id = $1", tenant_id)
+            due = await due_claims(conn, today)
+            proposals = await proposals_count(conn)
+            recipients = await digest_recipients(conn, tenant_id)
+        if not due:
+            continue
+        for r in recipients:
+            token = unsubscribe_token(tenant_id, r.membership_id)
+            unsubscribe_url = (
+                f"{settings.api_base_url.rstrip('/')}"
+                f"/api/v1/email/digest?tenant={tenant_id}&membership={r.membership_id}"
+                f"&token={token}"
+            )
+            subject, text = render_digest(
+                workspace, due, proposals, settings.web_base_url, unsubscribe_url
+            )
+            if await send_email(r.email, subject, text):
+                sent += 1
+    return f"due:{len(tenant_ids)} sent:{sent}"
+
+
 async def startup(ctx: dict) -> None:
     # Same trap as the API (see app/main.py configure_logging): arq configures
     # only its own `arq` logger, so without this the root logger stays at
@@ -271,6 +345,14 @@ class WorkerSettings:
         grant_draft_document,
         generate_impact_card,
         harvest_claims_from_application,
+    ]
+    # The register's dates change at midnight with nobody touching anything —
+    # these are the only jobs that run on a clock rather than an enqueue.
+    # 06:10 UTC daily for the feed row; Monday 07:00 UTC for the email, early
+    # enough to be in UK inboxes at the start of the working week.
+    cron_jobs = [
+        cron(sweep_claims, hour=6, minute=10),
+        cron(send_claims_digest, weekday="mon", hour=7, minute=0),
     ]
     on_startup = startup
     on_shutdown = shutdown
