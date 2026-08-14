@@ -42,11 +42,17 @@ async def setup_project(
     ctx: TenantContext = Depends(require_projects),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
-    core = await conn.fetchrow("select id, name from projects where id = $1", project_id)
+    core = await conn.fetchrow("select id, name, has_plan from projects where id = $1", project_id)
     if core is None:  # RLS scoped — cross-tenant ids are invisible
         raise ApiError(404, "not_found", "Project not found")
     if await conn.fetchval("select 1 from proj_projects where id = $1", project_id):
         raise ApiError(409, "already_setup", "This project is already a development project")
+    if core["has_plan"]:
+        # Reciprocal of enable_plan's is_dev check: a development project hides
+        # the plan panel everywhere, which would strand the plan's tasks.
+        raise ApiError(
+            409, "has_plan", "This project has a core plan — it cannot become a development project"
+        )
 
     template = await conn.fetchval(
         "select payload from proj_ref_templates where key = $1", TEMPLATE_KEY

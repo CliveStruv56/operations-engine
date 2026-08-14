@@ -81,6 +81,24 @@ async def test_flag_off_hides_module(client):
     assert (await client.get("/api/v1/projects", headers=headers)).status_code == 200
 
 
+async def test_setup_refuses_a_planned_project(client):
+    """Reciprocal of enable_plan's is_dev check: a development project hides
+    the plan panel everywhere, which would strand the plan's tasks."""
+    t = await seed_tenant(client, f"gwplan-{uuid4().hex[:6]}")
+    await enable_module(t)
+    headers = auth(t.owner_id, t.id)
+    core = await client.post(
+        "/api/v1/projects", json={"name": "Planned first", "kind": "planned"}, headers=headers
+    )
+    resp = await client.post(
+        f"/api/v1/projects/{core.json()['id']}/setup",
+        json={"client_org": "Test CLT", "applicability": {}},
+        headers=headers,
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "has_plan"
+
+
 # -- spine seeding -----------------------------------------------------------
 
 

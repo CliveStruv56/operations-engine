@@ -91,6 +91,7 @@ async def update_project(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
+    had_plan = False
     if "has_plan" in updates:
         is_dev = await conn.fetchval(
             "select exists (select 1 from proj_projects where id = $1)", project_id
@@ -101,6 +102,9 @@ async def update_project(
             )
         if updates["has_plan"] is False:
             raise ApiError(400, "invalid", "A plan cannot be removed once added")
+        had_plan = bool(
+            await conn.fetchval("select has_plan from projects where id = $1", project_id)
+        )
     sets, values = patch_sets("projects", updates)
     row = await conn.fetchrow(
         f"update projects set {sets}, updated_at = now() where id = $1 returning id, name",
@@ -109,7 +113,9 @@ async def update_project(
     )
     if row is None:
         raise ApiError(404, "not_found", "Project not found")
-    if updates.get("has_plan") is True:
+    if updates.get("has_plan") is True and not had_plan:
+        # Only on the false->true transition: a planned project whose owner
+        # deleted the brief must not get it re-seeded by an unrelated PATCH.
         doc_count = await conn.fetchval(
             "select count(*) from documents where project_id = $1", project_id
         )

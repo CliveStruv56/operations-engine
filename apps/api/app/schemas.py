@@ -1,13 +1,28 @@
 import re
 from datetime import date, datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, EmailStr, Field, field_validator
 
 from app.modules import FEATURE_FLAGS
 
 _HEX_COLOUR = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def _reject_null(value: object) -> object:
+    """Patch fields are `X | None` to mean "unset", never "set to null".
+
+    The columns behind these are NOT NULL, so an explicit null would reach the
+    UPDATE and surface as a 500. Defaults skip validation in Pydantic, so this
+    fires only when the client actually sends null. Same helper as the CRM's.
+    """
+    if value is None:
+        raise ValueError("must not be null — omit the field to leave it unchanged")
+    return value
+
+
+NotNull = BeforeValidator(_reject_null)
 
 
 class TenantCreate(BaseModel):
@@ -339,12 +354,12 @@ class PlanTaskIn(BaseModel):
 
 
 class PlanTaskPatch(BaseModel):
-    title: str | None = Field(default=None, min_length=1, max_length=300)
+    title: Annotated[str | None, NotNull] = Field(default=None, min_length=1, max_length=300)
     details: str | None = Field(default=None, max_length=2_000)
     due_date: date | None = None
     assignee_membership_id: UUID | None = None
-    status: str | None = Field(default=None, pattern="^(todo|doing|done)$")
-    position: int | None = None
+    status: Annotated[str | None, NotNull] = Field(default=None, pattern="^(todo|doing|done)$")
+    position: Annotated[int | None, NotNull] = None
 
 
 class PlanTaskOut(BaseModel):
