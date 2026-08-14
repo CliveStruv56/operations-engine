@@ -1,8 +1,12 @@
 # Vertical Module Roadmap — what to build after Groundwork
 ## Flowgrid OS · research + next-module recommendation
 
-**Version:** 1.0 · 2 August 2026
-**Status:** Research complete, sequence recommended, not yet committed to build.
+**Version:** 1.1 · 2 August 2026, status refreshed 14 August 2026
+**Status:** Research complete; sequence in motion. Orders 1–2 are **done** (module kit
+3 Aug, Grantwork 3–4 Aug — built ahead of the §4 validation gate, which has still not
+been run). Tenderhouse is next and is now cheaper than the §3 estimate: the claims
+register (`docs/claims-register-brief.md`, built 12 Aug, unflagged core) already is the
+answer library §2.1 assumed Tenderhouse would build for itself.
 **Scope:** Which industry/sector modules to add after Groundwork, in what order, and the
 platform work that makes each one cheaper than the last.
 
@@ -258,9 +262,9 @@ identity.
 
 | Order | Work | Effort | Why here |
 | --- | --- | --- | --- |
-| 1 | **Module kit** (§1.1–1.6) | 2–3 days | Unblocks everything; §1.4 unblocks selling modules at all |
-| 2 | **Grantwork** | 3–4 weeks (~£5–7k) | Cheapest; sells to existing Groundwork customers; proves multi-module expansion |
-| 3 | **Tenderhouse** | 4–6 weeks (~£7–10k) | Biggest market and clearest price gap; Grantwork de-risks the bid-drafting work |
+| 1 | **Module kit** (§1.1–1.6) — ✅ done 3 Aug 2026 | 2–3 days | Unblocks everything; §1.4 unblocks selling modules at all |
+| 2 | **Grantwork** — ✅ built 3–4 Aug 2026 (handoff §6g) | 3–4 weeks (~£5–7k) | Cheapest; sells to existing Groundwork customers; proves multi-module expansion |
+| 3 | **Tenderhouse** — next; cheaper now the claims register exists | 4–6 weeks (~£7–10k) | Biggest market and clearest price gap; Grantwork de-risks the bid-drafting work |
 | 4 | **Built-environment template packs** (Tier 0) | 1–2 days | Widens Groundwork's base for almost nothing |
 | 5 | **Assurance** | 5–7 weeks (~£9–12k) | Highest channel leverage; most reference-data commitment; do it once the kit is proven three times |
 

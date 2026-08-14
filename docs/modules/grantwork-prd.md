@@ -1,9 +1,11 @@
 # Module Build Spec — Grant Funding & Impact Reporting ("Grantwork")
 ## Flowgrid OS · Vertical module · Mini-PRD
 
-**Version:** 0.1 (mini-PRD) · 2 August 2026
-**Status:** Researched and recommended, **not approved for build**. Needs the validation in
-`docs/vertical-module-roadmap.md` §4 first.
+**Version:** 0.1 (mini-PRD) · 2 August 2026 · status corrected 14 August 2026
+**Status:** **Built** — shipped 3–4 August 2026 in five steps; `docs/review-context-handoff.md`
+§6g is the build record and `docs/groundwork/ASSUMPTIONS.md` #23–#24 hold the divergences.
+Built ahead of the roadmap §4 validation gate, which has still not been run — its three
+checks remain outstanding and now gate Tenderhouse instead.
 **Prerequisite:** The module kit (`docs/vertical-module-roadmap.md` §1) — particularly §1.5,
 the generalised drafting pipeline, which this module's estimate assumes.
 **Feature flag:** `tenants.features->>'grants' = 'true'`.

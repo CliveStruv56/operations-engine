@@ -31,9 +31,9 @@ pattern, and vault excerpt format).
 | Path | What |
 | --- | --- |
 | `apps/web` | Next.js 16 / React 19 / Tailwind 4 / TS strict — tenant-themed workspace |
-| `apps/api` | FastAPI (Python 3.12) — `/api/v1`, Supabase JWT auth, tenant RLS context, SQLAlchemy 2 + Alembic, Pydantic v2 |
+| `apps/api` | FastAPI (Python 3.12) — `/api/v1`, Supabase JWT auth, tenant RLS context, raw asyncpg SQL + Alembic, Pydantic v2 |
 | `apps/worker` | arq worker — document parsing (Docling) + embedding |
-| `packages/shared` | OpenAPI-generated TypeScript types (`types.ts`) + drift check |
+| `packages/shared` | Placeholder for OpenAPI-generated TypeScript types — README only, generation not yet wired (shared web types live in `apps/web/lib/*.ts`) |
 | `infra` | Docker Compose (Postgres 16 + pgvector, Redis), LiteLLM config |
 | `docs` | Specs, briefs, review reports, handoff context |
 
