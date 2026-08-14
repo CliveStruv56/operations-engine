@@ -890,9 +890,11 @@ and every divergence is recorded here.
     `owner_name`. Cross-tenant membership ids 404 in app code (FK checks
     bypass RLS).
 
-    A documents-only project can grow a plan via `PATCH has_plan=true` (not
-    the reverse). `project_tasks.details` is a short note on the row — not
-    comments, not Groundwork tickets. The UI is a checklist (todo/done);
+    A documents-only project can grow a plan via `POST /projects/{id}/plan`
+    (idempotent). `PATCH /projects/{id}` is rename/archive; extra fields are
+    dropped, which is why "Add a plan" previously returned `no_changes`.
+    `project_tasks.details` is a short note on the row — not comments, not
+    Groundwork tickets. The UI is a checklist (todo/done);
     `doing` remains in the check constraint but is not a third column.
 
 

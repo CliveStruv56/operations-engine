@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends
 
 from app.audit import write_audit
 from app.errors import ApiError
-from app.schemas import PlanTaskIn, PlanTaskOut, PlanTaskPatch, PlanTaskSeed
+from app.schemas import PlanTaskIn, PlanTaskOut, PlanTaskPatch, PlanTaskSeed, ProjectOut
 from app.sqlutil import patch_sets
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -118,6 +118,46 @@ async def list_plan_tasks(
         project_id,
     )
     return [dict(r) for r in rows]
+
+
+@router.post("/projects/{project_id}/plan", response_model=ProjectOut)
+async def enable_plan(
+    project_id: UUID,
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Turn a documents-only container into a planned project.
+
+    Dedicated POST so this cannot collide with PATCH /projects/{id}, whose
+    body is a sparse rename/archive model — an unknown field is dropped and
+    the handler returns 400 no_changes ("Nothing to update"). That is what
+    the Add a plan button hit on staging.
+    """
+    project = await require_core_project(conn, project_id)
+    is_dev = await conn.fetchval(
+        "select exists (select 1 from proj_projects where id = $1)", project_id
+    )
+    if is_dev:
+        raise ApiError(400, "invalid", "Development projects use the project room, not a core plan")
+    if not project["has_plan"]:
+        await conn.execute(
+            "update projects set has_plan = true, updated_at = now() where id = $1",
+            project_id,
+        )
+        name = await conn.fetchval("select name from projects where id = $1", project_id)
+        doc_count = await conn.fetchval(
+            "select count(*) from documents where project_id = $1", project_id
+        )
+        if doc_count == 0:
+            await seed_project_brief(conn, ctx, project_id, name)
+        await write_audit(
+            conn, ctx.tenant_id, ctx.user_id, "project.update", "project", str(project_id)
+        )
+    from app.routers.projects import fetch_project
+
+    out = await fetch_project(conn, project_id)
+    assert out is not None
+    return dict(out)
 
 
 @router.post("/projects/{project_id}/plan-tasks", status_code=201, response_model=PlanTaskOut)

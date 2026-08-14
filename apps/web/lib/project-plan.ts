@@ -65,8 +65,8 @@ export const listMembers = (tenantId: string) => api<MemberRow[]>("/members", {}
 
 export const enableProjectPlan = (projectId: string, tenantId: string) =>
   api<{ id: string; has_plan: boolean }>(
-    `/projects/${projectId}`,
-    { method: "PATCH", body: JSON.stringify({ has_plan: true }) },
+    `/projects/${projectId}/plan`,
+    { method: "POST" },
     tenantId
   );
 

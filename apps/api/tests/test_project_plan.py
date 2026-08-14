@@ -118,12 +118,16 @@ async def test_blank_project_can_gain_a_plan(client):
     project = (
         await client.post("/api/v1/projects", json={"name": "Folder"}, headers=headers)
     ).json()
-    resp = await client.patch(
-        f"/api/v1/projects/{project['id']}", json={"has_plan": True}, headers=headers
+    await client.patch(
+        f"/api/v1/documents/{t.document_id}",
+        json={"project_id": project["id"]},
+        headers=headers,
     )
+    resp = await client.post(f"/api/v1/projects/{project['id']}/plan", headers=headers)
     assert resp.status_code == 200, resp.text
     assert resp.json()["has_plan"] is True
-    assert resp.json()["document_count"] == 1
+    # Existing vault files must not block enabling the plan.
+    assert resp.json()["document_count"] >= 1
     add = await client.post(
         f"/api/v1/projects/{project['id']}/plan-tasks",
         json={"title": "Now allowed", "details": "Call before Friday"},

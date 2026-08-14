@@ -108,6 +108,7 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("POST", "/api/v1/claims/import/companies-house"),
         ("POST", "/api/v1/claims/import/charity-commission"),
         ("POST", "/api/v1/claims/import/oscr"),
+        ("POST", f"/api/v1/projects/{b.project_id}/plan"),
         ("GET", f"/api/v1/projects/{b.project_id}/plan-tasks"),
         ("POST", f"/api/v1/projects/{b.project_id}/plan-tasks"),
         ("PATCH", f"/api/v1/projects/{b.project_id}/plan-tasks/{b.plan_task_id}"),
@@ -183,6 +184,8 @@ async def test_direct_object_reference_attacks(client, two_tenants):
 
     # Core project plan: B's task under A's context must 404.
     resp = await client.get(f"/api/v1/projects/{b.project_id}/plan-tasks", headers=headers)
+    assert resp.status_code == 404
+    resp = await client.post(f"/api/v1/projects/{b.project_id}/plan", headers=headers)
     assert resp.status_code == 404
     resp = await client.patch(
         f"/api/v1/projects/{a.project_id}/plan-tasks/{b.plan_task_id}",
