@@ -198,9 +198,7 @@ async def _optional_request(
     not filed, or an operation the portal has since dropped, still imports.
     """
     try:
-        return await _request(
-            url, headers, register_label, params=params, auth=auth, client=client
-        )
+        return await _request(url, headers, register_label, params=params, auth=auth, client=client)
     except ApiError:
         return None
 
@@ -392,9 +390,7 @@ async def fetch_charity_commission(
         client=client,
     )
 
-    status = _cc_status(
-        _pick(detail, "charity_registration_status", "reg_status")
-    )
+    status = _cc_status(_pick(detail, "charity_registration_status", "reg_status"))
     year_end = _parse_date(
         _pick(detail, "latest_acc_fin_period_end_date", "latest_acc_fin_year_end_date")
     )
@@ -410,16 +406,12 @@ async def fetch_charity_commission(
     add("registered_name", _clean(detail.get("charity_name")), review_on=identity_review)
     add(
         "charity_number",
-        _clean(
-            _pick(detail, "reg_charity_number", "registered_charity_number") or number
-        ),
+        _clean(_pick(detail, "reg_charity_number", "registered_charity_number") or number),
         review_on=identity_review,
     )
     add(
         "company_number",
-        _clean(
-            _pick(detail, "charity_company_registration_number", "charity_co_reg_number")
-        ),
+        _clean(_pick(detail, "charity_company_registration_number", "charity_co_reg_number")),
         review_on=identity_review,
     )
     add("legal_form", _clean(detail.get("charity_type")), review_on=identity_review)
@@ -561,9 +553,7 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
     add(
         "legal_form",
         _clean(
-            _pick(
-                detail, "constitutional_form", "constitutionalForm", "currentConstitutionalForm"
-            )
+            _pick(detail, "constitutional_form", "constitutionalForm", "currentConstitutionalForm")
         ),
         review_on=identity_review,
     )
@@ -634,8 +624,9 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
 
     filed = [e for e in _as_list(returns) if isinstance(e, dict)]
     filed.sort(
-        key=lambda e: _parse_date(_pick(e, "year_end", "yearEnd", "AccountingReferenceDate"))
-        or date.min,
+        key=lambda e: (
+            _parse_date(_pick(e, "year_end", "yearEnd", "AccountingReferenceDate")) or date.min
+        ),
         reverse=True,
     )
     for entry in filed[:5]:
