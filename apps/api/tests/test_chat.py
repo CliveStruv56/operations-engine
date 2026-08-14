@@ -313,3 +313,26 @@ async def test_member_cannot_read_other_users_conversation(client, fake_llm):
         headers=auth(peer_id, tenant.id),
     )
     assert resp.status_code == 404
+
+
+def test_build_scope_most_explicit_signal_wins():
+    """A file attached to this chat beats the project's primary documents
+    beats its other documents beats the rest of the vault."""
+    from uuid import uuid4
+
+    from app.retrieval import ATTACHED_WEIGHT, PRIMARY_WEIGHT, PROJECT_WEIGHT
+    from app.routers.conversations import build_scope
+
+    project_doc, primary_doc, attached_doc = uuid4(), uuid4(), uuid4()
+    scope = build_scope({project_doc: False, primary_doc: True, attached_doc: True}, {attached_doc})
+    assert scope is not None
+    assert scope.weight(attached_doc) == ATTACHED_WEIGHT
+    assert scope.weight(primary_doc) == PRIMARY_WEIGHT
+    assert scope.weight(project_doc) == PROJECT_WEIGHT
+    assert scope.weight(uuid4()) == 1.0
+
+    # No project, no attachments: whole vault, equal weight.
+    assert build_scope({}, set()) is None
+    # An attachment alone still scopes an unprojected chat.
+    lone = build_scope({}, {attached_doc})
+    assert lone is not None and lone.weight(attached_doc) == ATTACHED_WEIGHT

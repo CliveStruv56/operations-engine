@@ -18,9 +18,11 @@ from app.litellm import litellm_client
 from app.queue import ingest_queue
 from app.ratelimit import rate_limiter
 from app.retrieval import retrieve
+from app.routers.conversations import _get_owned_conversation
 from app.schemas import (
     DocumentCreate,
     DocumentCreateOut,
+    DocumentDownloadOut,
     DocumentOut,
     DocumentUpdate,
     VaultSearchHit,
@@ -39,6 +41,13 @@ async def _get_document(conn: asyncpg.Connection, document_id: UUID) -> asyncpg.
     if row is None:  # RLS already scoped the select to the tenant
         raise ApiError(404, "not_found", "Document not found")
     return row
+
+
+def _doc_out(row: asyncpg.Record) -> dict:
+    """`has_source` is derived, never exposed as the key itself — the storage
+    key is an internal address, and the UI only needs to know whether Open
+    and Re-index have anything to work on."""
+    return {**dict(row), "has_source": bool(row["storage_key"])}
 
 
 @router.post("/documents", status_code=201, response_model=DocumentCreateOut)
@@ -61,14 +70,19 @@ async def create_document(
         exists = await conn.fetchval("select 1 from projects where id = $1", body.project_id)
         if not exists:
             raise ApiError(404, "not_found", "Project not found")
+    if body.conversation_id is not None:
+        # Owner-only, same gate as posting a message: attaching a file to a
+        # teammate's private chat would change what their replies read from.
+        await _get_owned_conversation(conn, ctx, body.conversation_id)
 
     document_id = uuid4()
     key = f"{ctx.tenant_id}/{document_id}.{ALLOWED_MIMES[body.mime]}"
     upload_url = storage.presign_put(key, body.mime)
     await conn.execute(
         """
-        insert into documents (id, tenant_id, title, storage_key, mime, project_id, created_by)
-        values ($1, $2, $3, $4, $5, $6, $7)
+        insert into documents (id, tenant_id, title, storage_key, mime, project_id,
+                               conversation_id, created_by)
+        values ($1, $2, $3, $4, $5, $6, $7, $8)
         """,
         document_id,
         ctx.tenant_id,
@@ -76,6 +90,7 @@ async def create_document(
         key,
         body.mime,
         body.project_id,
+        body.conversation_id,
         ctx.user_id,
     )
     await write_audit(
@@ -125,7 +140,7 @@ async def complete_upload(
             conn, ctx.tenant_id, ctx.user_id, "document.complete", "document", str(document_id)
         )
         await ingest_queue.enqueue_ingest(ctx.tenant_id, document_id, ctx.user_id)
-    return dict(row)
+    return _doc_out(row)
 
 
 @router.get("/documents", response_model=list[DocumentOut])
@@ -140,7 +155,7 @@ async def list_documents(
         )
     else:
         rows = await conn.fetch("select * from documents order by created_at desc")
-    return [dict(r) for r in rows]
+    return [_doc_out(r) for r in rows]
 
 
 @router.get("/documents/{document_id}", response_model=DocumentOut)
@@ -149,7 +164,23 @@ async def get_document(
     ctx: TenantContext = Depends(require_role("member")),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
-    return dict(await _get_document(conn, document_id))
+    return _doc_out(await _get_document(conn, document_id))
+
+
+@router.get("/documents/{document_id}/download", response_model=DocumentDownloadOut)
+async def download_document(
+    document_id: UUID,
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """The original file back out of the vault — the half of the loop that
+    was missing: upload, index, summarise, and finally open."""
+    doc = await _get_document(conn, document_id)
+    if not doc["storage_key"]:
+        raise ApiError(
+            409, "no_source", "This document was created in the app — there is no file to open"
+        )
+    return {"download_url": storage.presign_get(doc["storage_key"])}
 
 
 @router.patch("/documents/{document_id}", response_model=DocumentOut)
@@ -177,7 +208,7 @@ async def update_document(
     await write_audit(
         conn, ctx.tenant_id, ctx.user_id, "document.update", "document", str(document_id)
     )
-    return dict(row)
+    return _doc_out(row)
 
 
 @router.delete("/documents/{document_id}", status_code=204)
@@ -266,4 +297,4 @@ async def reprocess_document(
             conn, ctx.tenant_id, ctx.user_id, "document.reprocess", "document", str(document_id)
         )
         await ingest_queue.enqueue_ingest(ctx.tenant_id, document_id, ctx.user_id)
-    return dict(row)
+    return _doc_out(row)

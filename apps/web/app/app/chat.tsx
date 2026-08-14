@@ -4,9 +4,11 @@ import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, apiStream } from "@/lib/api";
 import { openPresigned } from "@/lib/groundwork";
+import { ACCEPT, uploadMime } from "@/lib/uploads";
 import { PulsingDots, Spinner } from "@/components/activity";
 import {
   ArrowUpIcon,
+  ClipIcon,
   CopyIcon,
   DocIcon,
   GlobeIcon,
@@ -258,9 +260,11 @@ export default function ChatPanel({
   const webSearchEnabled = ws.tenant!.features?.web_search === true;
   const devProjectsEnabled = ws.tenant!.features?.projects === true;
   const [docs, setDocs] = useState<DocMeta[] | null>(null);
+  const [uploadingCount, setUploadingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Set when this panel just created the conversation itself: the URL update
@@ -377,12 +381,27 @@ export default function ChatPanel({
   }, [conversationId, tenantId]);
 
   // Document metadata for the hero (context chip + title-derived suggestions)
-  // — best-effort, the hero renders without it too.
-  useEffect(() => {
+  // and the composer's attachment chips — best-effort, both render without it.
+  const refreshDocs = useCallback(() => {
     api<DocMeta[]>("/documents", {}, tenantId)
       .then(setDocs)
       .catch(() => setDocs(null));
   }, [tenantId]);
+  useEffect(refreshDocs, [refreshDocs]);
+
+  // Files dropped into this conversation. They ride the ordinary vault
+  // pipeline, so the chips just mirror ingest status until everything lands.
+  const attachments = conversationId
+    ? (docs ?? []).filter((d) => d.conversation_id === conversationId)
+    : [];
+  const attachmentsBusy = attachments.some((d) =>
+    ["uploaded", "parsing", "embedding"].includes(d.status)
+  );
+  useEffect(() => {
+    if (!attachmentsBusy) return;
+    const t = setInterval(refreshDocs, 3000);
+    return () => clearInterval(t);
+  }, [attachmentsBusy, refreshDocs]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -415,6 +434,80 @@ export default function ChatPanel({
     abortRef.current?.abort();
   }
 
+  /** The open conversation, or a fresh one — a first message and a first
+   *  attachment both need it, so the create lives once. Null = the create
+   *  failed and the error banner already says so. */
+  async function ensureConversation(titleSeed: string): Promise<string | null> {
+    // Null when the previous chat was deleted, so the first action after that
+    // opens a fresh one rather than posting into a conversation that is gone.
+    if (conversationId) return conversationId;
+    try {
+      const created = await api<{ id: string }>(
+        "/conversations",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: titleSeed.slice(0, 80),
+            project_id: activeProjectId,
+          }),
+        },
+        tenantId
+      );
+      justCreatedRef.current = created.id;
+      setCreatedHereIds((ids) => [...ids, created.id]);
+      setModes((s) => ({ ...s, [created.id]: s["new"] ?? "chat" }));
+      router.replace(convHref(created.id));
+      ws.refreshConversations();
+      return created.id;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+      return null;
+    }
+  }
+
+  async function attach(files: FileList) {
+    setError(null);
+    for (const file of Array.from(files)) {
+      const mime = uploadMime(file);
+      if (!mime) {
+        setError(`${file.name}: this file type isn't supported`);
+        continue;
+      }
+      // Attaching before the first message still needs somewhere to attach to.
+      const convId = await ensureConversation(file.name);
+      if (!convId) return;
+      setUploadingCount((n) => n + 1);
+      try {
+        const { id, upload_url } = await api<{ id: string; upload_url: string }>(
+          "/documents",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              title: file.name,
+              mime,
+              size_bytes: file.size,
+              project_id: activeProjectId,
+              conversation_id: convId,
+            }),
+          },
+          tenantId
+        );
+        const put = await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": mime },
+          body: file,
+        });
+        if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+        await api(`/documents/${id}/complete`, { method: "POST" }, tenantId);
+      } catch (err) {
+        setError(`${file.name}: ${err instanceof Error ? err.message : String(err)}`);
+      } finally {
+        setUploadingCount((n) => n - 1);
+      }
+    }
+    refreshDocs();
+  }
+
   async function send(e?: React.FormEvent) {
     e?.preventDefault();
     const content = draft.trim();
@@ -423,33 +516,8 @@ export default function ChatPanel({
     setDraft("");
     if (inputRef.current) inputRef.current.style.height = "auto";
 
-    // Null when the previous chat was deleted, so the first message after that
-    // opens a fresh one rather than posting into a conversation that is gone.
-    let convId = conversationId;
-    try {
-      if (!convId) {
-        const created = await api<{ id: string }>(
-          "/conversations",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              title: content.slice(0, 80),
-              project_id: activeProjectId,
-            }),
-          },
-          tenantId
-        );
-        convId = created.id;
-        justCreatedRef.current = convId;
-        setCreatedHereIds((ids) => [...ids, created.id]);
-        setModes((s) => ({ ...s, [created.id]: s["new"] ?? "chat" }));
-        router.replace(convHref(convId));
-        ws.refreshConversations();
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      return;
-    }
+    const convId = await ensureConversation(content);
+    if (!convId) return;
 
     setMessages((m) => [
       ...m,
@@ -637,7 +705,56 @@ export default function ChatPanel({
               </button>
             ))}
           </div>
+          {(attachments.length > 0 || uploadingCount > 0) && (
+            <div className="flex flex-wrap gap-1.5 px-0.5 pb-2">
+              {attachments.map((d) => (
+                <span
+                  key={d.id}
+                  className={`flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1 text-[11.5px] font-semibold ${
+                    d.status === "failed" ? "bg-danger-soft text-danger" : "bg-sidebar text-subtle"
+                  }`}
+                  title={d.status === "failed" ? (d.error ?? "Failed to read") : d.title}
+                >
+                  <ClipIcon className="h-3 w-3" />
+                  <span className="max-w-44 truncate">{d.title}</span>
+                  {d.status !== "ready" && (
+                    <span className="text-[10.5px] font-bold uppercase">
+                      {d.status === "failed" ? "failed" : "reading…"}
+                    </span>
+                  )}
+                </span>
+              ))}
+              {uploadingCount > 0 && (
+                <span className="flex items-center gap-1.5 rounded-full border border-edge bg-sidebar px-2.5 py-1 text-[11.5px] font-semibold text-subtle">
+                  <Spinner className="h-3 w-3" /> Uploading…
+                </span>
+              )}
+            </div>
+          )}
           <div className="flex items-end gap-2.5">
+            <button
+              type="button"
+              onClick={() => fileRef.current?.click()}
+              disabled={uploadingCount > 0}
+              aria-label="Attach a file to this chat"
+              title="Attach a file — it joins the vault and this chat reads it first"
+              className="mb-1.5 flex-none rounded-lg p-1.5 text-subtle transition hover:bg-sidebar hover:text-ink disabled:opacity-50"
+            >
+              <ClipIcon className="h-[18px] w-[18px]" />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              accept={ACCEPT}
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files?.length) attach(e.target.files);
+                // Same file again (a failed upload, a corrected copy) must
+                // still fire a change event.
+                e.target.value = "";
+              }}
+            />
             <textarea
               ref={inputRef}
               rows={1}

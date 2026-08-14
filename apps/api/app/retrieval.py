@@ -20,6 +20,11 @@ TOP_N = 8
 # primary docs first of all.
 PROJECT_WEIGHT = 1.5
 PRIMARY_WEIGHT = 2.25
+# A file dropped into this conversation outranks everything — attaching it is
+# the most explicit relevance signal a person can give. Still a boost, not a
+# restriction: the rest of the vault stays in the pool for the questions the
+# attachment does not answer.
+ATTACHED_WEIGHT = 3.0
 # Vector candidates below this cosine similarity are noise, not evidence —
 # dropping them here is what makes "the vault doesn't cover this" honest.
 SIM_FLOOR = 0.25

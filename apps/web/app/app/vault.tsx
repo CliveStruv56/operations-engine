@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/activity";
+import { openPresigned } from "@/lib/groundwork";
+import { ACCEPT, uploadMime } from "@/lib/uploads";
 import type { Project } from "./workspace";
 import ProjectPlanPanel from "./project-plan";
 
@@ -16,23 +18,7 @@ type Doc = {
   status: "uploaded" | "parsing" | "embedding" | "ready" | "failed";
   error: string | null;
   created_at: string;
-};
-
-const ACCEPT =
-  ".pdf,.docx,.xlsx,.pptx,.txt,.md,.csv,application/pdf," +
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document," +
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet," +
-  "application/vnd.openxmlformats-officedocument.presentationml.presentation," +
-  "text/plain,text/markdown,text/csv";
-
-const EXT_MIMES: Record<string, string> = {
-  pdf: "application/pdf",
-  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  pptx: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  txt: "text/plain",
-  md: "text/markdown",
-  csv: "text/csv",
+  has_source: boolean;
 };
 
 const MIME_LABEL: Record<string, string> = {
@@ -103,8 +89,8 @@ export default function VaultPanel({
   async function upload(files: FileList | File[]) {
     setError(null);
     for (const file of Array.from(files)) {
-      const mime = file.type || EXT_MIMES[file.name.split(".").pop()?.toLowerCase() ?? ""];
-      if (!mime || !Object.values(EXT_MIMES).includes(mime)) {
+      const mime = uploadMime(file);
+      if (!mime) {
         setError(`${file.name}: this file type isn't supported`);
         continue;
       }
@@ -152,6 +138,19 @@ export default function VaultPanel({
     try {
       await api(`/documents/${doc.id}/reprocess`, { method: "POST" }, tenantId);
       await refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function open(doc: Doc) {
+    try {
+      const out = await api<{ download_url: string }>(
+        `/documents/${doc.id}/download`,
+        {},
+        tenantId
+      );
+      openPresigned(out.download_url);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -275,6 +274,15 @@ export default function VaultPanel({
                     {STATUS_LABEL[d.status]}
                   </span>
                   <span className="flex shrink-0 items-center gap-3 text-xs">
+                    {d.has_source && confirmingId !== d.id && (
+                      <button
+                        onClick={() => open(d)}
+                        className="text-ink-muted underline hover:text-ink"
+                        title="Open the original file"
+                      >
+                        Open
+                      </button>
+                    )}
                     {d.summary && (
                       <button
                         onClick={() => setExpandedId(expandedId === d.id ? null : d.id)}
@@ -311,7 +319,9 @@ export default function VaultPanel({
                         ★
                       </button>
                     )}
+                    {/* No stored file (a seeded note) = nothing to re-read. */}
                     {(d.status === "ready" || d.status === "failed") &&
+                      d.has_source &&
                       confirmingId !== d.id && (
                         <button
                           onClick={() => reprocess(d)}

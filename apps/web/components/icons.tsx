@@ -170,6 +170,14 @@ export function CopyIcon(p: IconProps) {
   );
 }
 
+export function ClipIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="m21 12-8.5 8.5a6 6 0 0 1-8.5-8.5L12.5 3.5a4 4 0 0 1 5.7 5.7L9.7 17.7a2 2 0 0 1-2.9-2.9L15 6.5" />
+    </Icon>
+  );
+}
+
 export function StopIcon(p: IconProps) {
   return (
     <Icon {...p}>

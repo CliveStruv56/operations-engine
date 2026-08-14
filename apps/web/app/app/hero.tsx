@@ -19,8 +19,11 @@ export type DocMeta = {
   id: string;
   title: string;
   project_id: string | null;
+  /** Set when the file was dropped into a chat — the composer's chips. */
+  conversation_id: string | null;
   is_primary: boolean;
   status: string;
+  error: string | null;
   summary: string | null;
 };
 

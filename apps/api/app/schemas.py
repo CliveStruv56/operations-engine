@@ -389,6 +389,9 @@ class DocumentCreate(BaseModel):
     mime: str
     size_bytes: int = Field(gt=0)
     project_id: UUID | None = None
+    #: Set when the file was dropped into a chat: retrieval boosts it for
+    #: that conversation. Must be a conversation the caller owns.
+    conversation_id: UUID | None = None
 
 
 class DocumentUpdate(BaseModel):
@@ -402,6 +405,7 @@ class DocumentOut(BaseModel):
     title: str
     mime: str | None
     project_id: UUID | None
+    conversation_id: UUID | None = None
     is_primary: bool
     summary: str | None
     status: str
@@ -409,11 +413,18 @@ class DocumentOut(BaseModel):
     created_by: UUID | None
     created_at: datetime
     updated_at: datetime
+    #: False for seeded notes (the planned-project brief): there is no stored
+    #: file, so Open and Re-index have nothing to work on.
+    has_source: bool = False
 
 
 class DocumentCreateOut(BaseModel):
     id: UUID
     upload_url: str
+
+
+class DocumentDownloadOut(BaseModel):
+    download_url: str
 
 
 class GroundworkApplicability(BaseModel):

@@ -225,3 +225,88 @@ async def test_reprocess_transitions(client, fake_storage, fake_queue):
     # Now mid-pipeline → a second reprocess is rejected.
     resp = await client.post(f"/api/v1/documents/{tenant.document_id}/reprocess", headers=headers)
     assert resp.status_code == 409
+
+
+# -- open/download and chat attachments ---------------------------------------
+
+
+def _fake_presign_get(monkeypatch):
+    def presign_get(key):
+        return f"http://fake-storage/{key}?sig=get"
+
+    monkeypatch.setattr(storage, "presign_get", presign_get)
+
+
+async def test_download_returns_a_presigned_url(client, fake_storage, monkeypatch):
+    tenant = await seed_tenant(client, f"vault-{uuid4().hex[:6]}")
+    headers = auth(tenant.owner_id, tenant.id)
+    _fake_presign_get(monkeypatch)
+    doc_id = await create_doc(client, headers, fake_storage)
+
+    resp = await client.get(f"/api/v1/documents/{doc_id}/download", headers=headers)
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["download_url"].endswith("?sig=get")
+
+    # And the list says which rows have a file to open at all.
+    listed = (await client.get("/api/v1/documents", headers=headers)).json()
+    assert next(d for d in listed if d["id"] == doc_id)["has_source"] is True
+    # The conftest-seeded doc is a note with no stored file.
+    assert next(d for d in listed if d["id"] == str(tenant.document_id))["has_source"] is False
+
+
+async def test_download_refuses_a_seeded_note(client, monkeypatch):
+    """The conftest doc mirrors the planned-project brief: a row with chunks
+    and no file. Open has nothing to hand back."""
+    tenant = await seed_tenant(client, f"vault-{uuid4().hex[:6]}")
+    _fake_presign_get(monkeypatch)
+    resp = await client.get(
+        f"/api/v1/documents/{tenant.document_id}/download",
+        headers=auth(tenant.owner_id, tenant.id),
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "no_source"
+
+
+async def test_attachment_binds_to_an_owned_conversation(client, fake_storage):
+    tenant = await seed_tenant(client, f"vault-{uuid4().hex[:6]}")
+    headers = auth(tenant.owner_id, tenant.id)
+    resp = await client.post(
+        "/api/v1/documents",
+        json={
+            "title": "tender-pack.pdf",
+            "mime": PDF,
+            "size_bytes": 1000,
+            "conversation_id": str(tenant.conversation_id),
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    doc_id = resp.json()["id"]
+    listed = (await client.get("/api/v1/documents", headers=headers)).json()
+    assert next(d for d in listed if d["id"] == doc_id)["conversation_id"] == str(
+        tenant.conversation_id
+    )
+
+
+async def test_attachment_to_a_teammates_chat_is_refused(client, fake_storage):
+    """Attaching to somebody else's private chat would change what their
+    replies read from — same owner-only gate as posting a message."""
+    tenant = await seed_tenant(client, f"vault-{uuid4().hex[:6]}")
+    member_id = uuid4()
+    resp = await client.post(
+        "/api/v1/invites/accept",
+        json={"token": tenant.invite_token},
+        headers=auth(member_id),
+    )
+    assert resp.status_code == 200
+    resp = await client.post(
+        "/api/v1/documents",
+        json={
+            "title": "sneaky.pdf",
+            "mime": PDF,
+            "size_bytes": 1000,
+            "conversation_id": str(tenant.conversation_id),  # the owner's chat
+        },
+        headers=auth(member_id, tenant.id),
+    )
+    assert resp.status_code == 404

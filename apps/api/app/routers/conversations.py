@@ -34,7 +34,14 @@ from app.prompts import (
     WEB_PROMPT,
 )
 from app.ratelimit import rate_limiter
-from app.retrieval import PRIMARY_WEIGHT, PROJECT_WEIGHT, RetrievedChunk, Scope, retrieve
+from app.retrieval import (
+    ATTACHED_WEIGHT,
+    PRIMARY_WEIGHT,
+    PROJECT_WEIGHT,
+    RetrievedChunk,
+    Scope,
+    retrieve,
+)
 from app.routing import estimate_tokens, select_route
 from app.schemas import (
     ConversationCreate,
@@ -244,6 +251,20 @@ async def list_conversations(
     return [dict(r) for r in rows]
 
 
+def build_scope(project_docs: dict, attached_ids: set) -> Scope | None:
+    """Retrieval weights for one conversation, most explicit signal winning:
+    a file attached to this chat beats the project's primary documents beats
+    the project's other documents beats the rest of the vault. Pure, so the
+    ordering is testable without the whole chat stack."""
+    weights = {
+        doc_id: PRIMARY_WEIGHT if primary else PROJECT_WEIGHT
+        for doc_id, primary in project_docs.items()
+    }
+    for doc_id in attached_ids:
+        weights[doc_id] = ATTACHED_WEIGHT
+    return Scope(weights=weights) if weights else None
+
+
 async def _get_owned_conversation(
     conn: asyncpg.Connection, ctx: TenantContext, conversation_id: UUID
 ) -> asyncpg.Record:
@@ -359,6 +380,12 @@ async def post_message(
                     conversation["project_id"],
                 )
             }
+        attached_ids = {
+            r["id"]
+            for r in await conn.fetch(
+                "select id from documents where conversation_id = $1", conversation_id
+            )
+        }
         tenant = await conn.fetchrow(
             "select litellm_key_encrypted, soft_budget_usd, features from tenants where id = $1",
             ctx.tenant_id,
@@ -416,16 +443,7 @@ async def post_message(
     # projects land (Slice 4.5).
     chunks: list[RetrievedChunk] = []
     embed_tokens = 0
-    scope = (
-        Scope(
-            weights={
-                doc_id: PRIMARY_WEIGHT if primary else PROJECT_WEIGHT
-                for doc_id, primary in project_docs.items()
-            }
-        )
-        if project_docs
-        else None
-    )
+    scope = build_scope(project_docs, attached_ids)
 
     # The embedding and the web search are independent network calls — the
     # embedding feeds vault retrieval, the search feeds the prompt, and
