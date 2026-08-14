@@ -126,8 +126,18 @@ CORE_TENANT_TABLES: tuple[str, ...] = (
 #: Everything the RLS coverage check must see.
 RLS_TENANT_TABLES: tuple[str, ...] = MODULE_TENANT_TABLES + CORE_TENANT_TABLES
 
-#: LIKE patterns for the module audit namespaces the activity feed surfaces.
-FEED_PATTERNS: tuple[str, ...] = tuple(f"{m.feed_prefix}.%" for m in MODULES if m.feed_prefix)
+#: Core (unflagged) audit namespaces the feed also surfaces. The claims
+#: register is core, so it cannot opt in through a manifest entry the way a
+#: module does — and the sweep's `claims.review_due` row exists purely to be
+#: seen, so leaving it out of the feed writes it into a void (the trap the
+#: claims brief §14.1 names).
+CORE_FEED_PREFIXES: tuple[str, ...] = ("claims",)
+
+#: LIKE patterns for the audit namespaces the activity feed surfaces.
+FEED_PATTERNS: tuple[str, ...] = tuple(
+    f"{prefix}.%"
+    for prefix in (*(m.feed_prefix for m in MODULES if m.feed_prefix), *CORE_FEED_PREFIXES)
+)
 
 
 def make_feature_gate(flag: str) -> Callable[..., Awaitable[TenantContext]]:

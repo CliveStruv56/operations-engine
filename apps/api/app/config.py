@@ -35,6 +35,18 @@ class Settings(BaseSettings):
     # research messages return 503, matching the gateway/storage convention.
     exa_api_key: str = ""
 
+    # Resend email transport. Empty key = email disabled: invites still return
+    # their link for hand delivery, digests are not sent. When the key is set,
+    # email_unsubscribe_secret must be too (enforced at startup) — a digest we
+    # cannot put an unsubscribe link in is a digest we do not send.
+    # The sender domain must be verified in Resend before this works.
+    resend_api_key: str = ""
+    email_from: str = "Flowgrid <notifications@flowgridos.co.uk>"
+    # Signs unsubscribe links (HMAC). Must match the worker's copy.
+    email_unsubscribe_secret: str = ""
+    # Browser origin used for links in email (invite accept, the register).
+    web_base_url: str = "http://localhost:3000"
+
     # UK public registers, for seeding the claims register. Same convention:
     # an empty key disables that register's lookup route with a 503 naming it,
     # rather than failing obscurely at the network.

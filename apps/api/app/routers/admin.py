@@ -29,7 +29,7 @@ from app.litellm import litellm_client
 from app.refdata.promote import list_candidates, promote, withdraw
 from app.refdata.questions import get_platform_set, list_platform_sets
 from app.refdata.schemas import PromoteCandidate, PromoteIn, QuestionSetOut
-from app.routers.invites import INVITE_TTL_DAYS
+from app.routers.invites import INVITE_TTL_DAYS, send_invite_email
 from app.schemas import (
     AdminFeaturesIn,
     AdminFeaturesOut,
@@ -123,6 +123,9 @@ async def admin_create_tenant(
             meta={"platform_admin": True, "owner_email": body.owner_email},
         )
         invite = await _create_owner_invite(conn, tenant_id, body.owner_email, user.id)
+    invite["email_sent"] = await send_invite_email(
+        body.name, body.owner_email, "owner", invite["token"]
+    )
     out = dict(row)
     out["features"] = json.loads(out["features"])
     out["brand"] = json.loads(out["brand"])
@@ -141,9 +144,12 @@ async def admin_reissue_owner_invite(
     """Fresh owner invite for an existing workspace (links expire after a
     week; clients lose emails)."""
     async with db.tenant_tx(user.id, tenant_id) as conn:
-        if not await conn.fetchval("select 1 from tenants where id = $1", tenant_id):
+        workspace = await conn.fetchval("select name from tenants where id = $1", tenant_id)
+        if workspace is None:
             raise ApiError(404, "not_found", "Workspace not found")
-        return await _create_owner_invite(conn, tenant_id, body.email, user.id)
+        invite = await _create_owner_invite(conn, tenant_id, body.email, user.id)
+    invite["email_sent"] = await send_invite_email(workspace, body.email, "owner", invite["token"])
+    return invite
 
 
 @router.patch("/admin/tenants/{tenant_id}/features", response_model=AdminFeaturesOut)

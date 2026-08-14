@@ -19,6 +19,7 @@ from app.routers import (
     conversations,
     crm,
     documents,
+    email_prefs,
     global_search,
     grants,
     groundwork,
@@ -73,6 +74,12 @@ def create_app() -> FastAPI:
             " configured — generate one with: python -c 'from cryptography.fernet"
             " import Fernet; print(Fernet.generate_key().decode())'"
         )
+    if settings.resend_api_key and not settings.email_unsubscribe_secret:
+        # A digest whose unsubscribe link cannot be signed must not be sent.
+        raise RuntimeError(
+            "EMAIL_UNSUBSCRIBE_SECRET must be set when RESEND_API_KEY is"
+            " configured, and must match the worker's copy"
+        )
     if settings.sentry_dsn:
         # No client content in logs/errors (spec §9.5): ids and counts only.
         sentry_sdk.init(
@@ -114,6 +121,7 @@ def create_app() -> FastAPI:
         usage.router,
         global_search.router,
         activity.router,
+        email_prefs.router,
     ):
         app.include_router(router, prefix="/api/v1")
     return app

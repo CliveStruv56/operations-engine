@@ -145,6 +145,7 @@ class AdminInviteOut(BaseModel):
     email: str
     role: str
     expires_at: datetime
+    email_sent: bool = False
 
 
 class AdminTenantCreatedOut(BaseModel):
@@ -184,6 +185,9 @@ class MemberOut(BaseModel):
     role: str
     email: str | None = None
     created_at: datetime
+    #: Read-only here: the digest preference belongs to the recipient and is
+    #: changed only through the signed link in the digest itself.
+    digest_opt_out: bool = False
 
 
 class MemberRolePatch(BaseModel):
@@ -229,6 +233,10 @@ class InviteOut(BaseModel):
     role: str
     token: str
     expires_at: datetime
+    #: Whether the invite notification actually went out — False when email is
+    #: not configured or Resend refused it, in which case the UI says "copy
+    #: the link" instead of pretending.
+    email_sent: bool = False
 
 
 class InviteAccept(BaseModel):

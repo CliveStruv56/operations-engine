@@ -18,7 +18,7 @@ async def list_members(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     rows = await conn.fetch(
-        "select id, user_id, role, email, created_at from memberships"
+        "select id, user_id, role, email, created_at, digest_opt_out from memberships"
         " where tenant_id = $1 order by created_at",
         ctx.tenant_id,
     )
