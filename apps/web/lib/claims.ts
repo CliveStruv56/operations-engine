@@ -134,7 +134,7 @@ export const updateClaim = (
 
 export const deleteClaim = (id: string) => cl<void>(`/claims/${id}`, { method: "DELETE" });
 
-/** The three registers a workspace can seed itself from, and who each is for. */
+/** The four registers a workspace can seed itself from, and who each is for. */
 export const REGISTERS = [
   {
     route: "companies-house",
@@ -153,6 +153,14 @@ export const REGISTERS = [
     label: "OSCR",
     hint: "Charities registered in Scotland.",
     placeholder: "SC012345",
+  },
+  {
+    route: "ccni",
+    label: "CCNI",
+    hint:
+      "Charities registered in Northern Ireland — read from a snapshot of the register, " +
+      "so a very recent change may not show yet.",
+    placeholder: "NIC100012",
   },
 ] as const;
 

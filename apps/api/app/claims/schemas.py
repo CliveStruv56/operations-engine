@@ -16,6 +16,8 @@ from pydantic import BaseModel, Field
 COMPANY_NUMBER = r"^[A-Z0-9]{8}$"
 EW_CHARITY_NUMBER = r"^\d{6,8}$"
 SCOTTISH_CHARITY_NUMBER = r"^SC\d{6}$"
+#: Written NIC100012 on letterheads, keyed 100012 in CCNI's own export.
+NI_CHARITY_NUMBER = r"^(NIC)?\d{6}$"
 
 
 class ClaimKindOut(BaseModel):

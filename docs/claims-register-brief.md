@@ -325,11 +325,18 @@ allows 600 requests per five minutes **per application**, which is why
 `register_lookup_rate_limit_per_hour` exists — it is the only rate limit in the
 codebase whose job is protecting other tenants rather than us.
 
-**Northern Ireland (CCNI) is deliberately not built.** It has no per-charity
-JSON API, only a CSV export, so it needs an operator-refreshed
-`ref_ni_charities` snapshot rather than a live lookup — a different shape from
-the other three. The UI says so plainly rather than letting an NI charity
-discover it by failing. Roughly half a day if wanted.
+**Northern Ireland (CCNI) — built 14 Aug 2026, snapshot-shaped as planned.**
+It has no per-charity JSON API, only a CSV export, so the lookup reads an
+operator-refreshed `ref_ccni_charities` snapshot (migration 0021) loaded with
+`railway ssh --service api "python -m app.claims.ccni"` — the loader downloads
+CCNI's own export, or takes a file/URL argument if that endpoint drifts, and
+replaces the table whole (a partial register that looks complete being worse
+than last week's complete one). A local read spends no shared allowance, so
+it is the one import route with no rate limit. Review dates derive from the
+snapshot's loaded date — its only honest freshness anchor — except finance,
+which ages to the next NI filing deadline after the snapshot. The trade is
+freshness, and the register picker's hint says so: a very recent change may
+not show until the operator refreshes.
 
 **Outstanding before Scotland works in anger:** the OSCR key is issued on an
 approval request rather than self-serve, so it has lead time. And the OSCR API

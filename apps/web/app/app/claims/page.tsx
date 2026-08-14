@@ -296,7 +296,8 @@ function ClaimsPageInner() {
         >
           Open Government Licence v3.0
         </Link>{" "}
-        by Companies House, the Charity Commission for England and Wales, and OSCR.
+        by Companies House, the Charity Commission for England and Wales, OSCR, and the Charity
+        Commission for Northern Ireland.
       </p>
     </div>
   );

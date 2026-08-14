@@ -23,10 +23,12 @@ import asyncpg
 from fastapi import APIRouter, Depends
 
 from app.audit import write_audit
+from app.claims.ccni import fetch_ccni
 from app.claims.registers import fetch_charity_commission, fetch_companies_house, fetch_oscr
 from app.claims.schemas import (
     COMPANY_NUMBER,
     EW_CHARITY_NUMBER,
+    NI_CHARITY_NUMBER,
     SCOTTISH_CHARITY_NUMBER,
     ClaimIn,
     ClaimKindOut,
@@ -157,8 +159,10 @@ async def _import(
     body: RegisterImportIn,
     ctx: TenantContext,
     conn: asyncpg.Connection,
+    *,
+    shared_allowance: bool = True,
 ) -> RegisterImportOut:
-    """Shared body of the three import routes.
+    """Shared body of the four import routes.
 
     The dead-record gate lives here rather than in each client: a dissolved
     company and a removed charity both return complete, plausible data, and a
@@ -166,8 +170,13 @@ async def _import(
     this feature could produce. Overriding it is possible — a dissolved
     predecessor entity is a real thing to want on file — but it has to be asked
     for, and the answer says which status it was overridden from.
+
+    `shared_allowance` is the rate-limit switch: three registers spend
+    platform-wide API keys; the CCNI snapshot is a local read and spends
+    nothing another workspace needs.
     """
-    await rate_limiter.check_register_lookup(ctx.tenant_id)
+    if shared_allowance:
+        await rate_limiter.check_register_lookup(ctx.tenant_id)
     found = await fetcher(number)
     if not found.active and not body.allow_inactive:
         raise ApiError(
@@ -247,6 +256,30 @@ async def import_oscr(
         body.number, SCOTTISH_CHARITY_NUMBER, "a Scottish charity number like SC012345"
     )
     return await _import(fetch_oscr, number, body, ctx, conn)
+
+
+@router.post("/claims/import/ccni", response_model=RegisterImportOut)
+async def import_ccni(
+    body: RegisterImportIn,
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Northern Ireland, from the operator-refreshed snapshot.
+
+    CCNI publishes no lookup API, so this reads `ref_ccni_charities` — loaded
+    by the operator from the register's bulk export (`python -m
+    app.claims.ccni`). A local read spends no shared allowance, hence no rate
+    limit; the trade is freshness, which is why review dates on these claims
+    derive from the snapshot's own loaded date.
+    """
+    number = _normalise(
+        body.number, NI_CHARITY_NUMBER, "a Northern Ireland charity number like NIC100012"
+    ).removeprefix("NIC")
+
+    async def fetcher(n: str):
+        return await fetch_ccni(conn, n)
+
+    return await _import(fetcher, number, body, ctx, conn, shared_allowance=False)
 
 
 def _normalise(raw: str, pattern: str, expected: str) -> str:

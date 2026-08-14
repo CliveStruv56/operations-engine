@@ -117,13 +117,6 @@ export function ImportPanel({
         />
       </div>
 
-      {/* Northern Ireland has no per-charity lookup, so say so here rather
-          than letting somebody discover it by failing. */}
-      <p className="text-xs text-ink-faint">
-        Registered in Northern Ireland? CCNI is not covered yet — a company number still works if
-        you have one, and everything else can be added by hand.
-      </p>
-
       {inactive && (
         <div className="rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">
           <p>{inactive}</p>

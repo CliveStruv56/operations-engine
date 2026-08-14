@@ -12,14 +12,16 @@ from datetime import date, timedelta
 from pathlib import Path
 from uuid import uuid4
 
+import asyncpg
 import httpx
 import pytest
 
 from app.claims import registers
+from app.claims.ccni import load_snapshot, parse_snapshot_csv
 from app.claims.service import load_kinds, render_statement
 from app.config import get_settings
 from app.db import db
-from tests.conftest import auth
+from tests.conftest import OWNER_URL, auth
 
 # Worker CI has no Postgres, so the worker's DB-touching claims modules
 # (asyncpg + pydantic only) are imported across the monorepo and exercised
@@ -1290,3 +1292,98 @@ async def test_a_harvested_fact_the_register_already_holds_is_not_reproposed(cli
             conn, str(a.id), None, str(a.owner_id), [fact], source="draft"
         )
     assert (first, second) == (1, 0)
+
+
+# -- CCNI snapshot (Northern Ireland) -----------------------------------------
+
+CCNI_CSV = "\ufeff" + (
+    "Reg charity number,Sub charity number,Charity name,Date registered,Status,"
+    "Public address,Website,Company number,Total income,Total spending,"
+    "Date for financial year ending,Charitable purposes,What the charity does,"
+    "Who the charity helps,Charity trustees\n"
+    '100012,0,Lagan Meadows Trust,2014-05-12,Registered,"4 Quay Street, Belfast, BT1 3AA",'
+    'https://laganmeadows.example,NI654321,"£210,450","£198,200",2025-03-31,'
+    '"The advancement of environmental protection","Community meals and a repair cafe",'
+    '"Older people","Mr John Smith, Mrs Jane Doe"\n'
+    "100012,1,Lagan Meadows Trust Sub Fund,2015-01-01,Registered,,,,,,,,,,\n"
+    "100099,0,Closed Down Community Group,2011-02-02,Removed,,,,,,,,,,\n"
+)
+
+
+async def _load_ccni_snapshot() -> None:
+    conn = await asyncpg.connect(OWNER_URL)
+    try:
+        await load_snapshot(conn, parse_snapshot_csv(CCNI_CSV), source="test-fixture")
+    finally:
+        await conn.close()
+
+
+def test_ccni_csv_parses_defensively():
+    rows = parse_snapshot_csv(CCNI_CSV)
+    # The sub-charity row is the same organisation again; one row per charity.
+    assert [r.reg_number for r in rows] == ["100012", "100099"]
+    row = rows[0]
+    assert row.name == "Lagan Meadows Trust"
+    assert row.total_income == 210450.0
+    assert row.total_spending == 198200.0
+    assert str(row.financial_year_end) == "2025-03-31"
+    assert row.trustees == ("Mr John Smith", "Mrs Jane Doe")
+
+
+async def test_ccni_import_reads_the_snapshot(client, two_tenants):
+    a, _ = two_tenants
+    await _load_ccni_snapshot()
+    resp = await client.post(
+        "/api/v1/claims/import/ccni",
+        json={"number": "nic 100012"},  # letterhead spelling normalises
+        headers=auth(a.owner_id, a.id),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["register_key"] == "ccni"
+    assert "regId=100012" in body["source_url"]
+    by_kind = {c["kind"]: c for c in body["proposed"]}
+    assert by_kind["registered_name"]["value"] == "Lagan Meadows Trust"
+    # The NIC prefix is how the number is written everywhere it is asked for.
+    assert by_kind["charity_number"]["value"] == "NIC100012"
+    assert "Quay Street" in by_kind["registered_office"]["value"]
+    assert by_kind["annual_income"]["value"] == 210450.0
+    # Finance ages with the NI filing calendar — the next ten-months-after-
+    # year-end deadline that falls after the snapshot, when CCNI's published
+    # figures should next change (the reported year's own deadline is past).
+    assert by_kind["annual_expenditure"]["next_review"] == "2027-01-31"
+    trustees = sorted(c["subject"] for c in body["proposed"] if c["kind"] == "trustee")
+    assert trustees == ["Mr John Smith", "Mrs Jane Doe"]
+    # Identity facts age from the snapshot's own refresh, its only honest anchor.
+    review = date.fromisoformat(by_kind["registered_name"]["next_review"])
+    assert review.year == date.today().year + 1
+
+
+async def test_ccni_removed_charity_is_gated(client, two_tenants):
+    a, _ = two_tenants
+    await _load_ccni_snapshot()
+    headers = auth(a.owner_id, a.id)
+    resp = await client.post(
+        "/api/v1/claims/import/ccni", json={"number": "100099"}, headers=headers
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "register_record_inactive"
+    resp = await client.post(
+        "/api/v1/claims/import/ccni",
+        json={"number": "100099", "allow_inactive": True},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["inactive"] is True
+
+
+async def test_ccni_unknown_number_names_the_snapshot(client, two_tenants):
+    a, _ = two_tenants
+    await _load_ccni_snapshot()
+    resp = await client.post(
+        "/api/v1/claims/import/ccni",
+        json={"number": "999999"},
+        headers=auth(a.owner_id, a.id),
+    )
+    assert resp.status_code == 404
+    assert "snapshot" in resp.json()["error"]["message"]

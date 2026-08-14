@@ -83,11 +83,17 @@
 > ```sh
 > railway ssh --service api --environment production "python -m app.grants.seeds"
 > railway ssh --service api --environment production "python -m app.groundwork.seeds"
+> railway ssh --service api --environment production "python -m app.refdata.seeds"
+> railway ssh --service api --environment production "python -m app.claims.ccni"
 > ```
 >
-> Both upsert by key, so re-running is safe. Grantwork's prints a warning that
+> All upsert by key, so re-running is safe. Grantwork's prints a warning that
 > all 13 catalogue rows are `status='unverified'` and stale — that is by
-> design (ASSUMPTIONS #24), not a failed seed.
+> design (ASSUMPTIONS #24), not a failed seed. `app.claims.ccni` is different
+> in kind: it **downloads** the Northern Ireland charity register export and
+> replaces the snapshot whole, so it is a periodic operator refresh (monthly
+> is fine), not a one-off seed — and it takes a file path or URL argument if
+> CCNI's export endpoint drifts.
 >
 > `railway ssh` may print a one-time "Railway agent tooling not detected"
 > notice instead of running; just issue the command again.
