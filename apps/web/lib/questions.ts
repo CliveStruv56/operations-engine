@@ -95,6 +95,20 @@ export const transcribeQuestions = (source: string) =>
     body: JSON.stringify({ source }),
   });
 
+export type FetchedFormPage = {
+  url: string;
+  title: string | null;
+  text: string;
+  truncated: boolean;
+};
+
+/** Pre-fill for the transcribe box — an assist, never a saved set. */
+export const fetchFormPage = (url: string) =>
+  qs<FetchedFormPage>("/question-sets/fetch", {
+    method: "POST",
+    body: JSON.stringify({ url }),
+  });
+
 export const createQuestionSet = (body: QuestionSetBody) =>
   qs<QuestionSet>("/question-sets", { method: "POST", body: JSON.stringify(body) });
 

@@ -59,6 +59,20 @@ class RateLimiter:
             "Upload limit reached, retry later",
         )
 
+    async def check_form_fetch(self, tenant_id: UUID) -> None:
+        """Form-page fetches, which spend the platform-wide Exa key per call.
+
+        Same reasoning as register lookups: the allowance being protected is
+        shared, so one workspace pasting URLs in a loop must not spend every
+        other workspace's search budget.
+        """
+        await self._check(
+            f"rl:formfetch:{tenant_id}",
+            get_settings().form_fetch_rate_limit_per_hour,
+            3600,
+            "Too many page fetches — try again later, or paste the text",
+        )
+
     async def check_register_lookup(self, tenant_id: UUID) -> None:
         """Public-register lookups, which spend a platform-wide allowance.
 

@@ -15,9 +15,11 @@ import {
   Question,
   QuestionSet,
   createQuestionSet,
+  fetchFormPage,
   suggestKey,
   transcribeQuestions,
 } from "@/lib/questions";
+import { useWorkspace } from "../workspace";
 import { QuestionRow } from "./question-row";
 
 const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
@@ -32,6 +34,7 @@ export function TranscribePanel({
   onSaved: (set: QuestionSet) => void;
   onCancel: () => void;
 }) {
+  const ws = useWorkspace();
   const [source, setSource] = useState("");
   const [questions, setQuestions] = useState<Question[] | null>(null);
   const [hint, setHint] = useState<{ missing: number; inSource: number } | null>(null);
@@ -41,6 +44,35 @@ export function TranscribePanel({
   const [sourceUrl, setSourceUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fetchUrl, setFetchUrl] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [fetchNote, setFetchNote] = useState<string | null>(null);
+
+  // Same egress and the same commercial boundary as research mode, so the
+  // same flag — hidden entirely without it, like the chat mode strip.
+  const canFetch = ws.tenant?.features?.web_search === true;
+
+  async function fetchPage() {
+    setFetching(true);
+    setError(null);
+    setFetchNote(null);
+    try {
+      const page = await fetchFormPage(fetchUrl.trim());
+      setSource(page.text);
+      // The papercut this closes: the source URL is a required save field
+      // people forget, because they copy the text and not the address.
+      setSourceUrl(page.url);
+      setFetchNote(
+        `Fetched${page.title ? ` “${page.title}”` : " the page"}. Check it is the actual ` +
+          "questions — a “how to apply” page is often not the form." +
+          (page.truncated ? " The page carried more text than fits here; the end was cut." : "")
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setFetching(false);
+    }
+  }
 
   async function read() {
     setBusy(true);
@@ -99,6 +131,43 @@ export function TranscribePanel({
     <div className="space-y-4">
       {questions === null ? (
         <>
+          {canFetch && (
+            <div>
+              <div className="flex flex-wrap items-end gap-2">
+                <label className="min-w-0 flex-1 text-sm font-medium" htmlFor="fetch-url">
+                  Fetch from the funder&apos;s page
+                  <input
+                    id="fetch-url"
+                    type="url"
+                    value={fetchUrl}
+                    onChange={(e) => setFetchUrl(e.target.value)}
+                    placeholder="https://funder.org.uk/how-to-apply"
+                    className={`${input} mt-1 font-normal`}
+                  />
+                </label>
+                <button
+                  onClick={fetchPage}
+                  disabled={fetching || !fetchUrl.trim()}
+                  className={btn}
+                >
+                  {fetching ? (
+                    <>
+                      <Spinner className="mr-1.5" /> Fetching…
+                    </>
+                  ) : (
+                    "Fetch"
+                  )}
+                </button>
+              </div>
+              <p className="mt-1 text-xs text-ink-faint">
+                Works for ordinary web pages. A PDF or a page behind a login will not fetch —
+                paste those below as before.
+              </p>
+              {fetchNote && (
+                <p className="mt-2 rounded-[10px] bg-accent-soft px-3 py-2 text-xs">{fetchNote}</p>
+              )}
+            </div>
+          )}
           <div>
             <label className="text-sm font-medium" htmlFor="source">
               Paste the funder&apos;s questions

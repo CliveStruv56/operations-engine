@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.errors import ApiError
 
 EXA_SEARCH_URL = "https://api.exa.ai/search"
+EXA_CONTENTS_URL = "https://api.exa.ai/contents"
 # Keep each result roughly chunk-sized so a research prompt costs about the
 # same context as a vault retrieval.
 MAX_CONTENT_CHARS = 2_400
@@ -70,3 +71,51 @@ async def exa_search(
             )
         )
     return sources
+
+
+@dataclass(frozen=True)
+class FetchedPage:
+    title: str | None
+    url: str
+    text: str
+
+
+async def exa_contents(
+    url: str, *, max_chars: int, client: httpx.AsyncClient | None = None
+) -> FetchedPage | None:
+    """One page's text, by URL, fetched on Exa's infrastructure.
+
+    That location is the point (form-fetch PRD §2.4): the user-supplied
+    address is never dereferenced from inside our network, so there is no
+    SSRF surface here to defend — Railway's `*.internal` hosts are simply
+    unreachable from where the fetch happens. None = the page came back
+    empty (a PDF, a login wall, a JS-only portal), which the caller turns
+    into "paste it instead".
+    """
+    settings = get_settings()
+    if not settings.exa_api_key:
+        raise ApiError(503, "search_unavailable", "Web search is not configured")
+    payload = {"urls": [url], "text": {"maxCharacters": max_chars}}
+    headers = {"x-api-key": settings.exa_api_key}
+    try:
+        if client is None:
+            async with httpx.AsyncClient(timeout=TIMEOUT_S) as own:
+                resp = await own.post(EXA_CONTENTS_URL, json=payload, headers=headers)
+        else:  # injected in tests (httpx.MockTransport)
+            resp = await client.post(EXA_CONTENTS_URL, json=payload, headers=headers)
+        resp.raise_for_status()
+    except httpx.HTTPError as exc:
+        raise ApiError(502, "fetch_failed", "Could not fetch that page — try again") from exc
+
+    results = resp.json().get("results", [])
+    first = results[0] if results else None
+    if not isinstance(first, dict):
+        return None
+    text = (first.get("text") or "").strip()
+    if not text:
+        return None
+    return FetchedPage(
+        title=first.get("title") or None,
+        url=first.get("url") or url,
+        text=text,
+    )

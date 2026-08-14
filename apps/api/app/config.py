@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # this is generous for real use and still bounds the damage a loop could do
     # to an allowance every other workspace shares.
     register_lookup_rate_limit_per_hour: int = 10
+    # Form-page fetches spend the platform Exa key per call, like register
+    # lookups spend the platform register keys — bounded for the same reason.
+    form_fetch_rate_limit_per_hour: int = 20
 
     # Comma-separated browser origins; prod sets the tenant-facing domain(s).
     # Wildcards are rejected — origins must be enumerated explicitly.

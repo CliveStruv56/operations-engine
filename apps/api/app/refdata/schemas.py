@@ -6,7 +6,7 @@ Per CLAUDE.md, models live here rather than inline in routers.
 from datetime import date
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, HttpUrl
 
 
 class Question(BaseModel):
@@ -47,6 +47,31 @@ class TranscribeOut(BaseModel):
     questions: list[Question]
     limits_missing: int
     limits_in_source: int
+
+
+class FormFetchIn(BaseModel):
+    """A funder page's address, typed by the person who found it.
+
+    `HttpUrl` bounds the scheme to http/https at the model — everything else
+    (file:, gopher:, a bare hostname) is a 422 before any code runs. The
+    fetch itself happens on Exa's infrastructure, never from our network.
+    """
+
+    url: HttpUrl
+
+
+class FormFetchOut(BaseModel):
+    """Text for the paste box — an assist, never a saved set (PRD §3).
+
+    `truncated` is surfaced rather than silent because the cut end is where
+    the limits tend to live, and a reviewer should know the page carried
+    more than the box could take.
+    """
+
+    url: str
+    title: str | None
+    text: str
+    truncated: bool
 
 
 class QuestionSetIn(BaseModel):

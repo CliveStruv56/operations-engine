@@ -1,10 +1,17 @@
 # Feature Build Spec — Fetch a funder's form from its URL ("Form fetch")
 ## Flowgrid OS · Feature on the question-set surface · Mini-PRD
 
-**Version:** 0.1 (mini-PRD) · 12 August 2026
-**Status:** Researched, **not approved for build**. Raised by a pilot user on 12 Aug
-after transcribing a form by hand: "if we have the funder's website, can it extract
-the form automatically?"
+**Version:** 0.1 (mini-PRD) · 12 August 2026 · **Built 14 August 2026** (approved same day)
+**Status:** Shipped as specced: `POST /api/v1/question-sets/fetch` (Exa contents-by-URL,
+so the user's address is never dereferenced from inside our network — the §2.4 SSRF
+surface never existed to defend), a fetch row above the transcribe paste box shown only
+with `web_search`, per-fetch `usage_events` metering, a per-tenant rate limit
+(`FORM_FETCH_RATE_LIMIT_PER_HOUR`, default 20/hr — platform Exa key, same reasoning as
+register lookups), truncation at the paste box's 24k cap surfaced rather than silent,
+and the fetched URL pre-filling the required source-URL save field (§1's papercut).
+§3 held: fetch pre-fills the box; review, transcribe and save are unchanged. §5's
+out-of-scope list is untouched. Originally raised by a pilot user on 12 Aug after
+transcribing a form by hand.
 **Prerequisite:** Question sets, shipped 11 Aug (`app/refdata/`, `/app/forms`).
 **Feature flag:** reuse `tenants.features->>'web_search'` — the same egress and the
 same commercial boundary. No new flag.

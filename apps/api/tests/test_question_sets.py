@@ -825,3 +825,115 @@ async def test_the_sheet_counts_what_the_register_answered(
     assert sheet["from_register"] == 1
     assert [a["origin"] for a in sheet["answers"]] == ["claim", "claim_assisted", "drafted"]
     assert sheet["answers"][0]["claim_ids"] == [claim_id]
+
+
+# -- form fetch (URL -> paste box pre-fill) -----------------------------------
+
+
+async def _enable_web_search(tenant) -> None:
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            """update tenants set features = features || '{"web_search": true}' where id = $1""",
+            tenant.id,
+        )
+
+
+async def test_fetch_is_gated_on_web_search(client):
+    """Same egress and the same commercial boundary as research mode, so the
+    same cross-cutting 400 — not a 404 router."""
+    t = await seed_tenant(client, f"ffoff-{uuid4().hex[:6]}")
+    resp = await client.post(
+        "/api/v1/question-sets/fetch",
+        json={"url": "https://funder.example/how-to-apply"},
+        headers=auth(t.owner_id, t.id),
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "feature_disabled"
+
+
+async def test_fetch_prefills_and_meters(client, monkeypatch):
+    from app.search import FetchedPage
+
+    t = await seed_tenant(client, f"ffon-{uuid4().hex[:6]}")
+    await _enable_web_search(t)
+
+    async def fake_contents(url, *, max_chars, client=None):
+        return FetchedPage(
+            title="How to apply", url=url, text="Q1. What will you do? (300 words)" + "x" * 30
+        )
+
+    monkeypatch.setattr("app.routers.question_sets.exa_contents", fake_contents)
+    resp = await client.post(
+        "/api/v1/question-sets/fetch",
+        json={"url": "https://funder.example/how-to-apply"},
+        headers=auth(t.owner_id, t.id),
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["title"] == "How to apply"
+    assert body["url"] == "https://funder.example/how-to-apply"
+    assert body["text"].startswith("Q1. What will you do?")
+    assert body["truncated"] is False
+
+    # Exa bills per call, so the fetch is metered like research searches.
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        searches = await conn.fetchval(
+            "select count(*) from usage_events where kind = 'search' and model = 'exa'"
+        )
+    assert searches == 1
+
+
+async def test_fetch_truncates_at_the_paste_box_cap(client, monkeypatch):
+    from app.routers.question_sets import FETCH_MAX_CHARS
+    from app.search import FetchedPage
+
+    t = await seed_tenant(client, f"fftr-{uuid4().hex[:6]}")
+    await _enable_web_search(t)
+
+    async def fake_contents(url, *, max_chars, client=None):
+        return FetchedPage(title=None, url=url, text="y" * max_chars)
+
+    monkeypatch.setattr("app.routers.question_sets.exa_contents", fake_contents)
+    resp = await client.post(
+        "/api/v1/question-sets/fetch",
+        json={"url": "https://funder.example/long"},
+        headers=auth(t.owner_id, t.id),
+    )
+    body = resp.json()
+    assert len(body["text"]) == FETCH_MAX_CHARS
+    assert body["truncated"] is True
+
+
+async def test_fetch_of_an_unreadable_page_is_honest_and_still_metered(client, monkeypatch):
+    """A PDF or a login wall comes back empty. The user is sent to the paste
+    box — and the Exa call is still spend (hard constraint 5)."""
+    t = await seed_tenant(client, f"ffpdf-{uuid4().hex[:6]}")
+    await _enable_web_search(t)
+
+    async def fake_contents(url, *, max_chars, client=None):
+        return None
+
+    monkeypatch.setattr("app.routers.question_sets.exa_contents", fake_contents)
+    resp = await client.post(
+        "/api/v1/question-sets/fetch",
+        json={"url": "https://funder.example/form.pdf"},
+        headers=auth(t.owner_id, t.id),
+    )
+    assert resp.status_code == 422
+    assert resp.json()["error"]["code"] == "no_text"
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        searches = await conn.fetchval(
+            "select count(*) from usage_events where kind = 'search' and model = 'exa'"
+        )
+    assert searches == 1
+
+
+async def test_fetch_rejects_a_non_http_url(client):
+    t = await seed_tenant(client, f"ffbad-{uuid4().hex[:6]}")
+    await _enable_web_search(t)
+    resp = await client.post(
+        "/api/v1/question-sets/fetch",
+        json={"url": "file:///etc/passwd"},
+        headers=auth(t.owner_id, t.id),
+    )
+    assert resp.status_code == 422
