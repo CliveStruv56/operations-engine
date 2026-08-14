@@ -181,6 +181,15 @@ async def _request(
         raise ApiError(
             502, "register_failed", f"Could not reach the {register_label} register — try again"
         ) from exc
+    except ValueError as exc:
+        # A 200 whose body is not JSON — what a withdrawn Azure APIM operation
+        # returns. An ApiError keeps `_optional_request` optional and turns a
+        # primary-call failure into a clean 502 instead of a 500.
+        raise ApiError(
+            502,
+            "register_failed",
+            f"The {register_label} register returned an unreadable response — try again",
+        ) from exc
 
 
 async def _optional_request(
@@ -669,10 +678,14 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
                     review_on=review,
                 )
             )
+    # Each figure falls back on its own absence: an annual return that carries
+    # income but no expenditure line must not discard the detail record's
+    # expenditure figure.
     if not any(f.kind == "annual_income" for f in facts):
         latest = _pick(detail, "mostRecentYearIncome")
         if isinstance(latest, (int, float)):
             add("annual_income", float(latest), as_of=year_end, review_on=finance_review)
+    if not any(f.kind == "annual_expenditure" for f in facts):
         spent = _pick(detail, "mostRecentYearExpenditure")
         if isinstance(spent, (int, float)):
             add("annual_expenditure", float(spent), as_of=year_end, review_on=finance_review)

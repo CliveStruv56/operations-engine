@@ -441,6 +441,69 @@ async def test_oscr_import_survives_a_charity_with_no_annual_return(
     assert "employees_headcount" not in kinds
 
 
+async def test_oscr_expenditure_falls_back_independently_of_income(
+    client, two_tenants, register_keys, monkeypatch
+):
+    """An annual return can carry an income line and no expenditure at all.
+
+    The detail record's mostRecentYearExpenditure must still come through —
+    each figure falls back on its own absence, not the other's.
+    """
+    a, _ = two_tenants
+    income_only_returns = [{"year_end": "2026-03-31", "income": 210000}]
+    detail = [{**OSCR_CHARITY[0], "mostRecentYearExpenditure": 195000}]
+    resp = await _import(
+        client,
+        a,
+        monkeypatch,
+        "oscr",
+        "fetch_oscr",
+        {"/annualreturns": income_only_returns, "/all_charities": detail},
+        "SC012345",
+    )
+    assert resp.status_code == 200, resp.text
+    proposed = resp.json()["proposed"]
+    incomes = [c for c in proposed if c["kind"] == "annual_income"]
+    assert [c["value"] for c in incomes] == [210000.0]
+    spends = [c for c in proposed if c["kind"] == "annual_expenditure"]
+    assert [c["value"] for c in spends] == [195000.0]
+
+
+async def test_charity_commission_import_survives_a_non_json_optional_response(
+    client, two_tenants, register_keys, monkeypatch
+):
+    """A withdrawn Azure APIM operation answers 200 with an HTML body.
+
+    The optional governing-document/overview calls exist to be skippable; an
+    unreadable body must be skipped like a 404, not 500 the whole import.
+    """
+    a, _ = two_tenants
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/allcharitydetailsV2/1234567/0"):
+            return httpx.Response(200, json=CHARITY_DETAIL)
+        if request.url.path.endswith("/charitytrustees/1234567/0"):
+            return httpx.Response(200, json=CHARITY_TRUSTEES)
+        return httpx.Response(200, text="<html>This operation has been retired.</html>")
+
+    transport = httpx.MockTransport(handler)
+    real = registers.fetch_charity_commission
+
+    async def patched(num: str, *, client=None):
+        async with httpx.AsyncClient(transport=transport) as mock:
+            return await real(num, client=mock)
+
+    monkeypatch.setattr("app.routers.claims.fetch_charity_commission", patched)
+    resp = await client.post(
+        "/api/v1/claims/import/charity-commission",
+        json={"number": "1234567"},
+        headers=auth(a.owner_id, a.id),
+    )
+    assert resp.status_code == 200, resp.text
+    kinds = {c["kind"] for c in resp.json()["proposed"]}
+    assert "registered_name" in kinds
+
+
 async def test_dissolved_record_is_refused_until_asked_for(
     client, two_tenants, register_keys, monkeypatch
 ):

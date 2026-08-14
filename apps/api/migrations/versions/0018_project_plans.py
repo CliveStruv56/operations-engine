@@ -27,9 +27,7 @@ CORE_TABLES = ["project_tasks"]
 
 
 def upgrade() -> None:
-    op.execute(
-        "alter table projects add column has_plan boolean not null default false"
-    )
+    op.execute("alter table projects add column has_plan boolean not null default false")
     op.execute(
         """
         create table project_tasks (
@@ -49,8 +47,7 @@ def upgrade() -> None:
     )
     op.execute("create index on project_tasks (tenant_id, project_id, status)")
     op.execute(
-        "create index on project_tasks (tenant_id, due_date)"
-        " where status in ('todo', 'doing')"
+        "create index on project_tasks (tenant_id, due_date) where status in ('todo', 'doing')"
     )
     enable_tenant_rls(CORE_TABLES)
 
