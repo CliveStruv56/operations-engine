@@ -136,7 +136,13 @@ export function BidPackTab({ id }: { id: string }) {
                         type="file"
                         accept=".pdf,.docx,.xlsx"
                         className="hidden"
-                        onChange={(e) => e.target.files?.[0] && upload(doc, e.target.files[0])}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) upload(doc, file);
+                          // Re-selecting the same file (a failed PUT, a
+                          // corrected copy) must still fire a change event.
+                          e.target.value = "";
+                        }}
                       />
                     </label>
                     {doc.ai_draftable && (

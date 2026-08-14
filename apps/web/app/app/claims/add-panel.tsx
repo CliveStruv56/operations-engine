@@ -131,6 +131,7 @@ export function AddFactPanel({
         <label className="block text-sm">
           Which one
           <input
+            required
             value={subject}
             onChange={(e) => setSubject(e.target.value)}
             placeholder="e.g. Public liability, a trustee's name"
@@ -154,6 +155,7 @@ export function AddFactPanel({
       <label className="block text-sm">
         Value
         <input
+          required
           type={kind?.value_kind === "date" ? "date" : kind?.value_kind === "number" || kind?.value_kind === "money" ? "number" : "text"}
           value={rawValue}
           onChange={(e) => setRawValue(e.target.value)}
@@ -203,7 +205,18 @@ export function AddFactPanel({
       )}
 
       <div className="flex items-center gap-3">
-        <button type="submit" disabled={busy || !statement.trim()} className={btn}>
+        <button
+          type="submit"
+          // An empty value renders a non-empty statement ("…trades as .")
+          // from the template, so the statement check alone is not enough.
+          disabled={
+            busy ||
+            !statement.trim() ||
+            !rawValue.trim() ||
+            (kind?.cardinality === "multi" && !subject.trim())
+          }
+          className={btn}
+        >
           {busy ? <Spinner /> : "Add this fact"}
         </button>
         <button type="button" onClick={onCancel} className={btnGhost}>

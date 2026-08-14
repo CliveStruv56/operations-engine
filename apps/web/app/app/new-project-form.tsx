@@ -46,9 +46,20 @@ export default function NewProjectForm({
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
+    // A task typed but not yet added with the button still counts — Create
+    // must not silently discard it.
+    const pending = taskTitle.trim()
+      ? [
+          {
+            title: taskTitle.trim(),
+            due_date: taskDue || null,
+            assignee_membership_id: taskAssignee || null,
+          },
+        ]
+      : [];
     const created = await ws.createProject(name, {
       kind,
-      tasks: kind === "planned" ? seeds : undefined,
+      tasks: kind === "planned" ? [...seeds, ...pending] : undefined,
     });
     setBusy(false);
     if (created) onCreated(created.id);

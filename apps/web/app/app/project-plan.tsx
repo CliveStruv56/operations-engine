@@ -116,8 +116,23 @@ export default function ProjectPlanPanel({
     const i = open.findIndex((t) => t.id === task.id);
     const swap = open[i + dir];
     if (!swap) return;
-    await patch(task, { position: swap.position });
-    await patch(swap, { position: task.position });
+    try {
+      await patchPlanTask(projectId, task.id, tenantId, { position: swap.position });
+      try {
+        await patchPlanTask(projectId, swap.id, tenantId, { position: task.position });
+      } catch (err) {
+        // Undo the half-applied swap or two tasks share a position and the
+        // order falls back to the created_at tiebreak.
+        await patchPlanTask(projectId, task.id, tenantId, { position: task.position }).catch(
+          () => undefined
+        );
+        throw err;
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      await reload();
+    }
   }
 
   if (!hasPlan) {

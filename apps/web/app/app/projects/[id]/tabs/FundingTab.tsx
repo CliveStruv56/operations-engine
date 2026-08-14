@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Funding, Programme, fmtDate, fmtMoney, gw } from "@/lib/groundwork";
 import { LoadError, useGwLoad } from "./load";
 import { btn, btnGhost, input } from "./ui";
@@ -66,8 +66,8 @@ export function FundingTab({ id }: { id: string }) {
           </thead>
           <tbody className="divide-y divide-line">
             {stack.map((f) => (
-              <>
-                <tr key={f.id} onClick={() => setExpanded(expanded === f.id ? null : f.id)} className="cursor-pointer hover:bg-accent-soft">
+              <Fragment key={f.id}>
+                <tr onClick={() => setExpanded(expanded === f.id ? null : f.id)} className="cursor-pointer hover:bg-accent-soft">
                   <td className="px-3 py-2 font-medium">
                     {f.name}
                     {f.funder && <span className="block text-xs font-normal text-ink-faint">{f.funder}</span>}
@@ -122,7 +122,7 @@ export function FundingTab({ id }: { id: string }) {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
           </tbody>
         </table>
