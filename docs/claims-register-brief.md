@@ -344,9 +344,23 @@ treats trustees as an optional block for that reason.
 ## 14. Proposed follow-ups
 
 Both were asked for on 12 Aug 2026. **§14.1 step 1 and all of §14.2 are now
-built** (branch `claims-summary-badge`, ASSUMPTIONS #44 and #45). Only §14.1
-steps 2 and 3 — the scheduled sweep and email — remain unbuilt, and both are
-blocked on infrastructure that does not exist.
+built** (branch `claims-summary-badge`, ASSUMPTIONS #44 and #45).
+
+> **Steps 2 and 3 built, 14 Aug 2026.** The infrastructure decision they were
+> blocked on was taken once, deliberately: **Resend** as the platform email
+> transport (plain httpx, no SDK; empty key = disabled; `app/email.py` with a
+> deliberate worker mirror in `worker/email.py`) and **arq `cron_jobs`** as
+> the scheduler. Step 2: a daily 06:10 UTC sweep (`worker/claims/sweep.py`,
+> tenant discovery via the owner-run `claims_sweep_tenants()` in migration
+> 0020) writes `claims.review_due` to `audit_log` at most once per tenant per
+> 7 days; `claims.%` was added to `FEED_PATTERNS` (the trap named below).
+> Step 3: a Monday 07:00 UTC digest to admins/owners, worst-first and capped
+> at ten lines, with a per-member preference (`memberships.digest_opt_out`)
+> and a signed pause/resume link served by `/api/v1/email/digest` — GET
+> confirms, POST acts, so a mail scanner's prefetch changes nothing. The same
+> transport now sends invite emails; the invite response carries `email_sent`
+> so the UI never pretends. The rule held: both consumers trigger on
+> needs-attention claims only.
 
 ### 14.1 Surfacing overdue claims on a regular basis
 

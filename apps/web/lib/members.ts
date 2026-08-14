@@ -10,6 +10,9 @@ export type Member = {
   role: "owner" | "admin" | "member";
   email: string | null;
   created_at: string;
+  // Read-only: the digest preference belongs to the recipient and is changed
+  // only through the signed link in the digest email itself.
+  digest_opt_out: boolean;
 };
 
 /**

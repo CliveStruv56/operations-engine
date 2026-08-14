@@ -7,7 +7,14 @@ import { Spinner } from "@/components/activity";
 import type { Member, MemberRemoved } from "@/lib/members";
 import type { Tenant } from "../workspace";
 
-type Invite = { id: string; email: string; role: string; token: string; expires_at: string };
+type Invite = {
+  id: string;
+  email: string;
+  role: string;
+  token: string;
+  expires_at: string;
+  email_sent: boolean;
+};
 
 const input = "rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
 const btn =
@@ -23,6 +30,7 @@ export default function Members({ tenant }: { tenant: Tenant }) {
   const [inviteRole, setInviteRole] = useState("member");
   const [inviting, setInviting] = useState(false);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [inviteEmailed, setInviteEmailed] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const isOwner = tenant.role === "owner";
@@ -54,6 +62,7 @@ export default function Members({ tenant }: { tenant: Tenant }) {
       );
       setInviteEmail("");
       setInviteLink(`${window.location.origin}/invite/${created.token}`);
+      setInviteEmailed(created.email_sent);
     } catch (err) {
       if (err instanceof ApiError && err.code === "seat_limit") {
         setError(`${err.message}. Remove a member or expired invite to free a seat.`);
@@ -237,7 +246,10 @@ export default function Members({ tenant }: { tenant: Tenant }) {
         </div>
       )}
       <p className="mt-2 text-xs text-ink-faint">
-        Send the link yourself — invite emails aren&apos;t wired up yet. Links expire after 7 days.
+        {inviteLink && inviteEmailed
+          ? "We've emailed the invite — the link here is a spare in case it doesn't arrive."
+          : "Send the link yourself — the invite hasn't been emailed."}{" "}
+        Links expire after 7 days.
       </p>
 
       {error && <p className="mt-3 text-sm text-danger">{error}</p>}

@@ -56,6 +56,12 @@ function phrase(i: ActivityItem): string | null {
     case "conversation.unshare":
       return "unshared a chat";
   }
+  if (i.action === "claims.review_due") {
+    const n = typeof i.meta.needs_attention === "number" ? i.meta.needs_attention : null;
+    return n === null
+      ? "flagged organisation facts for a check"
+      : `flagged ${n} organisation ${n === 1 ? "fact" : "facts"} for a check`;
+  }
   if (i.action.startsWith("projects.")) return "updated a development project";
   return null;
 }
@@ -100,7 +106,11 @@ export default function ActivityCard() {
           <li key={`${i.created_at}-${n}`} className="flex items-baseline gap-2 text-[12.5px]">
             <span className="min-w-0 truncate font-semibold text-subtle">
               <span className="font-bold text-ink">
-                {i.actor_email ? i.actor_email.split("@")[0] : "Someone"}
+                {i.actor_email
+                  ? i.actor_email.split("@")[0]
+                  : i.action.startsWith("claims.")
+                    ? "Flowgrid" // the sweep writes with no user — it wasn't a person
+                    : "Someone"}
               </span>{" "}
               {text}
             </span>

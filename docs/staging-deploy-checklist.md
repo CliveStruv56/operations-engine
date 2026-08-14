@@ -166,6 +166,10 @@ enough.
 | `STORAGE_ENDPOINT` | ✓ | ✓ | | `https://<account_id>.r2.cloudflarestorage.com` |
 | `STORAGE_BUCKET` / `_ACCESS_KEY` / `_SECRET_KEY` | ✓ | ✓ | | R2 token creds; `STORAGE_REGION=auto` |
 | `SENTRY_DSN` / `ENVIRONMENT` | ✓ | ✓ | | `staging` |
+| `RESEND_API_KEY` / `EMAIL_FROM` | ✓ | ✓ | | empty = email off; sender domain must be verified in Resend first |
+| `EMAIL_UNSUBSCRIBE_SECRET` | ✓ | ✓ | | same value both sides — the API verifies links the worker signs; API boot refuses Resend without it |
+| `WEB_BASE_URL` | ✓ | ✓ | | staging web origin (links in email) |
+| `API_BASE_URL` | | ✓ | | staging API origin (the unsubscribe link's host) |
 | `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` | | | ✓ | |
 | `NEXT_PUBLIC_API_URL` | | | ✓ | staging API origin |
 | `NEXT_PUBLIC_STORAGE_ORIGIN` | | | ✓ | the R2 endpoint origin — presigned-URL open allowlist |
