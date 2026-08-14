@@ -35,6 +35,7 @@ none of it is read here, because the cheapest place to not hold something is
 before it arrives.
 """
 
+import json
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -71,7 +72,10 @@ SCOTTISH_FILING_MONTHS = 9
 
 #: Register values meaning the organisation is live. Anything else is gated.
 ACTIVE_COMPANY_STATUS = "active"
-ACTIVE_CHARITY_STATUSES = frozenset({"registered", "active"})
+ACTIVE_CHARITY_STATUSES = frozenset({"registered", "active", "r"})
+
+#: Live Azure APIM `reg_status` is a code; older docs and our fixtures used prose.
+_CC_REG_STATUS = {"R": "Registered", "RM": "Removed"}
 
 
 @dataclass(frozen=True)
@@ -179,6 +183,28 @@ async def _request(
         ) from exc
 
 
+async def _optional_request(
+    url: str,
+    headers: dict[str, str],
+    register_label: str,
+    *,
+    params: dict[str, str] | None = None,
+    auth: tuple[str, str] | None = None,
+    client: httpx.AsyncClient | None = None,
+) -> Any:
+    """A secondary register call that must not fail an import already in hand.
+
+    OSCR annual returns established the posture: a charity that exists but has
+    not filed, or an operation the portal has since dropped, still imports.
+    """
+    try:
+        return await _request(
+            url, headers, register_label, params=params, auth=auth, client=client
+        )
+    except ApiError:
+        return None
+
+
 def _require_key(key: str, register_label: str) -> str:
     if not key:
         raise ApiError(
@@ -223,10 +249,16 @@ def _address_line(address: dict[str, Any] | None) -> str | None:
             "care_of",
             "premises",
             "address_line_1",
+            "address_line_one",
             "address_line_2",
+            "address_line_two",
+            "address_line_three",
+            "address_line_four",
+            "address_line_five",
             "locality",
             "region",
             "postal_code",
+            "address_post_code",
             "country",
         )
     ]
@@ -327,6 +359,25 @@ async def fetch_companies_house(
 # --- Charity Commission for England and Wales --------------------------------
 
 
+def _pick(row: dict[str, Any], *keys: str) -> Any:
+    """First present, non-empty field. Live Azure APIM names and older docs differ."""
+    for key in keys:
+        if key not in row:
+            continue
+        value = row[key]
+        if value is None or value == "" or value == []:
+            continue
+        return value
+    return None
+
+
+def _cc_status(raw: Any) -> str:
+    text = _clean(raw)
+    if text is None:
+        return "unknown"
+    return _CC_REG_STATUS.get(text.upper(), text)
+
+
 async def fetch_charity_commission(
     number: str, *, client: httpx.AsyncClient | None = None
 ) -> RegisterFacts:
@@ -341,8 +392,12 @@ async def fetch_charity_commission(
         client=client,
     )
 
-    status = _clean(detail.get("charity_registration_status")) or "unknown"
-    year_end = _parse_date(detail.get("latest_acc_fin_period_end_date"))
+    status = _cc_status(
+        _pick(detail, "charity_registration_status", "reg_status")
+    )
+    year_end = _parse_date(
+        _pick(detail, "latest_acc_fin_period_end_date", "latest_acc_fin_year_end_date")
+    )
     finance_review = _months_after(year_end, EW_FILING_MONTHS)
     identity_review = finance_review
 
@@ -355,12 +410,16 @@ async def fetch_charity_commission(
     add("registered_name", _clean(detail.get("charity_name")), review_on=identity_review)
     add(
         "charity_number",
-        _clean(detail.get("reg_charity_number") or detail.get("registered_charity_number")),
+        _clean(
+            _pick(detail, "reg_charity_number", "registered_charity_number") or number
+        ),
         review_on=identity_review,
     )
     add(
         "company_number",
-        _clean(detail.get("charity_company_registration_number")),
+        _clean(
+            _pick(detail, "charity_company_registration_number", "charity_co_reg_number")
+        ),
         review_on=identity_review,
     )
     add("legal_form", _clean(detail.get("charity_type")), review_on=identity_review)
@@ -373,11 +432,32 @@ async def fetch_charity_commission(
     add(
         "registered_office",
         _address_line(detail.get("charity_contact_address"))
-        or _clean(detail.get("charity_contact_address")),
+        or _clean(detail.get("charity_contact_address"))
+        or _address_line(detail),
         review_on=identity_review,
     )
-    add("charitable_objects", _clean(detail.get("charity_objects")), review_on=identity_review)
-    add("activities", _clean(detail.get("charity_activities")), review_on=identity_review)
+    objects = _clean(detail.get("charity_objects"))
+    activities = _clean(detail.get("charity_activities"))
+    if objects is None:
+        governing = await _optional_request(
+            f"{CHARITY_COMMISSION_BASE}/charitygoverningdocument/{number}/0",
+            headers,
+            "Charity Commission",
+            client=client,
+        )
+        if isinstance(governing, dict):
+            objects = _clean(governing.get("charitable_objects"))
+    if activities is None:
+        overview = await _optional_request(
+            f"{CHARITY_COMMISSION_BASE}/charityoverview/{number}/0",
+            headers,
+            "Charity Commission",
+            client=client,
+        )
+        if isinstance(overview, dict):
+            activities = _clean(overview.get("activities"))
+    add("charitable_objects", objects, review_on=identity_review)
+    add("activities", activities, review_on=identity_review)
     add("accounts_year_end", year_end, review_on=finance_review)
     for key_name, kind in (
         ("latest_income", "annual_income"),
@@ -389,19 +469,29 @@ async def fetch_charity_commission(
 
     for source_key, kind in (
         ("area_of_operation", "area_of_operation"),
+        ("CharityAoORegion", "area_of_operation"),
+        ("CharityAoOLocalAuthority", "area_of_operation"),
+        ("CharityAoOCountryContinent", "area_of_operation"),
         ("who_what_where", "beneficiary_groups"),
     ):
-        raw = detail.get(source_key)
-        values = _string_list(raw)
+        if any(f.kind == kind for f in facts):
+            continue
+        values = _string_list(detail.get(source_key))
         if values:
             add(kind, values, review_on=identity_review)
 
-    trustees = await _request(
-        f"{CHARITY_COMMISSION_BASE}/charitytrustees/{number}/0",
-        headers,
-        "Charity Commission",
-        client=client,
-    )
+    # Live V2 embeds trustee_names. The older charitytrustees operation 404s
+    # on the current product; a missing list is normal (exemption), not a
+    # "number not on the register".
+    if "trustee_names" in detail:
+        trustees = detail.get("trustee_names")
+    else:
+        trustees = await _optional_request(
+            f"{CHARITY_COMMISSION_BASE}/charitytrustees/{number}/0",
+            headers,
+            "Charity Commission",
+            client=client,
+        )
     for trustee in _as_list(trustees):
         name = _clean(trustee.get("trustee_name") if isinstance(trustee, dict) else trustee)
         if name is None:
@@ -447,8 +537,8 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
         )
     detail = entries[0]
 
-    status = _clean(detail.get("charity_status") or detail.get("charityStatus")) or "unknown"
-    year_end = _parse_date(detail.get("year_end") or detail.get("yearEnd"))
+    status = _clean(_pick(detail, "charity_status", "charityStatus")) or "unknown"
+    year_end = _parse_date(_pick(detail, "year_end", "yearEnd"))
     finance_review = _months_after(year_end, SCOTTISH_FILING_MONTHS)
     identity_review = finance_review
 
@@ -460,58 +550,68 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
 
     add(
         "registered_name",
-        _clean(detail.get("charity_name") or detail.get("charityName")),
+        _clean(_pick(detail, "charity_name", "charityName")),
         review_on=identity_review,
     )
     add(
         "charity_number",
-        _clean(detail.get("charity_number") or detail.get("charityNumber")) or number,
+        _clean(_pick(detail, "charity_number", "charityNumber")) or number,
         review_on=identity_review,
     )
     add(
         "legal_form",
-        _clean(detail.get("constitutional_form") or detail.get("constitutionalForm")),
+        _clean(
+            _pick(
+                detail, "constitutional_form", "constitutionalForm", "currentConstitutionalForm"
+            )
+        ),
         review_on=identity_review,
     )
     add("registration_status", status, review_on=identity_review)
     add(
         "date_registered",
-        _parse_date(detail.get("registered_date") or detail.get("registeredDate")),
+        _parse_date(_pick(detail, "registered_date", "registeredDate")),
         review_on=identity_review,
     )
+    office = _pick(detail, "principal_office", "principalOffice")
+    contact = _clean(_pick(detail, "principalContactAddress"))
+    if contact and contact.lower() == "address withheld":
+        contact = None
     add(
         "registered_office",
-        _address_line(detail.get("principal_office"))
-        or _clean(detail.get("principal_office") or detail.get("principalOffice")),
+        _address_line(office) or _clean(office) or contact,
         review_on=identity_review,
     )
     add(
         "charitable_objects",
-        _clean(detail.get("objectives") or detail.get("purposes")),
+        _clean(detail.get("objectives")),
         review_on=identity_review,
     )
     add(
         "activities",
-        _clean(detail.get("activities")),
+        _clean(detail.get("activities"))
+        or (", ".join(_string_list(detail.get("typesOfActivities"))) or None),
         review_on=identity_review,
     )
     add("accounts_year_end", year_end, review_on=finance_review)
-    for source_key, kind in (
-        ("purposes", "area_of_operation"),
-        ("beneficiaries", "beneficiary_groups"),
-    ):
-        values = _string_list(detail.get(source_key))
-        if values and kind != "area_of_operation":
-            add(kind, values, review_on=identity_review)
+    values = _string_list(detail.get("beneficiaries"))
+    if values:
+        add("beneficiary_groups", values, review_on=identity_review)
     geographic = _string_list(
-        detail.get("geographical_spread") or detail.get("main_operating_location")
+        _pick(
+            detail,
+            "geographical_spread",
+            "geographicalSpread",
+            "main_operating_location",
+            "mainOperatingLocation",
+        )
     )
     if geographic:
         add("area_of_operation", geographic, review_on=identity_review)
 
-    # Trustee names have been published since 9 March 2026, but the API predates
-    # that change and a trustee may hold an exemption where publication would
-    # put them at risk. Absent is normal; it is never treated as an error.
+    # Trustee names have been on the public web register since 9 March 2026.
+    # The API still has no trustees operation (confirmed 14 Aug 2026 against
+    # Sanday Development Trust SC035495). Absent is normal; it is never an error.
     for trustee in _as_list(detail.get("trustees") or detail.get("charity_trustees")):
         name = _clean(trustee.get("trustee_name") if isinstance(trustee, dict) else trustee)
         if name is None:
@@ -520,7 +620,7 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
             RegisterFact(kind="trustee", subject=name, value={}, review_on=identity_review)
         )
 
-    charity_id = detail.get("charity_id") or detail.get("charityId") or number
+    charity_id = _pick(detail, "id", "charity_id", "charityId") or number
     try:
         returns = await _request(
             f"{OSCR_BASE}/annualreturns",
@@ -532,10 +632,14 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
     except ApiError:
         returns = []  # best effort: a charity that has not filed still imports
 
-    for entry in _as_list(returns):
-        if not isinstance(entry, dict):
-            continue
-        period_end = _parse_date(entry.get("year_end") or entry.get("yearEnd"))
+    filed = [e for e in _as_list(returns) if isinstance(e, dict)]
+    filed.sort(
+        key=lambda e: _parse_date(_pick(e, "year_end", "yearEnd", "AccountingReferenceDate"))
+        or date.min,
+        reverse=True,
+    )
+    for entry in filed[:5]:
+        period_end = _parse_date(_pick(entry, "year_end", "yearEnd", "AccountingReferenceDate"))
         if period_end is None:
             continue
         # A filed year is a slice of a series; the most recent one also stands
@@ -545,8 +649,12 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
         review = _months_after(period_end, SCOTTISH_FILING_MONTHS)
         for source_key, kind in (
             ("income", "annual_income"),
+            ("GrossIncome", "annual_income"),
             ("expenditure", "annual_expenditure"),
+            ("GrossExpenditure", "annual_expenditure"),
         ):
+            if any(f.kind == kind and f.period == period for f in facts):
+                continue
             raw = entry.get(source_key)
             if isinstance(raw, (int, float)):
                 facts.append(
@@ -558,8 +666,10 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
                         review_on=review,
                     )
                 )
-        staff = entry.get("staff") or entry.get("employees") or entry.get("number_of_employees")
-        if isinstance(staff, (int, float)):
+        staff = _pick(entry, "staff", "employees", "number_of_employees", "PaidStaff")
+        if isinstance(staff, (int, float)) and not any(
+            f.kind == "employees_headcount" and f.as_of == period_end for f in facts
+        ):
             facts.append(
                 RegisterFact(
                     kind="employees_headcount",
@@ -568,6 +678,13 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
                     review_on=review,
                 )
             )
+    if not any(f.kind == "annual_income" for f in facts):
+        latest = _pick(detail, "mostRecentYearIncome")
+        if isinstance(latest, (int, float)):
+            add("annual_income", float(latest), as_of=year_end, review_on=finance_review)
+        spent = _pick(detail, "mostRecentYearExpenditure")
+        if isinstance(spent, (int, float)):
+            add("annual_expenditure", float(spent), as_of=year_end, review_on=finance_review)
 
     return RegisterFacts(
         register="oscr",
@@ -580,6 +697,16 @@ async def fetch_oscr(number: str, *, client: httpx.AsyncClient | None = None) ->
 
 def _as_list(raw: Any) -> list[Any]:
     """Registers disagree about whether one result is a list or an object."""
+    if isinstance(raw, str):
+        # OSCR annualreturns returns a JSON array encoded as a JSON string.
+        text = raw.strip()
+        if text[:1] in "[{":
+            try:
+                raw = json.loads(text)
+            except json.JSONDecodeError:
+                return []
+        else:
+            return []
     if isinstance(raw, list):
         return raw
     if isinstance(raw, dict):
@@ -601,8 +728,11 @@ def _string_list(raw: Any) -> list[str]:
             if isinstance(item, dict):
                 text = _clean(
                     item.get("classification_description")
+                    or item.get("classification_desc")
                     or item.get("description")
                     or item.get("name")
+                    or item.get("country")
+                    or item.get("region")
                     or item.get("value")
                 )
             else:

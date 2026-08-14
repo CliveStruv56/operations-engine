@@ -6,8 +6,8 @@ Groundwork project is few and long-lived. `project_id` is the optional soft
 link back to a core project when a bid funds one.
 """
 
-import contextlib
 import json
+import logging
 from uuid import UUID
 
 import asyncpg
@@ -31,6 +31,7 @@ from app.sqlutil import patch_sets
 from app.tenant import TenantContext, get_conn
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 _SELECT = """
 select a.*, f.name as funder_name, p.name as project_name
@@ -318,18 +319,29 @@ async def set_status(
         str(application_id),
         {"status": body.status, "conditions_seeded": seeded},
     )
+    row = dict(await conn.fetchrow(f"{_SELECT} where a.id = $1", application_id))
     if body.status == "submitted":
         # Every bid an organisation sends restates the facts it will be asked
         # for again in six months, so submission is the natural moment to
         # offer them for the register — a by-product of work already finished
         # rather than a maintenance chore nobody gets round to.
         #
-        # Suppressed and outside the transaction on purpose: no queue, no
-        # Redis, or a worker that never runs must not be able to stop somebody
-        # recording that they submitted their application.
-        with contextlib.suppress(Exception):
+        # Outside the transaction on purpose: no queue, no Redis, or a worker
+        # that never runs must not be able to stop somebody recording that
+        # they submitted. The UI reads harvest_queued so a failed enqueue is
+        # not silent.
+        queued = False
+        try:
             await ingest_queue.enqueue_harvest(ctx.tenant_id, application_id, ctx.user_id)
-    return dict(await conn.fetchrow(f"{_SELECT} where a.id = $1", application_id))
+            queued = True
+        except Exception:
+            logger.exception(
+                "harvest enqueue failed tenant=%s application=%s",
+                ctx.tenant_id,
+                application_id,
+            )
+        row["harvest_queued"] = queued
+    return row
 
 
 @router.delete("/grants/applications/{application_id}", status_code=204)

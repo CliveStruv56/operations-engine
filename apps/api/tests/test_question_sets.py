@@ -533,6 +533,27 @@ async def test_verifying_is_the_one_thing_that_moves_the_date(client, question_s
     assert verified["next_review"] > verified["last_verified"]
 
 
+async def test_editing_questions_returns_a_verified_set_to_unverified(
+    client, question_set_ref_data
+):
+    """The tick was against a different form."""
+    tenant = await seed_tenant(client, "qseditunv")
+    h = auth(tenant.owner_id, tenant.id)
+    await client.post("/api/v1/question-sets", json=_set_body(), headers=h)
+    await client.patch("/api/v1/question-sets/ahf_eoi", json={"verified": True}, headers=h)
+    patched = await client.patch(
+        "/api/v1/question-sets/ahf_eoi",
+        json={
+            "questions": [
+                {"id": "q1", "order": 1, "text": "What is the building?", "limit": 400},
+            ]
+        },
+        headers=h,
+    )
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["status"] == "unverified"
+
+
 async def test_a_tenant_cannot_edit_or_delete_the_platform_catalogue(client, question_set_ref_data):
     """The curated library is the operator's. A workspace that wants it
     different transcribes its own copy."""

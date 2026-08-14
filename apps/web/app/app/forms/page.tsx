@@ -19,6 +19,7 @@ import {
   updateQuestionSet,
 } from "@/lib/questions";
 import { TranscribePanel } from "./transcribe-panel";
+import { EditFormPanel } from "./edit-panel";
 
 const card = "rounded-card border border-edge bg-card p-5 shadow-card";
 const btn =
@@ -33,6 +34,7 @@ function StageLabel({ stage }: { stage: QuestionSet["stage"] }) {
 
 function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const note = staleNote(set);
   const missing = set.questions.filter((q) => q.limit === null).length;
@@ -90,6 +92,13 @@ function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }
               </button>
             )}
             <button
+              onClick={() => setEditing((open) => !open)}
+              disabled={busy}
+              className={btnGhost}
+            >
+              {editing ? "Close" : "Edit"}
+            </button>
+            <button
               onClick={() => act(() => deleteQuestionSet(set.key))}
               disabled={busy}
               className={btnGhost}
@@ -105,6 +114,16 @@ function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }
       )}
       {error && (
         <p className="mt-2 rounded-[10px] bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
+      )}
+      {editing && (
+        <EditFormPanel
+          set={set}
+          onCancel={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            onChanged();
+          }}
+        />
       )}
     </li>
   );

@@ -173,6 +173,10 @@ async def update_question_set(
             add(column, value)
     if body.questions is not None:
         add("questions", json.dumps(validate_questions(body.questions)))
+        if not body.verified:
+            # Changing the questions is a new transcription. The old tick was
+            # against a different form, so the caveat has to come back.
+            sets.append("status = 'unverified'")
     if body.verified:
         # Verification is an act somebody performs. This is the endpoint where
         # they perform it, so it is the one place a date may move forward.

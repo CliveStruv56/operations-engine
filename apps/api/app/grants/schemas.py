@@ -175,6 +175,11 @@ class ApplicationOut(BaseModel):
     created_by: UUID | None
     created_at: datetime
     updated_at: datetime
+    #: Set only by POST .../status when moving to submitted. True if the
+    #: harvest job was queued; false if Redis/worker could not take it. The
+    #: application is submitted either way — harvesting must not be able to
+    #: fail that act. Null on every other read.
+    harvest_queued: bool | None = None
 
 
 class PortfolioRow(BaseModel):

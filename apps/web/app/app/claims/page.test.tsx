@@ -6,6 +6,8 @@ import type { Claim } from "@/lib/claims";
 
 const listClaims = vi.fn();
 const updateClaim = vi.fn();
+const listClaimKinds = vi.fn();
+const createClaim = vi.fn();
 const listMembers = vi.fn();
 const push = vi.fn();
 // Mutable so a test can put the page on ?owner=none, which is how Settings
@@ -15,6 +17,8 @@ const searchParams = { current: new URLSearchParams() };
 vi.mock("@/lib/claims", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/claims")>()),
   listClaims: () => listClaims(),
+  listClaimKinds: () => listClaimKinds(),
+  createClaim: (...args: unknown[]) => createClaim(...args),
   updateClaim: (...args: unknown[]) => updateClaim(...args),
 }));
 vi.mock("@/lib/members", async (importOriginal) => ({
@@ -187,5 +191,47 @@ describe("the facts nobody looks after", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: /show everything/i }));
     expect(push).toHaveBeenCalledWith("/app/claims");
+  });
+});
+
+const KIND = {
+  key: "trading_name",
+  label: "Trading name",
+  category: "identity" as const,
+  value_kind: "text" as const,
+  unit: null,
+  cardinality: "single" as const,
+  periodic: false,
+  review_days: 365,
+  statement_template: "The organisation trades as {value}.",
+  question_hints: [],
+  register_key: null,
+  notes: null,
+};
+
+describe("adding a fact by hand", () => {
+  beforeEach(() => {
+    listClaims.mockReset().mockResolvedValue([]);
+    listClaimKinds.mockReset().mockResolvedValue([KIND]);
+    createClaim.mockReset().mockResolvedValue({ id: "c-new" });
+    listMembers.mockReset().mockResolvedValue([]);
+    searchParams.current = new URLSearchParams();
+  });
+
+  it("lets somebody type a fact the registers do not publish", async () => {
+    render(withWorkspace(<ClaimsPage />));
+    await userEvent.click(await screen.findByRole("button", { name: /add a fact yourself/i }));
+    await screen.findByLabelText(/what kind of fact/i);
+    await userEvent.type(screen.getByLabelText(/^value$/i), "Riverside Trust");
+    await userEvent.click(screen.getByRole("button", { name: /add this fact/i }));
+    await waitFor(() =>
+      expect(createClaim).toHaveBeenCalledWith(
+        expect.objectContaining({
+          kind: "trading_name",
+          value: "Riverside Trust",
+          statement: "The organisation trades as Riverside Trust.",
+        }),
+      ),
+    );
   });
 });

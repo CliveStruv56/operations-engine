@@ -90,7 +90,7 @@ export default function AdminConsole() {
       <div className="mx-auto max-w-6xl p-6">
         <header className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="data text-ink-faint uppercase">Flowgrid OS</p>
+            <p className="data text-ink-faint uppercase">Flowgrid</p>
             <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">
               Operator console
             </h1>

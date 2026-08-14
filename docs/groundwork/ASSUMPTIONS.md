@@ -827,3 +827,43 @@ and every divergence is recorded here.
     decision about what that feed is for, and §14.2 does not need it — the two
     things it asked for are a findable view and the admin being told, and
     neither runs through the feed.
+
+46. **Typed claims from the register screen are confirmed on arrival** (14 Aug
+    2026). The API already did this (`create_claim`); the UI now has an "Add a
+    fact" panel for anything a public register does not publish. Asking someone
+    to type a fact and then tick it would be theatre. Machine-found claims
+    still arrive `proposed`.
+
+47. **Editing a tenant question set's questions returns it to unverified**
+    (14 Aug 2026). The tick was against a different form. Name/funder/URL-only
+    edits do not, because those are labels on the same questions. Verify in the
+    same PATCH still wins.
+
+48. **Submit harvest is no longer silent** (14 Aug 2026). Enqueue failures
+    still cannot fail the status change. `ApplicationOut.harvest_queued` is set
+    only on POST `.../status` to `submitted`, so the Grantwork room can say
+    whether the scan was queued or send the person to type the facts by hand.
+
+49. **Charity Commission V2 is the live contract** (14 Aug 2026). The Azure
+    APIM product still documents `charitytrustees/{number}/{suffix}`, but that
+    operation 404s; trustee names ride on `allcharitydetailsV2.trustee_names`.
+    Field names also drifted from the older docs our fixtures first encoded
+    (`reg_status` is `R`/`RM` not "Registered"/"Removed",
+    `charity_co_reg_number`, `address_line_one`,
+    `latest_acc_fin_year_end_date`). Charitable objects and activities are on
+    `charitygoverningdocument` and `charityoverview`. Those secondary calls
+    are best-effort, same posture as OSCR annual returns — a 404 there must
+    not fail an import that already has a register entry. Email, phone and
+    web are still unread.
+
+50. **OSCR's public API still does not return trustee names** (14 Aug 2026).
+    The Scottish Charity Register web entry for Sanday Development Trust
+    (SC035495) lists nine trustees. `GET all_charities` has no trustee field,
+    there is no trustees operation (those paths 404), and annual returns carry
+    only `TotalNumberofCharityTrustees` (a count). Official docs still list
+    two calls. Do not scrape the HTML register; a Scottish charitable company
+    can import Companies House for directors. The live payload is camelCase
+    (`charityName`, `currentConstitutionalForm`, `principalContactAddress`);
+    `annualreturns` returns a JSON array encoded as a JSON string; the charity
+    id for that call is `id` (a UUID), not the `SCxxxxxx` number.
+

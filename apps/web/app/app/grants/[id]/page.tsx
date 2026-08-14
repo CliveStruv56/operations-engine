@@ -17,6 +17,7 @@ import {
 } from "@/lib/grants";
 import { GRANTS_DISABLED, ModuleDisabled, useModuleEnabled } from "../../module-gate";
 import { card, input } from "../ui";
+import { EditApplicationPanel } from "./EditApplicationPanel";
 import { BidPackTab } from "./tabs/BidPackTab";
 import { ConditionsTab } from "./tabs/ConditionsTab";
 import { ImpactTab } from "./tabs/ImpactTab";
@@ -49,6 +50,8 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
   const [catalogue, setCatalogue] = useState<CatalogueRow | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Stages & gates");
   const [error, setError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [harvestNote, setHarvestNote] = useState<"queued" | "failed" | null>(null);
   const flagOn = useModuleEnabled("grants");
   // The module gate and a missing application both 404 with `not_found`, so
   // the client cannot tell them apart. The flag check below covers the module
@@ -85,11 +88,14 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
       if (!amount_awarded) return;
     }
     try {
-      await gr(`/grants/applications/${id}/status`, {
+      const next = await gr<Application>(`/grants/applications/${id}/status`, {
         method: "POST",
         body: JSON.stringify({ status, amount_awarded }),
       });
-      refresh();
+      setDetail(next);
+      if (status === "submitted") {
+        setHarvestNote(next.harvest_queued === false ? "failed" : "queued");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -182,8 +188,45 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setEditing((open) => !open)}
+              className="text-xs text-ink-muted underline hover:text-ink"
+            >
+              {editing ? "Close" : "Edit"}
+            </button>
           </div>
         </header>
+
+        {editing && (
+          <EditApplicationPanel
+            detail={detail}
+            onCancel={() => setEditing(false)}
+            onSaved={(next) => {
+              setDetail(next);
+              setEditing(false);
+            }}
+          />
+        )}
+
+        {harvestNote === "queued" && (
+          <p className="mb-3 rounded-[10px] bg-accent-soft px-3 py-2 text-sm">
+            We&apos;ll look through the answers you sent for facts to add to{" "}
+            <Link href="/app/claims" className="underline hover:text-ink">
+              Your organisation
+            </Link>
+            . They arrive as proposals, for someone to confirm.
+          </p>
+        )}
+        {harvestNote === "failed" && (
+          <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+            The application is marked submitted, but we could not queue a scan of it for the
+            register. You can add those facts by hand on{" "}
+            <Link href="/app/claims" className="underline hover:text-ink">
+              Your organisation
+            </Link>
+            .
+          </p>
+        )}
 
         {warning && (
           <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">

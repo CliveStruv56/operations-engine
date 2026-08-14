@@ -47,8 +47,9 @@ class IngestQueue:
 
         Fire-and-forget by design: harvesting is a by-product of work somebody
         has already finished, so it must never be able to fail the act of
-        marking an application submitted. Callers suppress its errors, and the
-        `_job_id` makes marking the same application submitted twice a no-op.
+        marking an application submitted. Callers catch its errors and tell
+        the client whether the job queued (`harvest_queued`); the `_job_id`
+        makes marking the same application submitted twice a no-op.
         """
         pool = await self._conn()
         await pool.enqueue_job(

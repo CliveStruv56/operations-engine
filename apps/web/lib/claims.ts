@@ -215,3 +215,38 @@ export const CATEGORY_LABELS: Record<ClaimKind["category"], string> = {
   assurance: "Policies and cover",
   delivery: "What you do",
 };
+
+/** Turn a typed field into the value the API stores. */
+export function parseClaimValue(kind: ClaimKind, raw: string): unknown {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (kind.value_kind === "number" || kind.value_kind === "money") {
+    const n = Number(trimmed.replace(/,/g, ""));
+    return Number.isFinite(n) ? n : trimmed;
+  }
+  if (kind.value_kind === "boolean") return trimmed === "true" || trimmed === "yes";
+  return trimmed;
+}
+
+/** The sentence a prompt and a list row read, matching the API renderer. */
+export function fillStatement(kind: ClaimKind, subject: string | null, value: unknown): string {
+  const rendered = formatClaimValue(kind, value);
+  try {
+    return kind.statement_template
+      .replaceAll("{value}", rendered)
+      .replaceAll("{subject}", subject || kind.label)
+      .trim();
+  } catch {
+    return rendered ? `${kind.label}: ${rendered}` : kind.label;
+  }
+}
+
+function formatClaimValue(kind: ClaimKind, value: unknown): string {
+  if (value == null || value === "") return "";
+  if (Array.isArray(value)) return value.map(String).join(", ");
+  if (typeof value === "object") return "";
+  if (kind.value_kind === "money" && typeof value === "number") {
+    return `£${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+  }
+  return String(value);
+}

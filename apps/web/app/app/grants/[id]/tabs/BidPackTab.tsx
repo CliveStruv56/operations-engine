@@ -7,6 +7,7 @@ import {
   DraftKind,
   RegistryDoc,
   STAGE_LABEL,
+  UploadTicket,
   fmtDate,
   gr,
 } from "@/lib/grants";
@@ -44,6 +45,32 @@ export function BidPackTab({ id }: { id: string }) {
       `/grants/applications/${id}/documents/${doc.id}/download`
     );
     openPresigned(ticket.download_url);
+  }
+
+  async function upload(doc: RegistryDoc, file: File) {
+    setError(null);
+    try {
+      const { upload_url, file_key } = await gr<UploadTicket>(
+        `/grants/applications/${id}/documents/${doc.id}/upload`,
+        {
+          method: "POST",
+          body: JSON.stringify({ filename: file.name, mime: file.type, size_bytes: file.size }),
+        }
+      );
+      const put = await fetch(upload_url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+      await gr(`/grants/applications/${id}/documents/${doc.id}/upload/complete`, {
+        method: "POST",
+        body: JSON.stringify({ file_key }),
+      });
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
   }
 
   return (
@@ -102,19 +129,30 @@ export function BidPackTab({ id }: { id: string }) {
                 <td className="data px-4 py-2.5 text-ink-faint">{doc.versions.length || "—"}</td>
                 <td className="data px-4 py-2.5 text-ink-faint">{fmtDate(doc.updated_at)}</td>
                 <td className="px-4 py-2.5 text-right">
-                  {doc.ai_draftable && (
-                    <button
-                      onClick={() => setDrafting(doc.doc_type_key as DraftKind)}
-                      className={btnGhost}
-                    >
-                      Draft with AI
-                    </button>
-                  )}
-                  {doc.current_file_key && (
-                    <button onClick={() => download(doc)} className={`${btnGhost} ml-3`}>
-                      Download
-                    </button>
-                  )}
+                  <span className="flex items-center justify-end gap-3">
+                    <label className={btnGhost}>
+                      Upload
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.xlsx"
+                        className="hidden"
+                        onChange={(e) => e.target.files?.[0] && upload(doc, e.target.files[0])}
+                      />
+                    </label>
+                    {doc.ai_draftable && (
+                      <button
+                        onClick={() => setDrafting(doc.doc_type_key as DraftKind)}
+                        className={btnGhost}
+                      >
+                        Draft with AI
+                      </button>
+                    )}
+                    {doc.current_file_key && (
+                      <button onClick={() => download(doc)} className={btnGhost}>
+                        Download
+                      </button>
+                    )}
+                  </span>
                 </td>
               </tr>
             ))}

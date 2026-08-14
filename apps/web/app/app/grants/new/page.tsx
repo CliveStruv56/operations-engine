@@ -26,6 +26,8 @@ export default function NewApplicationPage() {
     deadline: "",
     restricted: true,
   });
+  const [addingFunder, setAddingFunder] = useState(false);
+  const [newFunderName, setNewFunderName] = useState("");
 
   useEffect(() => {
     if (flagOn !== true) return;
@@ -59,6 +61,26 @@ export default function NewApplicationPage() {
       router.push(`/app/grants/${created.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setBusy(false);
+    }
+  }
+
+  async function addFunder() {
+    if (!newFunderName.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await gr<Funder>("/grants/funders", {
+        method: "POST",
+        body: JSON.stringify({ name: newFunderName.trim() }),
+      });
+      setFunders((rows) => [...rows, created].sort((a, b) => a.name.localeCompare(b.name)));
+      setForm((f) => ({ ...f, funder_id: created.id }));
+      setNewFunderName("");
+      setAddingFunder(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
       setBusy(false);
     }
   }
@@ -106,6 +128,35 @@ export default function NewApplicationPage() {
                   </option>
                 ))}
               </select>
+              {addingFunder ? (
+                <div className="mt-2 flex gap-2">
+                  <input
+                    autoFocus
+                    value={newFunderName}
+                    onChange={(e) => setNewFunderName(e.target.value)}
+                    placeholder="Funder's name"
+                    className={`${input} min-w-0 flex-1`}
+                  />
+                  <button type="button" onClick={addFunder} disabled={busy} className={btn}>
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddingFunder(false)}
+                    className="text-xs text-ink-muted underline"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setAddingFunder(true)}
+                  className="mt-1 text-xs text-ink-muted underline hover:text-ink"
+                >
+                  Add a funder
+                </button>
+              )}
             </label>
 
             <label className="block">

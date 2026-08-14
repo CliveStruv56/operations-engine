@@ -56,6 +56,8 @@ export type Application = {
   notes: string | null;
   created_at: string;
   updated_at: string;
+  /** Set on POST .../status when moving to submitted. Null on every other read. */
+  harvest_queued?: boolean | null;
 };
 
 export type Funder = {

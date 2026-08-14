@@ -257,6 +257,66 @@ async def test_charity_commission_import_covers_finance_and_trustees(
     assert trustees == ["Ade Okafor", "Sarah Fry"]
 
 
+async def test_charity_commission_live_v2_payload_does_not_need_trustees_route(
+    client, two_tenants, register_keys, monkeypatch
+):
+    """The current Azure APIM product 404s charitytrustees; V2 embeds names.
+
+    Field names also drifted (reg_status, charity_co_reg_number, address_line_*).
+    A 404 on the old trustee route must not be reported as 'not on the register'.
+    """
+    a, _ = two_tenants
+    live = {
+        "charity_name": "Riverside Community Trust",
+        "reg_charity_number": 1234567,
+        "charity_co_reg_number": "07123456",
+        "charity_type": "Charitable company",
+        "reg_status": "R",
+        "date_of_registration": "2011-04-01",
+        "address_line_one": "12 Meadow Lane",
+        "address_line_three": "Sheffield",
+        "address_post_code": "S1 2AB",
+        "latest_income": 847000,
+        "latest_expenditure": 792000,
+        "latest_acc_fin_year_end_date": "2026-03-31",
+        "who_what_where": [{"classification_desc": "Older people"}],
+        "trustee_names": [
+            {"trustee_name": "Sarah Fry"},
+            {"trustee_name": "Ade Okafor"},
+        ],
+    }
+    resp = await _import(
+        client,
+        a,
+        monkeypatch,
+        "charity-commission",
+        "fetch_charity_commission",
+        {
+            "/allcharitydetailsV2/1234567/0": live,
+            "/charitygoverningdocument/1234567/0": {
+                "charitable_objects": "To advance community wellbeing in Sheffield."
+            },
+            "/charityoverview/1234567/0": {
+                "activities": "Community meals, advice sessions and a repair cafe."
+            },
+        },
+        "1234567",
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["inactive"] is False
+    proposed = body["proposed"]
+    by_kind = {c["kind"]: c for c in proposed}
+    assert by_kind["registered_name"]["value"] == "Riverside Community Trust"
+    assert by_kind["registration_status"]["value"] == "Registered"
+    assert by_kind["company_number"]["value"] == "07123456"
+    assert "12 Meadow Lane" in by_kind["registered_office"]["value"]
+    assert by_kind["charitable_objects"]["value"].startswith("To advance community")
+    assert by_kind["annual_income"]["next_review"] == "2027-01-31"
+    trustees = sorted(c["subject"] for c in proposed if c["kind"] == "trustee")
+    assert trustees == ["Ade Okafor", "Sarah Fry"]
+
+
 async def test_oscr_import_gives_scotland_a_finance_series_and_headcount(
     client, two_tenants, register_keys, monkeypatch
 ):
@@ -293,6 +353,68 @@ async def test_oscr_import_gives_scotland_a_finance_series_and_headcount(
 
     trustees = [c["subject"] for c in proposed if c["kind"] == "trustee"]
     assert trustees == ["Morag Dunn"]
+
+
+async def test_oscr_live_payload_reads_camelcase_and_encoded_returns(
+    client, two_tenants, register_keys, monkeypatch
+):
+    """The live Azure Functions API uses camelCase and double-encoded returns.
+
+    It still does not include trustee names (ASSUMPTIONS #50). A 404 on a
+    trustees route must not fail the import.
+    """
+    a, _ = two_tenants
+    live = {
+        "id": "2eec7dca-d105-ed11-82e5-000d3a875836",
+        "charityName": "Sanday Development Trust",
+        "charityNumber": "SC035495",
+        "charityStatus": "Active",
+        "currentConstitutionalForm": "Company (registered with Companies House)",
+        "objectives": "To manage community land for the benefit of the Community.",
+        "geographicalSpread": "Orkney Islands",
+        "beneficiaries": ["Children or young people", "the community"],
+        "typesOfActivities": ["It carries out activities or services itself"],
+        "principalContactAddress": "Heilsa Fjold, Sanday",
+        "yearEnd": "2025-03-31",
+        "mostRecentYearIncome": 544005,
+        "mostRecentYearExpenditure": 381143,
+    }
+    returns = json.dumps(
+        [
+            {
+                "AccountingReferenceDate": "2025-03-31",
+                "GrossIncome": 544005.0,
+                "GrossExpenditure": 381143.0,
+                "PaidStaff": 20,
+            },
+            {
+                "AccountingReferenceDate": "2024-03-31",
+                "GrossIncome": 547159.0,
+                "GrossExpenditure": 322190.0,
+                "PaidStaff": 18,
+            },
+        ]
+    )
+    resp = await _import(
+        client,
+        a,
+        monkeypatch,
+        "oscr",
+        "fetch_oscr",
+        {"/all_charities": live, "/annualreturns": returns},
+        "SC035495",
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["inactive"] is False
+    proposed = body["proposed"]
+    by_kind = {c["kind"]: c for c in proposed}
+    assert by_kind["registered_name"]["value"] == "Sanday Development Trust"
+    assert by_kind["legal_form"]["value"].startswith("Company")
+    assert "Heilsa Fjold" in by_kind["registered_office"]["value"]
+    incomes = {c["period"]: c["value"] for c in proposed if c["kind"] == "annual_income"}
+    assert incomes["2024/25"] == 544005.0
+    assert not any(c["kind"] == "trustee" for c in proposed)
 
 
 async def test_oscr_import_survives_a_charity_with_no_annual_return(

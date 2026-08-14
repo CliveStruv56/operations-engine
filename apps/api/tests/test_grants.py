@@ -303,6 +303,42 @@ async def test_pipeline_applications_have_no_conditions(client):
     assert conditions == []
 
 
+async def test_submitting_queues_a_claims_harvest(client, monkeypatch):
+    jobs: list[str] = []
+
+    class _HarvestQueue:
+        async def enqueue_harvest(self, tenant_id, application_id, user_id):
+            jobs.append(str(application_id))
+
+    monkeypatch.setattr("app.routers.grants.applications.ingest_queue", _HarvestQueue())
+    tenant, headers = await make_tenant(client, "harvestok")
+    application_id = await create_application(client, headers)
+    resp = await client.post(
+        f"/api/v1/grants/applications/{application_id}/status",
+        json={"status": "submitted"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "submitted"
+    assert resp.json()["harvest_queued"] is True
+    assert jobs == [application_id]
+
+
+async def test_submit_still_succeeds_when_harvest_cannot_queue(client):
+    """Redis is disabled in this suite, so enqueue raises. Recording the
+    submission must not."""
+    tenant, headers = await make_tenant(client, "harvestfail")
+    application_id = await create_application(client, headers)
+    resp = await client.post(
+        f"/api/v1/grants/applications/{application_id}/status",
+        json={"status": "submitted"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["status"] == "submitted"
+    assert resp.json()["harvest_queued"] is False
+
+
 # -- portfolio ---------------------------------------------------------------
 
 
