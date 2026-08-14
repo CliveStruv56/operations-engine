@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from app.config import get_settings
 from app.db import db
+from app.litellm import litellm_client
 from tests.conftest import auth, make_token
 
 
@@ -233,6 +234,37 @@ async def test_admin_edits_workspace_fields(client, two_tenants):
     async with db.tenant_tx(a.owner_id, a.id) as conn:
         budget = await conn.fetchval("select soft_budget_usd from tenants where id = $1", a.id)
     assert float(budget) == 12 * get_settings().default_soft_budget_per_seat_usd
+
+
+async def test_seat_change_resyncs_the_gateway_key_budget(client, two_tenants, monkeypatch):
+    """soft_budget_usd used to move with seats while the virtual key kept
+    enforcing its creation-time max_budget."""
+    a, _ = two_tenants
+    # Empty LITELLM_KEY_ENCRYPTION_KEY in tests means pass-through storage.
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        await conn.execute(
+            "update tenants set litellm_key_encrypted = 'sk-tenant-test' where id = $1", a.id
+        )
+
+    calls: list[tuple[str, float]] = []
+
+    async def record(key: str, soft_budget_usd: float) -> None:
+        calls.append((key, soft_budget_usd))
+
+    monkeypatch.setattr(litellm_client, "update_key_budget", record)
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}", json={"seats": 7}, headers=admin_auth(uuid4())
+    )
+    assert resp.status_code == 200, resp.text
+    assert calls == [("sk-tenant-test", 7 * get_settings().default_soft_budget_per_seat_usd)]
+
+    # A name-only edit touches no budget and must not call the gateway.
+    calls.clear()
+    resp = await client.patch(
+        f"/api/v1/admin/tenants/{a.id}", json={"name": "Same seats"}, headers=admin_auth(uuid4())
+    )
+    assert resp.status_code == 200, resp.text
+    assert calls == []
 
 
 async def test_workspace_patch_is_partial_and_validated(client, two_tenants):

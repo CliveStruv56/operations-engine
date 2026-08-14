@@ -145,6 +145,22 @@ class LiteLLMClient:
         )
         resp.raise_for_status()
 
+    async def update_key_budget(self, key: str, soft_budget_usd: float) -> None:
+        """Move a tenant key's own ceiling when its soft cap changes.
+
+        Same rule as creation (spec §4): max_budget = 2x soft cap. Without
+        this, a seat change edits `soft_budget_usd` while the gateway keeps
+        enforcing the old ceiling.
+        """
+        if not self.enabled or not key:
+            return
+        resp = await self._http().post(
+            "/key/update",
+            headers=self._admin_headers(),
+            json={"key": key, "max_budget": round(soft_budget_usd * 2, 2)},
+        )
+        resp.raise_for_status()
+
     # -- embeddings (tenant virtual key) ---------------------------------------
 
     def _tenant_headers(self, virtual_key: str) -> dict[str, str]:

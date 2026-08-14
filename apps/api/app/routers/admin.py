@@ -12,10 +12,12 @@ and no write path for the runtime role (ASSUMPTIONS #28).
 """
 
 import json
+import logging
 import secrets
 from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
+import httpx
 from fastapi import APIRouter, Depends
 
 from app.audit import write_audit
@@ -40,7 +42,7 @@ from app.schemas import (
     AdminTenantPatch,
     AdminTenantRow,
 )
-from app.secrets import encrypt_llm_key
+from app.secrets import decrypt_llm_key, encrypt_llm_key
 from app.sqlutil import patch_sets
 
 router = APIRouter(tags=["admin"])
@@ -214,8 +216,9 @@ async def admin_update_tenant(
     Only the fields present in the request body change, so two operators
     editing different fields cannot overwrite each other. Changing seats also
     moves `soft_budget_usd` (seats x the per-seat cap) to keep the gateway's
-    fair-use ceiling in step with what the client is paying for; the LiteLLM
-    key's own budget is not re-synced here — see the note in the console.
+    fair-use ceiling in step with what the client is paying for, and re-syncs
+    the LiteLLM key's own max_budget — best effort: the seat change has
+    landed, so a dark gateway logs a warning rather than failing the edit.
     """
     updates = body.changes()
     if not updates:
@@ -223,7 +226,9 @@ async def admin_update_tenant(
     accent = updates.pop("brand_accent", None)
 
     async with db.tenant_tx(user.id, tenant_id) as conn:
-        current = await conn.fetchrow("select brand, seats from tenants where id = $1", tenant_id)
+        current = await conn.fetchrow(
+            "select brand, seats, litellm_key_encrypted from tenants where id = $1", tenant_id
+        )
         if current is None:
             raise ApiError(404, "not_found", "Workspace not found")
 
@@ -250,6 +255,20 @@ async def admin_update_tenant(
             str(tenant_id),
             meta={"platform_admin": True, "fields": sorted(body.changes())},
         )
+    if "soft_budget_usd" in updates:
+        # Outside the transaction: a gateway round trip, after the row change
+        # is already committed.
+        try:
+            await litellm_client.update_key_budget(
+                decrypt_llm_key(current["litellm_key_encrypted"]) or "",
+                updates["soft_budget_usd"],
+            )
+        except (httpx.HTTPError, ApiError):
+            logging.getLogger("app.admin").warning(
+                "tenant %s: seat change committed but the LiteLLM key budget"
+                " re-sync failed — the gateway still enforces the old ceiling",
+                tenant_id,
+            )
     return _tenant_out(row)
 
 
