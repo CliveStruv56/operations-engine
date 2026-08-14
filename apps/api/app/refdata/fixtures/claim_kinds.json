@@ -288,6 +288,48 @@
       "notes": "For a charitable company the directors ARE the charity trustees, which is the fallback that gives a Scottish charitable company a usable board list from Companies House before OSCR access arrives."
     },
     {
+      "key": "director_idv",
+      "label": "Director identity verification",
+      "category": "governance",
+      "value_kind": "text",
+      "unit": null,
+      "cardinality": "multi",
+      "periodic": false,
+      "review_days": null,
+      "statement_template": "{subject}'s Companies House identity is {value}.",
+      "question_hints": [],
+      "register": "companies_house",
+      "notes": "ECCTA: every director must have verified identity at Companies House by 18 November 2026; after that an unverified director blocks the confirmation statement and the company commits an offence. The officers API returns identity_verification_details in two shapes — a verified date plus the verifying agent, or a bare completion statement — or not at all, which means not verified. Values always begin 'verified' or 'not yet verified'; the readiness panel keys off that prefix, so the prefix is contract, not copy. Review dates ride the confirmation-statement cycle like the other identity facts."
+    },
+    {
+      "key": "confirmation_statement_due",
+      "label": "Confirmation statement due",
+      "category": "governance",
+      "value_kind": "date",
+      "unit": null,
+      "cardinality": "single",
+      "periodic": false,
+      "review_days": null,
+      "statement_template": "The organisation's next confirmation statement is due {value}.",
+      "question_hints": [],
+      "register": "companies_house",
+      "notes": "The filing deadline itself, as a fact. Its review date IS the due date, so it goes stale the day it passes and the sweep surfaces it; a re-import refreshes it from the register once the filing is made. Under ECCTA this is also each existing director's personal identity-verification deadline."
+    },
+    {
+      "key": "accounts_due",
+      "label": "Annual accounts due",
+      "category": "finance",
+      "value_kind": "date",
+      "unit": null,
+      "cardinality": "single",
+      "periodic": false,
+      "review_days": null,
+      "statement_template": "The organisation's next annual accounts are due {value}.",
+      "question_hints": [],
+      "register": "companies_house",
+      "notes": "Same shape as confirmation_statement_due: the review date is the deadline, so a passed filing date surfaces through the ordinary staleness machinery rather than a bespoke alarm."
+    },
+    {
       "key": "accreditation",
       "label": "Accreditation",
       "category": "assurance",

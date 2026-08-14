@@ -899,3 +899,27 @@ and every divergence is recorded here.
 
 
 
+
+## Recorded during the ECCTA readiness panel (14 Aug 2026)
+
+52. **Director identity verification is read from the officers payload's
+    `identity_verification_details`, defensively, and the value prefix is a
+    contract.**
+
+    The field ships in two shapes (CH developer forum, Aug 2026): a record
+    with the verified date and the ACSP that carried out the check, or a bare
+    completion statement — and it is absent entirely on an unverified
+    officer. `_idv_value()` normalises all three; every value begins
+    `verified` or `not yet verified`, and the web readiness strip keys off
+    that prefix rather than parsing prose. Any change to the prefix breaks
+    the panel silently, which is why the register test pins all three shapes.
+
+    Three new kinds: `director_idv` (multi, per director, ages with the
+    confirmation statement like the other identity facts) and the two filing
+    deadlines `confirmation_statement_due` / `accounts_due`, whose
+    `next_review` IS the due date — a passed deadline surfaces through the
+    ordinary staleness machinery (badge, sweep, digest), not a bespoke alarm.
+    The panel itself is derived in the web page from loaded claims
+    (proposed + confirmed), never stored. The 18 Nov 2026 transition end is
+    hard-coded copy in one place (`EcctaStrip`); after that date the line
+    should change from a deadline warning to a standing compliance state.

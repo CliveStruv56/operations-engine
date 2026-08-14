@@ -504,6 +504,69 @@ async def test_charity_commission_import_survives_a_non_json_optional_response(
     assert "registered_name" in kinds
 
 
+async def test_companies_house_import_reads_eccta_idv_and_filing_deadlines(
+    client, two_tenants, register_keys, monkeypatch
+):
+    """`identity_verification_details` arrives in two shapes or not at all.
+
+    Every value must begin `verified` / `not yet verified` — the readiness
+    panel keys off that prefix — and the filing deadlines become facts whose
+    review date is the deadline itself, so a passed one goes stale through
+    the ordinary machinery.
+    """
+    a, _ = two_tenants
+    officers = {
+        "items": [
+            {
+                "name": "FRY, Sarah",
+                "officer_role": "director",
+                "appointed_on": "2011-03-04",
+                "identity_verification_details": {
+                    "identity_verified_on": "2025-07-16",
+                    "acsp_name": "DE PINNA LLP",
+                },
+            },
+            {
+                "name": "OKAFOR, Ade",
+                "officer_role": "director",
+                "identity_verification_details": (
+                    "verification requirements complete (from 16 April 2026)"
+                ),
+            },
+            {"name": "DUNN, Morag", "officer_role": "director"},
+        ]
+    }
+    resp = await _import(
+        client,
+        a,
+        monkeypatch,
+        "companies-house",
+        "fetch_companies_house",
+        {"/officers": officers, "/company/07123456": COMPANY_PROFILE},
+        "07123456",
+    )
+    assert resp.status_code == 200, resp.text
+    proposed = resp.json()["proposed"]
+
+    idv = {c["subject"]: c for c in proposed if c["kind"] == "director_idv"}
+    assert idv["FRY, Sarah"]["value"] == "verified on 2025-07-16 via DE PINNA LLP"
+    assert idv["OKAFOR, Ade"]["value"] == (
+        "verified — verification requirements complete (from 16 April 2026)"
+    )
+    assert idv["DUNN, Morag"]["value"] == "not yet verified"
+    assert idv["DUNN, Morag"]["statement"] == (
+        "DUNN, Morag's Companies House identity is not yet verified."
+    )
+    # IDV facts age with the confirmation statement, like the identity facts.
+    assert idv["DUNN, Morag"]["next_review"] == "2026-09-15"
+
+    by_kind = {c["kind"]: c for c in proposed}
+    assert by_kind["confirmation_statement_due"]["value"] == "2026-09-15"
+    assert by_kind["confirmation_statement_due"]["next_review"] == "2026-09-15"
+    assert by_kind["accounts_due"]["value"] == "2026-12-31"
+    assert by_kind["accounts_due"]["next_review"] == "2026-12-31"
+
+
 async def test_dissolved_record_is_refused_until_asked_for(
     client, two_tenants, register_keys, monkeypatch
 ):

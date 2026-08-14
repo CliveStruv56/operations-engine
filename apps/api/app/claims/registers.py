@@ -273,6 +273,36 @@ def _address_line(address: dict[str, Any] | None) -> str | None:
     return joined or None
 
 
+def _idv_value(raw: Any) -> str:
+    """The ECCTA `identity_verification_details` field, read defensively.
+
+    Observed in two shapes (CH developer forum, Aug 2026): a record carrying
+    the verified date and the ACSP that carried out the check, or a bare
+    completion statement — and the field is absent entirely on an unverified
+    officer. Every value returned here begins `verified` or `not yet
+    verified`; the readiness panel keys off that prefix, so the prefix is
+    contract, not copy.
+    """
+    if isinstance(raw, dict):
+        verified_on = _parse_date(
+            _pick(raw, "identity_verified_on", "verified_on", "date_verified")
+        )
+        agent = _clean(_pick(raw, "acsp_name", "verified_by", "authorised_agent"))
+        if verified_on and agent:
+            return f"verified on {verified_on} via {agent}"
+        if verified_on:
+            return f"verified on {verified_on}"
+        raw = _pick(raw, "statement", "status", "description")
+    if isinstance(raw, str) and raw.strip():
+        text = raw.strip()
+        lowered = text.lower()
+        # A completion statement is evidence of verification — keep the
+        # register's own wording — but any negation means it is not.
+        if ("verif" in lowered or "complete" in lowered) and " not" not in f" {lowered}":
+            return text if lowered.startswith("verified") else f"verified — {text}"
+    return "not yet verified"
+
+
 async def fetch_companies_house(
     number: str, *, client: httpx.AsyncClient | None = None
 ) -> RegisterFacts:
@@ -320,6 +350,12 @@ async def fetch_companies_house(
     last_accounts = accounts.get("last_accounts") or {}
     year_end = _parse_date(accounts.get("next_made_up_to") or last_accounts.get("made_up_to"))
     add("accounts_year_end", year_end, review_on=finance_review)
+    # The filing deadlines themselves, as facts. Each one's review date is the
+    # deadline, so a passed filing date goes stale through the ordinary
+    # machinery — and the confirmation-statement date is also every existing
+    # director's ECCTA identity-verification deadline.
+    add("confirmation_statement_due", identity_review, review_on=identity_review)
+    add("accounts_due", finance_review, review_on=finance_review)
 
     officers = await _request(
         f"{COMPANIES_HOUSE_BASE}/company/{number}/officers",
@@ -350,6 +386,14 @@ async def fetch_companies_house(
                 if officer.get("appointed_on")
                 else {"role": role},
                 as_of=_parse_date(officer.get("appointed_on")),
+                review_on=identity_review,
+            )
+        )
+        facts.append(
+            RegisterFact(
+                kind="director_idv",
+                subject=name,
+                value=_idv_value(officer.get("identity_verification_details")),
                 review_on=identity_review,
             )
         )
