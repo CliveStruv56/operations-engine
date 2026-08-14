@@ -29,6 +29,42 @@ const btn =
   "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
 const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
 
+const fmtDay = (iso: string) =>
+  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+
+/** ECCTA readiness, derived from the register — never stored. From 18 Nov
+ * 2026 an unverified director blocks Companies House filings, so this is the
+ * one place the register editorialises about a deadline. Values on
+ * `director_idv` claims begin "verified" / "not yet verified" by contract
+ * with the API's register client. */
+function EcctaStrip({ claims }: { claims: Claim[] }) {
+  const idv = claims.filter((c) => c.kind === "director_idv");
+  if (idv.length === 0) return null;
+  const verified = idv.filter(
+    (c) => typeof c.value === "string" && c.value.startsWith("verified")
+  ).length;
+  const cs = claims.find((c) => c.kind === "confirmation_statement_due");
+  const csDue = cs && typeof cs.value === "string" ? fmtDay(cs.value) : null;
+  const dueNote = csDue ? ` Next confirmation statement due ${csDue}.` : "";
+
+  if (verified === idv.length) {
+    return (
+      <p className="rounded-[10px] bg-grounded-tint px-3 py-2 text-sm text-grounded">
+        {idv.length === 1
+          ? "Your director has verified their identity with Companies House."
+          : `All ${idv.length} directors have verified their identity with Companies House.`}
+        {dueNote}
+      </p>
+    );
+  }
+  return (
+    <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+      {verified} of {idv.length} directors have verified their identity with Companies House.
+      From 18 Nov 2026 an unverified director blocks filings.{dueNote}
+    </p>
+  );
+}
+
 export default function ClaimsPage() {
   return (
     // useSearchParams needs a Suspense boundary at the page level.
@@ -170,6 +206,8 @@ function ClaimsPageInner() {
         </section>
       ) : (
         <>
+          {!unownedOnly && <EcctaStrip claims={live} />}
+
           {/* Proposals are about whether a fact is right, which is a different
               question from who keeps it right — so the filtered view leaves
               them out rather than mixing the two. */}

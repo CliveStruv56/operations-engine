@@ -235,3 +235,58 @@ describe("adding a fact by hand", () => {
     );
   });
 });
+
+describe("ECCTA readiness strip", () => {
+  const idv = (subject: string, value: string): Claim =>
+    claim({
+      id: `idv-${subject}`,
+      kind: "director_idv",
+      label: "Director identity verification",
+      category: "governance",
+      subject,
+      value,
+      statement: `${subject}'s Companies House identity is ${value}.`,
+    });
+
+  beforeEach(() => {
+    listClaims.mockReset();
+    listMembers.mockReset().mockResolvedValue([]);
+    searchParams.current = new URLSearchParams();
+  });
+
+  it("warns while a director is unverified, with the filing date", async () => {
+    listClaims.mockResolvedValue([
+      idv("FRY, Sarah", "verified on 2025-07-16 via DE PINNA LLP"),
+      idv("DUNN, Morag", "not yet verified"),
+      claim({
+        id: "cs-due",
+        kind: "confirmation_statement_due",
+        label: "Confirmation statement due",
+        category: "governance",
+        value: "2026-09-15",
+        statement: "The organisation's next confirmation statement is due 2026-09-15.",
+      }),
+    ]);
+    render(withWorkspace(<ClaimsPage />));
+    const strip = await screen.findByText(/1 of 2 directors have verified their identity/i);
+    expect(strip.textContent).toMatch(/18 Nov 2026/);
+    expect(strip.textContent).toMatch(/due 15 Sept? 2026/);
+  });
+
+  it("reads as a trust state once everyone has verified", async () => {
+    listClaims.mockResolvedValue([
+      idv("FRY, Sarah", "verified on 2025-07-16 via DE PINNA LLP"),
+      idv("OKAFOR, Ade", "verified — verification requirements complete (from 16 April 2026)"),
+    ]);
+    render(withWorkspace(<ClaimsPage />));
+    const strip = await screen.findByText(/All 2 directors have verified their identity/i);
+    expect(strip.textContent).not.toMatch(/blocks filings/);
+  });
+
+  it("stays silent for a workspace with no register directors", async () => {
+    listClaims.mockResolvedValue([claim()]);
+    render(withWorkspace(<ClaimsPage />));
+    await screen.findAllByText(/annual income/i);
+    expect(screen.queryByText(/verified their identity/i)).not.toBeInTheDocument();
+  });
+});
