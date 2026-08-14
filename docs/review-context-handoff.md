@@ -1,11 +1,11 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-12 (**§6k is the latest state**; §1–6j are history,
-oldest first)
+**Handoff date:** 2026-08-14 (**§6k–§6o are the latest state**; §1–6j are
+history, oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
-rename, module-kit, Grantwork and smoke-test sessions, and the 12 Aug
-claims-register build
+rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
+claims-register build, and the 14 Aug evaluation-gap and project-plan work
 **Purpose:** Resume in a new context window without re-deriving this work.
 **Start at §7** — it names the active task and the order to read things in.
 
@@ -1280,23 +1280,108 @@ what that feed is for, and neither thing §14.2 asked for runs through it.
 
 ---
 
+## 6n. The evaluation gaps, and what the live registers actually return (14 August 2026)
+
+One commit, `82f1998`, green. Rulings: ASSUMPTIONS **#46–#50**.
+
+**Where the gaps came from.** Walking the workspace as a Grantwork evaluator
+would, five things the API could already do had no way in from the UI, and two
+register clients were written against documentation rather than a live
+response.
+
+**The five UI gaps closed:** an "Add a fact" panel on `/app/claims` for
+anything a public register does not publish (confirmed on arrival — #46);
+bid-pack upload on the application's Bid Pack tab; editing a funder; editing an
+application; and editing a tenant question set's questions, name, funder and
+URL.
+
+**The register findings are the durable part**, and both were only findable
+against a live key:
+
+- **Charity Commission V2 is the contract, not the portal's documentation
+  (#49).** The documented `charitytrustees/{number}/{suffix}` operation 404s;
+  trustee names ride on `allcharitydetailsV2.trustee_names`. Field names had
+  drifted from what our fixtures encoded — `reg_status` is `R`/`RM`, not
+  "Registered"/"Removed" — and objects and activities live on two further
+  best-effort calls (`charitygoverningdocument`, `charityoverview`) that must
+  not fail an import which already has a register entry.
+- **OSCR still does not publish trustee names through its API (#50)**, even
+  though the web register does. Checked against a real charity with nine
+  trustees listed publicly. Do not scrape the register; a Scottish charitable
+  company can import Companies House for its directors. The live payload is
+  camelCase, `annualreturns` returns a JSON array encoded as a JSON *string*,
+  and that call keys on a UUID `id`, not the `SCxxxxxx` number.
+
+**Two contract changes worth knowing.** `ApplicationOut.harvest_queued` is set
+only by `POST .../status` to `submitted`, and is null on every other read — the
+submit-time harvest stays fire-and-forget (it must never fail the act of
+recording a submission) but is no longer *silent*, so the room can send someone
+to type the facts by hand when the queue is down (#48). And editing a question
+set's questions returns it to unverified, because the tick was against a
+different form; label-only edits do not (#47).
+
+**The three register keys now have documented slots** in `apps/api/.env.example`
+and `infra/.env.staging.example`. Empty key = that import route 503s. OSCR is
+still the one with an approval lead time.
+
+---
+
+## 6o. Core projects get a plan (14 August 2026)
+
+Three commits, `a363c8a` → `3c62879` → `438cad5`, green. Ruling: ASSUMPTIONS
+**#51**.
+
+**What it is.** A sidebar project can now start as either a documents-only
+folder (the historic vault/chat container) or a thin plan: `POST /projects`
+takes `kind: blank | planned`, and `planned` sets `projects.has_plan`, seeds a
+primary "Project brief" markdown document so chat has something to ground on
+from day one, and accepts an opening checklist. Migrations **0018**
+(`project_plans`) and **0019** (`plan_task_details`). Nested CRUD at
+`/projects/{id}/plan-tasks`, plus `POST /projects/{id}/plan` to add a plan to a
+project that started as a folder.
+
+**Why it is not Groundwork.** Groundwork's `proj_tasks` requires a CLH
+`stage_key` and the `projects` feature flag, so folding general work into that
+spine would either invent a fake stage or hide tasks from every tenant that
+never bought development projects. `/app/projects/*` stays the development
+room. Assignees are workspace members — not CRM contacts, not free-text owner
+names — and a cross-tenant membership id 404s in app code, because foreign-key
+checks bypass RLS (the same hole as `_check_owned_document`, now the fifth
+instance).
+
+**The trap `438cad5` fixes.** "Add a plan" was wired to `PATCH /projects/{id}`,
+which is rename/archive only and silently drops unknown fields — so the button
+returned `no_changes` and did nothing. Enabling a plan is a `POST` to
+`/projects/{id}/plan`, and it is idempotent.
+
+**Deliberately narrow:** `project_tasks.details` is a short note on the row, not
+comments and not Groundwork tickets; the UI is a two-state checklist, and while
+`doing` survives in the check constraint it is not a third column.
+
+---
+
 ## 7. Read first in a new session
 
 **Active work brief:** `docs/claims-register-brief.md` **§14** — only §14.1
 steps 2–3 (the arq cron sweep, then email) remain unbuilt, and both are blocked
 on infrastructure that does not exist. Nothing else is in flight.
 
+**Suites as of 14 Aug 2026, all green:** api **346**, worker **182**, web
+**87**.
+
 1. This file — **§6k** first (the claims register: what was built, the five
    rulings not to relitigate, the three traps not to reintroduce, and what the
    user still owes), then **§6l** (the summary badge) and **§6m** (ownership, and
-   the two contract changes in it). Then **§6j** if touching latency, **§6g** for
-   Grantwork.
+   the two contract changes in it), then **§6n** (what the live Charity
+   Commission and OSCR payloads actually return) and **§6o** (plans on core
+   projects). Then **§6j** if touching latency, **§6g** for Grantwork.
 2. `docs/claims-register-brief.md` — **§13** for what shipped, **§14** for the
    two proposed follow-ups with their recommended shapes and the decisions to
    settle first.
 3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#45** are the claims-register
-   rulings and the newest in the file. #36, #37, #43, #44 and #45 each record a
-   specific failure and are easy to undo by accident.
+   rulings, **#46–#50** the evaluation-gap and live-register findings, and
+   **#51** core project plans. #36, #37, #43, #44, #45, #49 and #50 each record
+   a specific failure and are easy to undo by accident.
 4. `CLAUDE.md` (unchanged conventions: RLS with an isolation test per table,
    LiteLLM-only for models, cost telemetry on every LLM call, commit-on-green).
 5. `docs/vertical-module-roadmap.md` if the next move is a new module.
