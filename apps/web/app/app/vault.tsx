@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/activity";
 import type { Project } from "./workspace";
+import ProjectPlanPanel from "./project-plan";
 
 type Doc = {
   id: string;
@@ -186,6 +187,12 @@ export default function VaultPanel({
           {visible.length} documents · {readyCount} ready
         </p>
       </header>
+
+      {activeProject && !activeProject.is_development && (
+        <div className="border-b border-edge px-6 py-4">
+          <ProjectPlanPanel projectId={activeProject.id} hasPlan={activeProject.has_plan} />
+        </div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
         <div

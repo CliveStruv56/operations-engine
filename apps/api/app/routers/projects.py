@@ -91,14 +91,30 @@ async def update_project(
     updates = body.model_dump(exclude_unset=True)
     if not updates:
         raise ApiError(400, "no_changes", "Nothing to update")
+    if "has_plan" in updates:
+        is_dev = await conn.fetchval(
+            "select exists (select 1 from proj_projects where id = $1)", project_id
+        )
+        if is_dev:
+            raise ApiError(
+                400, "invalid", "Development projects use the project room, not a core plan"
+            )
+        if updates["has_plan"] is False:
+            raise ApiError(400, "invalid", "A plan cannot be removed once added")
     sets, values = patch_sets("projects", updates)
     row = await conn.fetchrow(
-        f"update projects set {sets}, updated_at = now() where id = $1 returning id",
+        f"update projects set {sets}, updated_at = now() where id = $1 returning id, name",
         project_id,
         *values,
     )
     if row is None:
         raise ApiError(404, "not_found", "Project not found")
+    if updates.get("has_plan") is True:
+        doc_count = await conn.fetchval(
+            "select count(*) from documents where project_id = $1", project_id
+        )
+        if doc_count == 0:
+            await seed_project_brief(conn, ctx, project_id, row["name"])
     await write_audit(
         conn, ctx.tenant_id, ctx.user_id, "project.update", "project", str(project_id)
     )

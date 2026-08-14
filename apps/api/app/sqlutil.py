@@ -23,9 +23,17 @@ PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
     # Operator-console edits only; tenant-facing PATCH /tenants/me still
     # writes name/brand directly and never reaches this allowlist.
     "tenants": frozenset({"name", "seats", "plan", "trial_ends_at", "soft_budget_usd", "brand"}),
-    "projects": frozenset({"name", "description", "archived"}),
+    "projects": frozenset({"name", "description", "archived", "has_plan"}),
     "project_tasks": frozenset(
-        {"title", "due_date", "assignee_membership_id", "status", "position", "completed_at"}
+        {
+            "title",
+            "details",
+            "due_date",
+            "assignee_membership_id",
+            "status",
+            "position",
+            "completed_at",
+        }
     ),
     "documents": frozenset({"project_id", "is_primary"}),
     "proj_projects": frozenset(

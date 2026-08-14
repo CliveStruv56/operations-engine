@@ -299,6 +299,7 @@ class SlidesExportOut(BaseModel):
 
 class PlanTaskSeed(BaseModel):
     title: str = Field(min_length=1, max_length=300)
+    details: str | None = Field(default=None, max_length=2_000)
     due_date: date | None = None
     assignee_membership_id: UUID | None = None
 
@@ -314,6 +315,7 @@ class ProjectUpdate(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2_000)
     archived: bool | None = None
+    has_plan: bool | None = None
 
 
 class ProjectOut(BaseModel):
@@ -331,12 +333,14 @@ class ProjectOut(BaseModel):
 
 class PlanTaskIn(BaseModel):
     title: str = Field(min_length=1, max_length=300)
+    details: str | None = Field(default=None, max_length=2_000)
     due_date: date | None = None
     assignee_membership_id: UUID | None = None
 
 
 class PlanTaskPatch(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=300)
+    details: str | None = Field(default=None, max_length=2_000)
     due_date: date | None = None
     assignee_membership_id: UUID | None = None
     status: str | None = Field(default=None, pattern="^(todo|doing|done)$")
@@ -347,6 +351,7 @@ class PlanTaskOut(BaseModel):
     id: UUID
     project_id: UUID
     title: str
+    details: str | None
     status: str
     due_date: date | None
     assignee_membership_id: UUID | None

@@ -89,13 +89,15 @@ async def insert_plan_tasks(
         row = await conn.fetchrow(
             """
             insert into project_tasks (
-                tenant_id, project_id, title, due_date, assignee_membership_id, position
+                tenant_id, project_id, title, details, due_date,
+                assignee_membership_id, position
             )
-            values ($1, $2, $3, $4, $5, $6) returning *
+            values ($1, $2, $3, $4, $5, $6, $7) returning *
             """,
             ctx.tenant_id,
             project_id,
             task.title,
+            task.details,
             task.due_date,
             task.assignee_membership_id,
             position,
@@ -127,7 +129,7 @@ async def create_plan_task(
 ):
     project = await require_core_project(conn, project_id)
     if not project["has_plan"]:
-        raise ApiError(400, "no_plan", "This project has documents only — recreate it with a plan")
+        raise ApiError(400, "no_plan", "This project has documents only — add a plan first")
     await require_membership(conn, body.assignee_membership_id)
     position = await conn.fetchval(
         "select coalesce(max(position), 0) + 1 from project_tasks where project_id = $1",
@@ -136,13 +138,15 @@ async def create_plan_task(
     row = await conn.fetchrow(
         """
         insert into project_tasks (
-            tenant_id, project_id, title, due_date, assignee_membership_id, position
+            tenant_id, project_id, title, details, due_date,
+            assignee_membership_id, position
         )
-        values ($1, $2, $3, $4, $5, $6) returning id
+        values ($1, $2, $3, $4, $5, $6, $7) returning id
         """,
         ctx.tenant_id,
         project_id,
         body.title,
+        body.details,
         body.due_date,
         body.assignee_membership_id,
         position,

@@ -14,6 +14,7 @@ import {
 } from "@/components/icons";
 import { AnswerMarkdown, stripCiteMarkers } from "@/components/markdown";
 import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
+import ProjectPlanPanel from "./project-plan";
 import ShareBar from "./share-bar";
 import { useWorkspace } from "./workspace";
 
@@ -583,6 +584,18 @@ export default function ChatPanel({
         >
           {error}
         </p>
+      )}
+
+      {activeProject && !activeProject.is_development && !empty && (
+        <div className="border-t border-edge px-4 py-3 sm:px-6">
+          <div className="mx-auto w-full max-w-[720px]">
+            <ProjectPlanPanel
+              projectId={activeProject.id}
+              hasPlan={activeProject.has_plan}
+              compact
+            />
+          </div>
+        </div>
       )}
 
       {readOnly ? (

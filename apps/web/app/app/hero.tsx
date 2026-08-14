@@ -173,8 +173,10 @@ export default function EmptyHero({
       {activeProject?.is_development && devProjectsEnabled && (
         <DevStatusCard projectId={activeProject.id} />
       )}
-      {activeProject?.has_plan && !activeProject.is_development && (
-        <ProjectPlanPanel projectId={activeProject.id} />
+      {activeProject && !activeProject.is_development && (
+        <div className="mt-7 w-full max-w-[620px]">
+          <ProjectPlanPanel projectId={activeProject.id} hasPlan={activeProject.has_plan} />
+        </div>
       )}
 
       {emptyProject ? (

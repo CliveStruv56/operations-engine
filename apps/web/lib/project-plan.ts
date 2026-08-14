@@ -4,6 +4,7 @@ export type PlanTask = {
   id: string;
   project_id: string;
   title: string;
+  details: string | null;
   status: "todo" | "doing" | "done";
   due_date: string | null;
   assignee_membership_id: string | null;
@@ -15,9 +16,19 @@ export type PlanTask = {
 
 export type PlanTaskSeed = {
   title: string;
+  details?: string | null;
   due_date?: string | null;
   assignee_membership_id?: string | null;
 };
+
+export type PlanTaskPatch = Partial<{
+  title: string;
+  details: string | null;
+  status: PlanTask["status"];
+  due_date: string | null;
+  assignee_membership_id: string | null;
+  position: number;
+}>;
 
 export type MemberRow = {
   id: string;
@@ -39,7 +50,7 @@ export const patchPlanTask = (
   projectId: string,
   taskId: string,
   tenantId: string,
-  body: Partial<{ title: string; status: PlanTask["status"]; due_date: string | null; assignee_membership_id: string | null }>
+  body: PlanTaskPatch
 ) =>
   api<PlanTask>(
     `/projects/${projectId}/plan-tasks/${taskId}`,
@@ -51,3 +62,15 @@ export const deletePlanTask = (projectId: string, taskId: string, tenantId: stri
   api<void>(`/projects/${projectId}/plan-tasks/${taskId}`, { method: "DELETE" }, tenantId);
 
 export const listMembers = (tenantId: string) => api<MemberRow[]>("/members", {}, tenantId);
+
+export const enableProjectPlan = (projectId: string, tenantId: string) =>
+  api<{ id: string; has_plan: boolean }>(
+    `/projects/${projectId}`,
+    { method: "PATCH", body: JSON.stringify({ has_plan: true }) },
+    tenantId
+  );
+
+export function isOverdue(task: PlanTask, today = new Date()): boolean {
+  if (task.status === "done" || !task.due_date) return false;
+  return task.due_date < today.toISOString().slice(0, 10);
+}

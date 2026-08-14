@@ -112,6 +112,62 @@ async def test_plan_task_crud_and_complete(client):
     assert resp.status_code == 204
 
 
+async def test_blank_project_can_gain_a_plan(client):
+    t = await seed_tenant(client, f"gain-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    project = (
+        await client.post("/api/v1/projects", json={"name": "Folder"}, headers=headers)
+    ).json()
+    resp = await client.patch(
+        f"/api/v1/projects/{project['id']}", json={"has_plan": True}, headers=headers
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["has_plan"] is True
+    assert resp.json()["document_count"] == 1
+    add = await client.post(
+        f"/api/v1/projects/{project['id']}/plan-tasks",
+        json={"title": "Now allowed", "details": "Call before Friday"},
+        headers=headers,
+    )
+    assert add.status_code == 201, add.text
+    assert add.json()["details"] == "Call before Friday"
+
+
+async def test_plan_task_details_and_reopen(client):
+    t = await seed_tenant(client, f"note-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    project = (
+        await client.post(
+            "/api/v1/projects", json={"name": "Work", "kind": "planned"}, headers=headers
+        )
+    ).json()
+    created = (
+        await client.post(
+            f"/api/v1/projects/{project['id']}/plan-tasks",
+            json={"title": "Survey", "details": "Ask about drainage"},
+            headers=headers,
+        )
+    ).json()
+    done = (
+        await client.patch(
+            f"/api/v1/projects/{project['id']}/plan-tasks/{created['id']}",
+            json={"status": "done"},
+            headers=headers,
+        )
+    ).json()
+    assert done["completed_at"] is not None
+    reopened = (
+        await client.patch(
+            f"/api/v1/projects/{project['id']}/plan-tasks/{created['id']}",
+            json={"status": "todo", "details": "Ask about drainage and access"},
+            headers=headers,
+        )
+    ).json()
+    assert reopened["status"] == "todo"
+    assert reopened["completed_at"] is None
+    assert reopened["details"] == "Ask about drainage and access"
+
+
 async def test_cannot_assign_another_tenants_member(client):
     a = await seed_tenant(client, f"aa-{uuid4().hex[:6]}")
     b = await seed_tenant(client, f"bb-{uuid4().hex[:6]}")
