@@ -207,6 +207,15 @@ async def test_reprocess_transitions(client, fake_storage, fake_queue):
     tenant = await seed_tenant(client, f"vault-{uuid4().hex[:6]}")
     headers = auth(tenant.owner_id, tenant.id)
 
+    # The conftest doc has no stored file; reprocess requires one (a seeded
+    # note has nothing to re-read), so this test stands in an uploaded one.
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            "update documents set storage_key = $2 where id = $1",
+            tenant.document_id,
+            f"{tenant.id}/{tenant.document_id}.pdf",
+        )
+
     # Seeded doc is 'ready' → reprocess allowed.
     resp = await client.post(f"/api/v1/documents/{tenant.document_id}/reprocess", headers=headers)
     assert resp.status_code == 200, resp.text

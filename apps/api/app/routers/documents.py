@@ -244,6 +244,15 @@ async def reprocess_document(
     # wins; a failed enqueue rolls the status change back.
     async with db.tenant_tx(ctx.user_id, ctx.tenant_id) as conn:
         doc = await _get_document(conn, document_id)
+        if not doc["storage_key"]:
+            # Seeded notes (the planned-project brief) have chunks but no
+            # stored file: reprocessing would wipe the chunks and then fail
+            # in the worker with nothing to re-read.
+            raise ApiError(
+                409,
+                "no_source",
+                "This document was created in the app — there is no file to re-index",
+            )
         row = await conn.fetchrow(
             """
             update documents set status = 'parsing', error = null, updated_at = now()

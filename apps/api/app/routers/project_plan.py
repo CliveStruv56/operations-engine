@@ -35,7 +35,13 @@ async def require_core_project(conn: asyncpg.Connection, project_id: UUID) -> as
 async def require_membership(conn: asyncpg.Connection, membership_id: UUID | None) -> None:
     if membership_id is None:
         return
-    found = await conn.fetchval("select 1 from memberships where id = $1", membership_id)
+    # The memberships select policy is `user_id = current_user OR tenant_id =
+    # current_tenant`, so a caller's own membership in *another* workspace is
+    # visible here — the explicit tenant predicate keeps it unassignable.
+    found = await conn.fetchval(
+        "select 1 from memberships where id = $1 and tenant_id = app_current_tenant()",
+        membership_id,
+    )
     if not found:
         raise ApiError(404, "not_found", "Member not found")
 
