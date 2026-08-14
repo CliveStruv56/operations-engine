@@ -10,6 +10,7 @@ import {
 } from "@/lib/groundwork";
 import { DocIcon, PenIcon } from "@/components/icons";
 import ActivityCard from "./activity-card";
+import ProjectPlanPanel from "./project-plan";
 import { RagDots } from "./projects/page";
 import type { Project } from "./workspace";
 
@@ -171,6 +172,9 @@ export default function EmptyHero({
 
       {activeProject?.is_development && devProjectsEnabled && (
         <DevStatusCard projectId={activeProject.id} />
+      )}
+      {activeProject?.has_plan && !activeProject.is_development && (
+        <ProjectPlanPanel projectId={activeProject.id} />
       )}
 
       {emptyProject ? (

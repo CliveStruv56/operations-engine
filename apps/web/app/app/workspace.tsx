@@ -34,6 +34,8 @@ export type Project = {
   archived: boolean;
   document_count: number;
   is_development: boolean;
+  has_plan: boolean;
+  open_task_count: number;
 };
 
 export type Conversation = {
@@ -68,7 +70,13 @@ export type WorkspaceState = {
   setError: (e: string | null) => void;
   selectTenant: (tenantId?: string) => Promise<void>;
   createTenant: (name: string) => Promise<void>;
-  createProject: (name: string) => Promise<Project | null>;
+  createProject: (
+    name: string,
+    opts?: {
+      kind?: "blank" | "planned";
+      tasks?: { title: string; due_date?: string | null; assignee_membership_id?: string | null }[];
+    }
+  ) => Promise<Project | null>;
   refreshProjects: () => Promise<void>;
   refreshConversations: () => Promise<void>;
   refreshClaimSummary: () => Promise<void>;
@@ -195,12 +203,25 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   );
 
   const createProject = useCallback(
-    async (name: string): Promise<Project | null> => {
+    async (
+      name: string,
+      opts?: {
+        kind?: "blank" | "planned";
+        tasks?: { title: string; due_date?: string | null; assignee_membership_id?: string | null }[];
+      }
+    ): Promise<Project | null> => {
       if (!tenant) return null;
       try {
         const created = await api<Project>(
           "/projects",
-          { method: "POST", body: JSON.stringify({ name }) },
+          {
+            method: "POST",
+            body: JSON.stringify({
+              name,
+              kind: opts?.kind ?? "blank",
+              tasks: opts?.tasks ?? [],
+            }),
+          },
           tenant.id
         );
         await loadProjects(tenant.id);

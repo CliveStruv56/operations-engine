@@ -126,6 +126,7 @@ class Tenant:
     funder_id: UUID
     application_id: UUID
     claim_id: UUID
+    plan_task_id: UUID
 
 
 async def _seed_grantwork(conn, tenant_id: UUID, owner_id: UUID, project_id: UUID, name: str):
@@ -368,6 +369,16 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
             json.dumps(f"{name} Ltd"),
             owner_id,
         )
+        await conn.execute("update projects set has_plan = true where id = $1", project_id)
+        plan_task_id = await conn.fetchval(
+            """
+            insert into project_tasks (tenant_id, project_id, title, position)
+            values ($1, $2, $3, 1) returning id
+            """,
+            tenant_id,
+            project_id,
+            f"{name} first task",
+        )
     return Tenant(
         id=tenant_id,
         owner_id=owner_id,
@@ -382,6 +393,7 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         funder_id=funder_id,
         application_id=application_id,
         claim_id=claim_id,
+        plan_task_id=plan_task_id,
     )
 
 

@@ -24,6 +24,9 @@ PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
     # writes name/brand directly and never reaches this allowlist.
     "tenants": frozenset({"name", "seats", "plan", "trial_ends_at", "soft_budget_usd", "brand"}),
     "projects": frozenset({"name", "description", "archived"}),
+    "project_tasks": frozenset(
+        {"title", "due_date", "assignee_membership_id", "status", "position", "completed_at"}
+    ),
     "documents": frozenset({"project_id", "is_primary"}),
     "proj_projects": frozenset(
         {

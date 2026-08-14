@@ -23,6 +23,9 @@ ALLOWED_ACTIONS = [
     "project.create",
     "project.update",
     "project.delete",
+    "project.task_create",
+    "project.task_update",
+    "project.task_delete",
     "member.role_change",
     "invite.accept",  # invite.create would leak invitee emails pre-join
     "tenant.update",

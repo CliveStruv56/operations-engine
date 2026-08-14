@@ -17,6 +17,7 @@ import {
 } from "@/components/icons";
 import { claimsWaiting, claimsWaitingLabel } from "@/lib/claims";
 import SidebarChats, { href, item, itemActive, itemRest, navLabel } from "./sidebar-chats";
+import NewProjectForm from "./new-project-form";
 import { useWorkspace } from "./workspace";
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -25,7 +26,6 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const pathname = usePathname();
   const sp = useSearchParams();
   const [addingProject, setAddingProject] = useState(false);
-  const [projectName, setProjectName] = useState("");
 
   const tenant = ws.tenant;
   if (!tenant) return null;
@@ -56,15 +56,10 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
     ? Math.max(0, Math.ceil((new Date(tenant.trial_ends_at).getTime() - now) / 86_400_000))
     : null;
 
-  async function createProject(e: React.FormEvent) {
-    e.preventDefault();
-    const created = await ws.createProject(projectName);
-    setProjectName("");
+  async function onProjectCreated(id: string) {
     setAddingProject(false);
-    if (created) {
-      router.push(href({ view: view === "vault" ? "vault" : undefined, project: created.id }));
-      onClose();
-    }
+    router.push(href({ view: view === "vault" ? "vault" : undefined, project: id }));
+    onClose();
   }
 
   return (
@@ -269,26 +264,17 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               <HomeIcon />
               <span className="truncate">{p.name}</span>
               <span className="ml-auto text-[11.5px] font-semibold text-faint">
-                {p.document_count}
+                {p.has_plan && p.open_task_count > 0
+                  ? `${p.open_task_count} · ${p.document_count}`
+                  : p.document_count}
               </span>
             </Link>
           ))}
           {addingProject && (
-            <form
-              onSubmit={createProject}
-              className="mt-1 px-3"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <input
-                autoFocus
-                required
-                value={projectName}
-                onChange={(e) => setProjectName(e.target.value)}
-                onBlur={() => !projectName && setAddingProject(false)}
-                placeholder="Project name"
-                className="w-full rounded-[10px] border border-edge bg-card px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
-              />
-            </form>
+            <NewProjectForm
+              onCreated={onProjectCreated}
+              onCancel={() => setAddingProject(false)}
+            />
           )}
 
           <SidebarChats

@@ -110,9 +110,18 @@ MODULE_TENANT_TABLES: tuple[str, ...] = tuple(t for m in MODULES for t in m.tabl
 #: they are the spine every vertical reads from, so gating them on any single
 #: module would hide a workspace's own facts from the module that needed them.
 #:
+#: `project_tasks` is the optional plan on a core (sidebar) project — not
+#: Groundwork's `proj_tasks`. Gating it on the development-projects flag would
+#: hide ordinary work from tenants that never bought that module.
+#:
 #: The 0001 core tables are deliberately absent: they predate the check and
 #: are covered row-by-row by the `two_tenants` fixture in the isolation suite.
-CORE_TENANT_TABLES: tuple[str, ...] = ("tenant_question_sets", "claims", "claim_revisions")
+CORE_TENANT_TABLES: tuple[str, ...] = (
+    "tenant_question_sets",
+    "claims",
+    "claim_revisions",
+    "project_tasks",
+)
 
 #: Everything the RLS coverage check must see.
 RLS_TENANT_TABLES: tuple[str, ...] = MODULE_TENANT_TABLES + CORE_TENANT_TABLES

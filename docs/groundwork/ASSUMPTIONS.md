@@ -867,3 +867,27 @@ and every divergence is recorded here.
     `annualreturns` returns a JSON array encoded as a JSON string; the charity
     id for that call is `id` (a UUID), not the `SCxxxxxx` number.
 
+## Recorded during core project plans (14 Aug 2026)
+
+51. **Sidebar "Projects" may be documents-only or a thin plan; that plan is
+    not Groundwork.**
+
+    `POST /projects` accepts `kind: blank | planned`. Blank is the historic
+    vault/chat container. Planned sets `projects.has_plan`, seeds a primary
+    "Project brief" markdown document (DB row + keyword chunk, no object
+    storage — CI has storage off) and optional `project_tasks` (title, due
+    date, `assignee_membership_id`). Nested CRUD lives at
+    `/projects/{id}/plan-tasks` so it never collides with Groundwork
+    `/projects/{id}/tasks`.
+
+    **Why the repo wins.** Groundwork `proj_tasks` requires a CLH `stage_key`
+    and the `projects` feature flag. Folding general work into that spine
+    would either invent a fake stage or hide tasks from tenants that never
+    bought development projects. The two products stay distinct: `/app/projects/*`
+    remains the development room.
+
+    Assignees are workspace members, not CRM contacts and not free-text
+    `owner_name`. Cross-tenant membership ids 404 in app code (FK checks
+    bypass RLS).
+
+

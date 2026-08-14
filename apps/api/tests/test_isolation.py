@@ -42,6 +42,7 @@ TENANT_TABLES = [
     "grant_draft_jobs",
     "claims",
     "claim_revisions",
+    "project_tasks",
 ]
 
 
@@ -107,6 +108,10 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("POST", "/api/v1/claims/import/companies-house"),
         ("POST", "/api/v1/claims/import/charity-commission"),
         ("POST", "/api/v1/claims/import/oscr"),
+        ("GET", f"/api/v1/projects/{b.project_id}/plan-tasks"),
+        ("POST", f"/api/v1/projects/{b.project_id}/plan-tasks"),
+        ("PATCH", f"/api/v1/projects/{b.project_id}/plan-tasks/{b.plan_task_id}"),
+        ("DELETE", f"/api/v1/projects/{b.project_id}/plan-tasks/{b.plan_task_id}"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
@@ -175,6 +180,20 @@ async def test_direct_object_reference_attacks(client, two_tenants):
     claims = (await client.get("/api/v1/claims", headers=headers)).json()
     assert str(b.claim_id) not in {c["id"] for c in claims}
     assert str(a.claim_id) in {c["id"] for c in claims}
+
+    # Core project plan: B's task under A's context must 404.
+    resp = await client.get(f"/api/v1/projects/{b.project_id}/plan-tasks", headers=headers)
+    assert resp.status_code == 404
+    resp = await client.patch(
+        f"/api/v1/projects/{a.project_id}/plan-tasks/{b.plan_task_id}",
+        json={"title": "mine now"},
+        headers=headers,
+    )
+    assert resp.status_code == 404
+    listed = (
+        await client.get(f"/api/v1/projects/{a.project_id}/plan-tasks", headers=headers)
+    ).json()
+    assert str(b.plan_task_id) not in {t["id"] for t in listed}
 
 
 async def test_claim_cannot_cite_another_tenants_document(client, two_tenants):

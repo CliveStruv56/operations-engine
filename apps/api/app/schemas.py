@@ -1,6 +1,6 @@
 import re
 from datetime import date, datetime
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -297,9 +297,17 @@ class SlidesExportOut(BaseModel):
     slide_count: int
 
 
+class PlanTaskSeed(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    due_date: date | None = None
+    assignee_membership_id: UUID | None = None
+
+
 class ProjectCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2_000)
+    kind: Literal["blank", "planned"] = "blank"
+    tasks: list[PlanTaskSeed] = Field(default_factory=list, max_length=20)
 
 
 class ProjectUpdate(BaseModel):
@@ -313,10 +321,39 @@ class ProjectOut(BaseModel):
     name: str
     description: str | None
     archived: bool
+    has_plan: bool = False
     created_at: datetime
     updated_at: datetime
     document_count: int = 0
     is_development: bool = False
+    open_task_count: int = 0
+
+
+class PlanTaskIn(BaseModel):
+    title: str = Field(min_length=1, max_length=300)
+    due_date: date | None = None
+    assignee_membership_id: UUID | None = None
+
+
+class PlanTaskPatch(BaseModel):
+    title: str | None = Field(default=None, min_length=1, max_length=300)
+    due_date: date | None = None
+    assignee_membership_id: UUID | None = None
+    status: str | None = Field(default=None, pattern="^(todo|doing|done)$")
+    position: int | None = None
+
+
+class PlanTaskOut(BaseModel):
+    id: UUID
+    project_id: UUID
+    title: str
+    status: str
+    due_date: date | None
+    assignee_membership_id: UUID | None
+    assignee_email: str | None = None
+    position: int
+    completed_at: datetime | None
+    created_at: datetime
 
 
 class DocumentCreate(BaseModel):
