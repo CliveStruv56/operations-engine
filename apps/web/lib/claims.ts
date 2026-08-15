@@ -253,8 +253,11 @@ function formatClaimValue(kind: ClaimKind, value: unknown): string {
   if (value == null || value === "") return "";
   if (Array.isArray(value)) return value.map(String).join(", ");
   if (typeof value === "object") return "";
-  if (kind.value_kind === "money" && typeof value === "number") {
-    return `£${value.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+  if (kind.value_kind === "money") {
+    const n = typeof value === "string" ? Number(value) : value;
+    if (typeof n === "number" && !Number.isNaN(n)) {
+      return `£${n.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
+    }
   }
   return String(value);
 }

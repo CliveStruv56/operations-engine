@@ -76,4 +76,21 @@ describe("fmtMoney", () => {
     expect(fmtMoney(null)).toBe("—");
     expect(fmtMoney(0)).toBe("£0");
   });
+
+  it("coerces Decimal-as-string amounts from the API", () => {
+    // Pydantic v2 serialises Decimal fields as JSON strings.
+    expect(fmtMoney("20000.00")).toBe("£20,000");
+    expect(fmtMoney("27500.00")).toBe("£27,500");
+    expect(fmtMoney("not a number")).toBe("—");
+  });
+});
+
+describe("achievedShare with Decimal-as-string inputs", () => {
+  it("compares string amounts numerically", () => {
+    expect(achievedShare("180.00", "250.00")).toBe(0.72);
+  });
+
+  it("treats a string zero target as nothing to compare", () => {
+    expect(achievedShare("180.00", "0.00")).toBeNull();
+  });
 });

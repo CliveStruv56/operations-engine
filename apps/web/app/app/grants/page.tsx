@@ -25,7 +25,7 @@ function Money({ rows }: { rows: PortfolioRow[] }) {
     .reduce((sum, r) => sum + r.weighted_value, 0);
   const secured = rows
     .filter((r) => r.status === "awarded" || r.status === "complete")
-    .reduce((sum, r) => sum + (r.amount_awarded ?? 0), 0);
+    .reduce((sum, r) => sum + (Number(r.amount_awarded ?? 0) || 0), 0);
   const overdue = rows.reduce((sum, r) => sum + r.overdue_returns, 0);
 
   return (

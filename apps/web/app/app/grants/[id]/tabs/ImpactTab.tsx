@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Spinner } from "@/components/activity";
-import { DraftJob, Measure, getDraftJob, gr, submitImpactCard } from "@/lib/grants";
+import { DraftJob, Measure, fmtNum, getDraftJob, gr, submitImpactCard } from "@/lib/grants";
 import { openPresigned } from "@/lib/groundwork";
 import { btn, btnGhost, card, input, th } from "../../ui";
 import { LoadError, useGrantLoad } from "./load";
@@ -202,8 +202,8 @@ export function ImpactTab({ id }: { id: string }) {
                 <tr key={measure.id}>
                   <td className="px-4 py-2.5 font-medium">{measure.name}</td>
                   <td className="data px-4 py-2.5 text-ink-faint">{measure.unit}</td>
-                  <td className="data px-4 py-2.5">{measure.baseline ?? "—"}</td>
-                  <td className="data px-4 py-2.5">{measure.target ?? "—"}</td>
+                  <td className="data px-4 py-2.5">{fmtNum(measure.baseline)}</td>
+                  <td className="data px-4 py-2.5">{fmtNum(measure.target)}</td>
                   <td className="px-4 py-2.5 text-right">
                     <button onClick={() => remove(measure)} className={btnGhost}>
                       Delete

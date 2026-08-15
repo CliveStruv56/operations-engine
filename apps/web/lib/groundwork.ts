@@ -217,5 +217,10 @@ export const RAG_DOT: Record<string, string> = {
 };
 export const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString("en-GB") : "—";
-export const fmtMoney = (n: number | null | undefined) =>
-  n == null ? "—" : "£" + n.toLocaleString("en-GB", { maximumFractionDigits: 0 });
+// Decimal fields arrive as JSON strings (Pydantic v2 default), so coerce first.
+export const fmtMoney = (n: number | string | null | undefined) => {
+  const v = typeof n === "string" ? Number(n) : n;
+  return v == null || Number.isNaN(v)
+    ? "—"
+    : "£" + v.toLocaleString("en-GB", { maximumFractionDigits: 0 });
+};

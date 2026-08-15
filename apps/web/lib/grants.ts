@@ -21,8 +21,9 @@ export type PortfolioRow = {
   funder_name: string | null;
   status: ApplicationStatus;
   stage_current: string;
-  amount_requested: number | null;
-  amount_awarded: number | null;
+  /** Decimal on the API — serialised as a JSON string. */
+  amount_requested: number | string | null;
+  amount_awarded: number | string | null;
   restricted: boolean;
   deadline: string | null;
   updated_at: string;
@@ -44,8 +45,9 @@ export type Application = {
   programme_key: string | null;
   stage_current: string;
   status: ApplicationStatus;
-  amount_requested: number | null;
-  amount_awarded: number | null;
+  /** Decimal on the API — serialised as a JSON string. */
+  amount_requested: number | string | null;
+  amount_awarded: number | string | null;
   restricted: boolean;
   deadline: string | null;
   submitted_at: string | null;
@@ -184,8 +186,9 @@ export type Measure = {
   name: string;
   definition: string | null;
   unit: string;
-  baseline: number | null;
-  target: number | null;
+  /** Decimal on the API — serialised as a JSON string. */
+  baseline: number | string | null;
+  target: number | string | null;
   position: number;
   notes: string | null;
 };
@@ -195,9 +198,10 @@ export type Outcome = {
   measure_id: string;
   measure_name: string;
   unit: string;
-  target: number | null;
+  /** Decimal on the API — serialised as a JSON string. */
+  target: number | string | null;
   reporting_period_id: string;
-  value: number | null;
+  value: number | string | null;
   narrative: string | null;
   evidence_notes: string | null;
   recorded_at: string;
@@ -302,13 +306,31 @@ export const RAG_DOT: Record<string, string> = {
 export const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString("en-GB") : "—";
 
-export const fmtMoney = (n: number | null | undefined) =>
-  n == null ? "—" : "£" + n.toLocaleString("en-GB", { maximumFractionDigits: 0 });
+// Decimal fields arrive as JSON strings (Pydantic v2 default), so coerce first.
+export const fmtMoney = (n: number | string | null | undefined) => {
+  const v = typeof n === "string" ? Number(n) : n;
+  return v == null || Number.isNaN(v)
+    ? "—"
+    : "£" + v.toLocaleString("en-GB", { maximumFractionDigits: 0 });
+};
+
+/** Plain number display for Decimal-backed fields — no unit, no trailing zeros. */
+export const fmtNum = (n: number | string | null | undefined) => {
+  const v = typeof n === "string" ? Number(n) : n;
+  return v == null || Number.isNaN(v)
+    ? "—"
+    : v.toLocaleString("en-GB", { maximumFractionDigits: 2 });
+};
 
 /** Percentage of target achieved, or null when there is nothing to compare. */
-export function achievedShare(value: number | null, target: number | null): number | null {
-  if (value == null || target == null || target === 0) return null;
-  return value / target;
+export function achievedShare(
+  value: number | string | null,
+  target: number | string | null
+): number | null {
+  const v = typeof value === "string" ? Number(value) : value;
+  const t = typeof target === "string" ? Number(target) : target;
+  if (v == null || t == null || Number.isNaN(v) || Number.isNaN(t) || t === 0) return null;
+  return v / t;
 }
 
 /**

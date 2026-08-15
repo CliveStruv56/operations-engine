@@ -7,6 +7,7 @@ import {
   ReportingPeriod,
   achievedShare,
   fmtDate,
+  fmtNum,
   gr,
 } from "@/lib/grants";
 import { btn, btnGhost, card, input, th } from "../../ui";
@@ -73,7 +74,7 @@ function Outcomes({
               <tr key={measure.id}>
                 <td className="px-2 py-2">{measure.name}</td>
                 <td className="data px-2 py-2 text-ink-faint">
-                  {measure.target ?? "—"} {measure.unit}
+                  {fmtNum(measure.target)} {measure.unit}
                 </td>
                 <td className="px-2 py-2">
                   <input

@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import CommandPalette from "./command-palette";
 import Sidebar from "./sidebar";
+import { ToastProvider } from "@/components/toast";
 import { useWorkspace, WorkspaceProvider } from "./workspace";
 
 function Onboarding() {
@@ -157,9 +158,11 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceProvider>
-      <Suspense fallback={null}>
-        <WorkspaceShell>{children}</WorkspaceShell>
-      </Suspense>
+      <ToastProvider>
+        <Suspense fallback={null}>
+          <WorkspaceShell>{children}</WorkspaceShell>
+        </Suspense>
+      </ToastProvider>
     </WorkspaceProvider>
   );
 }
