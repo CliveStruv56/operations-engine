@@ -1,0 +1,64 @@
+# Canary: a section-shaped drafting call must come back as prose.
+#
+# The 3 Aug 2026 incident (handoff §6h): reasoning models spent the whole
+# token budget thinking, returned finish=length with zero prose, and a
+# monitoring return reached the registry with six of nine sections missing.
+# The fix was reasoning_effort=low + max_tokens=4096; this asserts that
+# contract still holds on every alias the drafting engine can route to.
+#
+# Also DRAFT-002: the prompt below supplies NO table, so any reference to an
+# "accompanying" table or appendix is the phantom-reference class that was
+# found three separate times (sections, grant prompt notes, summaries).
+
+description: "Section drafting canaries — empty-output and phantom-table classes"
+
+prompts:
+  - |
+    You are drafting one section of a community organisation's monthly
+    monitoring report. Write the section titled "Progress this month" using
+    only the facts below. Do not invent figures. Write 150-250 words of
+    plain prose with no headings.
+
+    Facts:
+    - The roof repair contract was signed on 4 August with Harte & Sons.
+    - Two volunteer training sessions ran, with 14 attendees in total.
+    - The hall reopened for community meals on Thursdays.
+
+providers:
+  - id: openai:chat:workhorse
+    label: workhorse
+    config: &gateway
+      apiBaseUrl: "{{ env.LITELLM_BASE_URL }}"
+      apiKeyEnvar: LITELLM_API_KEY
+      temperature: 0.2
+      max_tokens: 4096
+      reasoning_effort: low
+      # The app reads message content only; grading the thinking stream would
+      # pass on exactly the empty-prose failure this canary exists to catch.
+      showThinking: false
+  - id: openai:chat:drafter
+    label: drafter
+    config: *gateway
+  - id: openai:chat:reasoner
+    label: reasoner
+    config: *gateway
+  - id: openai:chat:longdoc
+    label: longdoc
+    config: *gateway
+
+tests:
+  - description: "one section, four aliases"
+    assert:
+      # The empty-output class: thinking is not prose.
+      - type: javascript
+        value: output.trim().length > 300
+      # The phantom-reference class: nothing supplied a table or appendix.
+      - type: not-icontains
+        value: "accompanying table"
+      - type: not-icontains
+        value: "table below"
+      - type: not-icontains
+        value: "see appendix"
+      # And the facts actually made it in.
+      - type: icontains
+        value: "Harte"

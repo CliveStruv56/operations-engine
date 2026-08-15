@@ -1,0 +1,55 @@
+# Canary: transcription must not invent a limit.
+#
+# The funder-forms contract (docs/funder-forms-guide.md, "Limits are the
+# point"): a character limit the source text does not state must come back
+# null — a wrong limit produces an answer that will not paste, discovered at
+# the funder's portal after the writing is done. The source below states one
+# limit and omits the other; the model inventing the second is the failure.
+
+description: "Form transcription canary — invented-limit class"
+
+prompts:
+  - |
+    Read the funder's guidance below and list the application questions as a
+    JSON array. Each item: {"text": string, "limit": integer or null}.
+    "limit" is the funder's stated maximum length for the answer. If the
+    guidance does not state a limit for a question, use null. Never guess a
+    limit. Reply with the JSON array only.
+
+    Guidance:
+    Section A. Tell us about your organisation (maximum 300 words).
+    Section B. Describe the difference this project will make.
+
+providers:
+  - id: openai:chat:workhorse
+    label: workhorse
+    config:
+      apiBaseUrl: "{{ env.LITELLM_BASE_URL }}"
+      apiKeyEnvar: LITELLM_API_KEY
+      temperature: 0
+      max_tokens: 4096
+      reasoning_effort: low
+      # The app reads message content only; a canary that graded the
+      # thinking stream would pass on exactly the empty-prose failure it
+      # exists to catch.
+      showThinking: false
+
+tests:
+  - description: "one stated limit, one absent"
+    assert:
+      - type: icontains
+        value: "300"
+      # The stated limit arrives; the unstated one stays null. Parse every
+      # bracketed candidate — prose (or a code fence) may surround the array.
+      - type: javascript
+        value: |
+          const candidates = output.match(/\[[\s\S]*?\]/g) || [];
+          for (const candidate of candidates) {
+            let questions;
+            try { questions = JSON.parse(candidate); } catch { continue; }
+            if (!Array.isArray(questions) || typeof questions[0] !== "object") continue;
+            return questions.length === 2 &&
+              questions[0].limit === 300 &&
+              questions[1].limit === null;
+          }
+          return false;

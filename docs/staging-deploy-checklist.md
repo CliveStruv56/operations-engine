@@ -158,6 +158,27 @@ enough.
   `ops_app` is created by migration 0001 in dev/CI; **create it manually in
   staging** with RLS-enforced (non-owner, no BYPASSRLS).
 
+## 2b. Observability (optional, opt-in)
+
+**Langfuse traces.** The gateway config carries a commented
+`litellm_settings` block (`infra/litellm/config.yaml`): uncomment it, set
+`LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST` on the
+litellm service, and **redeploy litellm** (the config is baked into the
+image). Per-tenant attribution is free — traces group by virtual-key alias
+`tenant-<id>`. Message content is off by default
+(`turn_off_message_logging: true`); turning it on sends tenant prompts to
+wherever Langfuse runs, which is a hard-constraint-4 decision, not a tweak.
+Where to run Langfuse: the EU-region Langfuse Cloud free tier is the
+low-ops path; self-hosting v3 needs Postgres + ClickHouse + Redis + S3 —
+a real stack, not a casual Railway add.
+
+**Prompt canaries.** `.github/workflows/prompt-checks.yml` runs the
+`infra/promptfoo/` suites (empty-output, phantom-table and invented-limit
+classes) against the staging gateway, weekly and on demand. Enable by
+setting two repo secrets: `STAGING_LITELLM_BASE_URL` and
+`STAGING_LITELLM_KEY` (the master key, or a dedicated virtual key). Without
+them the workflow skips and says so.
+
 ## 3. Environment matrix
 
 | Var | API | Worker | Web | Staging value |

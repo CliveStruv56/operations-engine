@@ -109,6 +109,28 @@ router_settings:
   num_retries: 2
   timeout: 120
 
+# Observability (opt-in): Langfuse traces per generation, activated by
+# uncommenting this block and setting LANGFUSE_PUBLIC_KEY / LANGFUSE_SECRET_KEY
+# / LANGFUSE_HOST on the litellm service, then REDEPLOYING IT — this file is
+# baked into the image and editing it changes nothing until the service ships
+# (staging checklist header note). Deliberately commented rather than always
+# on: with the callback listed and no keys, every request logs a callback
+# error, which is exactly the silent-noise failure mode this repo avoids.
+#
+# Per-tenant attribution comes free — each workspace calls through its own
+# virtual key aliased `tenant-<id>`, and Langfuse groups traces by key alias.
+#
+# `turn_off_message_logging` stays true on purpose: traces carry model,
+# latency, tokens and cost — the numbers a slow draft is debugged with — and
+# never client prompt or completion content. Flipping it to false sends
+# tenant content to wherever Langfuse runs, which is a data-protection
+# decision (hard constraint 4), not a config tweak.
+#
+# litellm_settings:
+#   success_callback: ["langfuse"]
+#   failure_callback: ["langfuse"]
+#   turn_off_message_logging: true
+
 general_settings:
   master_key: os.environ/LITELLM_MASTER_KEY
   database_url: os.environ/LITELLM_DATABASE_URL

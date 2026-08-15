@@ -1,0 +1,38 @@
+# Live-model prompt canaries (infra/promptfoo/) — the failure classes CI
+# cannot catch because they are provider behaviours, not code paths: reasoning
+# models returning empty prose, phantom table references, invented limits.
+#
+# Runs against the STAGING gateway with real models (a few pence per run), so
+# it is scheduled + manual rather than per-PR, and skips cleanly when the
+# gateway secrets are not configured.
+name: prompt-checks
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 5 * * 1" # Mondays 05:30 UTC, before the working week
+
+jobs:
+  canaries:
+    runs-on: ubuntu-latest
+    env:
+      LITELLM_BASE_URL: ${{ secrets.STAGING_LITELLM_BASE_URL }}
+      LITELLM_API_KEY: ${{ secrets.STAGING_LITELLM_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Gate on gateway secrets
+        id: gate
+        run: |
+          if [ -z "$LITELLM_BASE_URL" ] || [ -z "$LITELLM_API_KEY" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "STAGING_LITELLM_BASE_URL / STAGING_LITELLM_KEY are not set — nothing to run against."
+          fi
+      - name: Section canaries (empty-output + phantom-table classes)
+        if: steps.gate.outputs.skip != 'true'
+        run: npx promptfoo@latest eval -c infra/promptfoo/sections.yaml --no-cache
+      - name: Transcription canary (invented-limit class)
+        if: steps.gate.outputs.skip != 'true'
+        run: npx promptfoo@latest eval -c infra/promptfoo/transcribe.yaml --no-cache
