@@ -78,8 +78,12 @@ function ClaimsPageInner() {
   const sp = useSearchParams();
   const [claims, setClaims] = useState<Claim[] | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  // ?add=1 — chat's "Assert it as a fact" recovery action opens the form
+  // straight away, with the question that went unanswered carried as ?topic=
+  // so it lands in the provenance notes.
   const [importing, setImporting] = useState(false);
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState(sp.get("add") === "1");
+  const topic = sp.get("topic");
   const [error, setError] = useState<string | null>(null);
 
   // Confirming a proposal or checking a stale fact changes the sidebar count,
@@ -165,6 +169,7 @@ function ClaimsPageInner() {
             you save it.
           </p>
           <AddFactPanel
+            initialNotes={topic ? `Asserted after asking: “${topic}”` : undefined}
             onCancel={() => setAdding(false)}
             onSaved={() => {
               setAdding(false);

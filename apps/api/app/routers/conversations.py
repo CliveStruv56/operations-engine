@@ -624,16 +624,30 @@ async def post_message(
                 conversation_id,
             )
         # What actually answered: project docs, the wider vault, or no vault.
+        # `coverage` is the recovery signal — "none" means the vault was asked
+        # and nothing in it backed the answer (no chunks retrieved, or nothing
+        # cited), which is when the client offers "add a document / assert it
+        # as a fact". `scope_used` stays unset in that case: a footer reading
+        # "from the whole vault" over an answer that touched no documents was
+        # actively misleading.
         scope_used = None
+        coverage = None
         if body.use_vault:
-            cited_docs = {UUID(c["document_id"]) for c in citations}
-            scope_used = "project" if project_docs and cited_docs & set(project_docs) else "vault"
+            vault_cited = {
+                UUID(c["document_id"]) for c in citations if c.get("source_type") != "web"
+            }
+            coverage = "ok" if vault_cited else "none"
+            if vault_cited:
+                scope_used = (
+                    "project" if project_docs and vault_cited & set(project_docs) else "vault"
+                )
         yield _sse(
             "done",
             {
                 **_json_safe(_message_out(row)),
                 "soft_cap": soft_cap_hit,
                 "scope_used": scope_used,
+                "coverage": coverage,
             },
         )
 

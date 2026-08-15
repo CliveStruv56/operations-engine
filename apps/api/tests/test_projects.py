@@ -171,6 +171,7 @@ async def test_projectless_chat_reports_vault_scope(client, scoped_llm):
     )
     done = dict(parse_sse(resp.text))["done"]
     assert done["scope_used"] == "vault"
+    assert done["coverage"] == "ok"
 
     resp = await client.post(
         f"/api/v1/conversations/{t.conversation_id}/messages",

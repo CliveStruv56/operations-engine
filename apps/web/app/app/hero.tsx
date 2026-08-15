@@ -38,41 +38,55 @@ function greeting(): string {
 
 const shorten = (t: string, max = 40) => (t.length > max ? `${t.slice(0, max - 1)}…` : t);
 
-/** Context-dependent starter prompts. Only ever suggests questions the vault
- * can actually ground — Groundwork structured data (tasks, stages) is not
- * retrievable by chat, so those facts render in the status card instead. */
-function buildSuggestions(project: Project | null, projectDocs: DocMeta[]): Suggestion[] {
+/** Context-dependent starter prompts, built from what the vault actually
+ * holds: real indexed documents beat canned classics, which only appear while
+ * the vault is too thin to ask about. Only ever suggests questions the vault
+ * can ground — Groundwork structured data (tasks, stages) is not retrievable
+ * by chat, so those facts render in the status card instead; the same goes
+ * for organisation facts, which chat does not read. */
+export function buildSuggestions(project: Project | null, projectDocs: DocMeta[]): Suggestion[] {
   const ready = projectDocs.filter((d) => d.status === "ready");
   const lead = ready.find((d) => d.is_primary) ?? ready[0];
-
-  if (!project) {
-    const generic: Suggestion[] = [
-      { text: "Summarise our health and safety procedures", icon: "doc" },
-      { text: "What are our standard payment terms?", icon: "doc" },
-      { text: "Draft a letter quoting for a new client", icon: "pen" },
-      { text: "Give me a one-page status report", mode: "report", icon: "pen" },
-    ];
-    if (lead) generic[0] = { text: `Summarise the key points of ${shorten(lead.title)}`, icon: "doc" };
-    return generic;
-  }
+  const second = ready.find((d) => d !== lead);
 
   const cards: Suggestion[] = [];
   if (lead) {
     cards.push({ text: `Summarise the key points of ${shorten(lead.title)}`, icon: "doc" });
   }
+  if (second) {
+    cards.push({ text: `What should we know from ${shorten(second.title)}?`, icon: "doc" });
+  }
   if (ready.length >= 2) {
-    cards.push({ text: "What are the key dates and actions across these documents?", icon: "doc" });
+    cards.push({
+      text: project
+        ? "What are the key dates and actions across these documents?"
+        : "What are the key dates and actions across our documents?",
+      icon: "doc",
+    });
   }
-  if (project.is_development) {
-    cards.push({ text: "Draft a status update for the client", mode: "report", icon: "pen" });
-  }
-  cards.push({
-    text: `Draft a one-page summary of ${shorten(project.name, 30)}`,
-    mode: "report",
-    icon: "pen",
-  });
-  if (cards.length < 4) {
-    cards.push({ text: "Turn these documents into a slide deck", mode: "slides", icon: "pen" });
+
+  if (project) {
+    if (project.is_development) {
+      cards.push({ text: "Draft a status update for the client", mode: "report", icon: "pen" });
+    }
+    cards.push({
+      text: `Draft a one-page summary of ${shorten(project.name, 30)}`,
+      mode: "report",
+      icon: "pen",
+    });
+    if (cards.length < 4) {
+      cards.push({ text: "Turn these documents into a slide deck", mode: "slides", icon: "pen" });
+    }
+  } else {
+    cards.push({ text: "Draft a letter quoting for a new client", icon: "pen" });
+    cards.push({ text: "Give me a one-page status report", mode: "report", icon: "pen" });
+    // Canned openers pad the grid only while the vault cannot.
+    if (cards.length < 4) {
+      cards.push({ text: "Summarise our health and safety procedures", icon: "doc" });
+    }
+    if (cards.length < 4) {
+      cards.push({ text: "What are our standard payment terms?", icon: "doc" });
+    }
   }
   return cards.slice(0, 4);
 }

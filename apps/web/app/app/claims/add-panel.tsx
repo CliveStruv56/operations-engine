@@ -29,9 +29,12 @@ const input = "w-full rounded-[10px] border border-edge bg-card px-3 py-2 text-s
 export function AddFactPanel({
   onCancel,
   onSaved,
+  initialNotes,
 }: {
   onCancel: () => void;
   onSaved: () => void;
+  /** Pre-filled provenance — e.g. the chat question this fact answers. */
+  initialNotes?: string;
 }) {
   const [kinds, setKinds] = useState<ClaimKind[] | null>(null);
   const [kindKey, setKindKey] = useState("");
@@ -40,7 +43,7 @@ export function AddFactPanel({
   const [rawValue, setRawValue] = useState("");
   const [statementEdit, setStatementEdit] = useState<string | null>(null);
   const [expiresOn, setExpiresOn] = useState("");
-  const [notes, setNotes] = useState("");
+  const [notes, setNotes] = useState(initialNotes ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ value?: string; subject?: string }>({});

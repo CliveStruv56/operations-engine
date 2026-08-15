@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { Spinner } from "@/components/activity";
 import { openPresigned } from "@/lib/groundwork";
@@ -68,6 +69,21 @@ export default function VaultPanel({
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const activeProject = projects.find((p) => p.id === activeProjectId) ?? null;
+  const router = useRouter();
+  const sp = useSearchParams();
+
+  // ?upload=1 — chat's "Add a document" recovery action lands here wanting
+  // the picker open. One-shot: strip the param so back/refresh do not re-open
+  // it. If the browser refuses a click without user activation, the dropzone
+  // is the first thing on the page anyway.
+  const wantUpload = sp.get("upload") === "1";
+  useEffect(() => {
+    if (!wantUpload) return;
+    const q = new URLSearchParams(sp);
+    q.delete("upload");
+    router.replace(`/app?${q}`);
+    fileInput.current?.click();
+  }, [wantUpload, sp, router]);
 
   const refresh = useCallback(async () => {
     setDocs(await api<Doc[]>("/documents", {}, tenantId));

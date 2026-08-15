@@ -139,6 +139,9 @@ function AssistantMessageInner({
   saving,
   onPdf,
   pdfBusy,
+  coverage,
+  onAddDocument,
+  onAssertFact,
   readOnly,
 }: {
   m: Message;
@@ -152,6 +155,10 @@ function AssistantMessageInner({
   saving: boolean;
   onPdf: (id: string) => void;
   pdfBusy: boolean;
+  /** "none" when the vault was asked and could not back the answer. */
+  coverage: string | undefined;
+  onAddDocument: () => void;
+  onAssertFact: (id: string) => void;
   readOnly: boolean;
 }) {
   const [showAllSources, setShowAllSources] = useState(false);
@@ -249,6 +256,23 @@ function AssistantMessageInner({
           </span>
         )}
       </div>
+      {coverage === "none" && !readOnly && (
+        <p className="mt-2.5 flex flex-wrap items-center gap-2.5 rounded-[10px] bg-sidebar px-3 py-2 text-xs text-ink-muted">
+          <span>Your vault could not back this answer.</span>
+          <button
+            onClick={onAddDocument}
+            className="font-medium text-accent-deep underline hover:text-ink"
+          >
+            Add a document
+          </button>
+          <button
+            onClick={() => onAssertFact(m.id)}
+            className="font-medium text-accent-deep underline hover:text-ink"
+          >
+            Assert it as a fact
+          </button>
+        </p>
+      )}
     </article>
   );
 }
@@ -283,6 +307,9 @@ export default function ChatPanel({
   const activeProject = ws.projects.find((p) => p.id === activeProjectId) ?? null;
   const activeConv = ws.conversations.find((c) => c.id === activeConversationId) ?? null;
   const [scopes, setScopes] = useState<Record<string, string>>({});
+  // Like scopes: live-session only, keyed by message id. "none" marks an
+  // answer the vault could not back, which is when recovery actions show.
+  const [coverages, setCoverages] = useState<Record<string, string>>({});
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [createdHereIds, setCreatedHereIds] = useState<string[]>([]);
@@ -551,6 +578,29 @@ export default function ChatPanel({
     [conversationId, tenantId]
   );
 
+  // Recovery from "the vault does not contain X": put the missing thing in.
+  const addDocument = useCallback(() => {
+    const q = new URLSearchParams({ view: "vault", upload: "1" });
+    if (activeProjectId) q.set("project", activeProjectId);
+    router.push(`/app?${q}`);
+  }, [router, activeProjectId]);
+
+  const assertFact = useCallback(
+    (messageId: string) => {
+      // The thing that was missing is what the person asked — the user
+      // message just before this answer.
+      const list = messagesRef.current;
+      const i = list.findIndex((x) => x.id === messageId);
+      const asked = list
+        .slice(0, Math.max(i, 0))
+        .reverse()
+        .find((x) => x.role === "user")?.content;
+      const topic = (asked ?? "").slice(0, 200);
+      router.push(`/app/claims?add=1${topic ? `&topic=${encodeURIComponent(topic)}` : ""}`);
+    },
+    [router]
+  );
+
   function stopStreaming() {
     abortRef.current?.abort();
   }
@@ -668,9 +718,13 @@ export default function ChatPanel({
           discardDeltas();
           setSoftCap(Boolean(message.soft_cap));
           setStreamText(null);
-          const done = message as unknown as Message & { scope_used?: string | null };
+          const done = message as unknown as Message & {
+            scope_used?: string | null;
+            coverage?: string | null;
+          };
           setMessages((m) => [...m, done]);
           if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
+          if (done.coverage) setCoverages((s) => ({ ...s, [done.id]: done.coverage! }));
           ws.refreshConversations();
         },
         onError: (_code, msg) => {
@@ -749,6 +803,9 @@ export default function ChatPanel({
                     saving={savingId === m.id}
                     onPdf={exportPdf}
                     pdfBusy={pdfId === m.id}
+                    coverage={coverages[m.id]}
+                    onAddDocument={addDocument}
+                    onAssertFact={assertFact}
                     readOnly={readOnly}
                   />
                 )

@@ -103,6 +103,32 @@ async def test_stream_and_persist(client, fake_llm):
     assert summary["tokens_out"] == 70
 
 
+async def test_done_reports_vault_coverage(client, fake_llm):
+    """An answer that cites nothing from the vault says so — coverage "none"
+    with no scope claim — and a vault-off chat claims nothing either way."""
+    tenant = await seed_tenant(client, f"cov-{uuid4().hex[:6]}")
+    await enable_llm_key(tenant)
+    headers = auth(tenant.owner_id, tenant.id)
+
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "Something the vault does not cover"},
+        headers=headers,
+    )
+    done = dict(parse_sse(resp.text))["done"]
+    assert done["coverage"] == "none"
+    assert done["scope_used"] is None
+
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages",
+        json={"content": "No vault at all", "use_vault": False},
+        headers=headers,
+    )
+    done = dict(parse_sse(resp.text))["done"]
+    assert done["coverage"] is None
+    assert done["scope_used"] is None
+
+
 async def test_soft_cap_pins_routing_to_workhorse(client, fake_llm):
     tenant = await seed_tenant(client, f"cap-{uuid4().hex[:6]}")
     await enable_llm_key(tenant)
