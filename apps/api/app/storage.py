@@ -27,6 +27,9 @@ ALLOWED_MIMES = {
     "text/plain": "txt",
     "text/markdown": "md",
     "text/csv": "csv",
+    # Meeting transcripts (Teams, Meet, Zoom, Fathom all export WebVTT). The
+    # worker parses these itself, speaker-aware — never Docling.
+    "text/vtt": "vtt",
 }
 
 

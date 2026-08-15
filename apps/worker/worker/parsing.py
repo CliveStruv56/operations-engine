@@ -10,6 +10,7 @@ section headers while walking the document tree. OCR is off in Phase 1
 from pathlib import Path
 
 from worker.blocks import Block
+from worker.transcript import parse_vtt
 
 _converter = None
 
@@ -29,7 +30,10 @@ def _get_converter():
 
 
 def parse_file(path: str) -> list[Block]:
-    if Path(path).suffix.lower() in (".txt", ".md"):
+    suffix = Path(path).suffix.lower()
+    if suffix == ".vtt":
+        return parse_vtt(Path(path).read_text(encoding="utf-8", errors="replace"))
+    if suffix in (".txt", ".md"):
         return _parse_text(Path(path).read_text(encoding="utf-8", errors="replace"))
     return _parse_docling(path)
 

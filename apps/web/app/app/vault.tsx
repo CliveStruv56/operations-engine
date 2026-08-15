@@ -29,6 +29,7 @@ const MIME_LABEL: Record<string, string> = {
   "text/plain": "TXT",
   "text/markdown": "MD",
   "text/csv": "CSV",
+  "text/vtt": "VTT",
 };
 
 const STATUS_LABEL: Record<Doc["status"], string> = {
@@ -214,7 +215,8 @@ export default function VaultPanel({
         >
           <p className="text-sm font-medium">Drop files here, or click to choose</p>
           <p className="data mt-2 text-ink-faint uppercase">
-            PDF · Word · Excel · PowerPoint · Text · Markdown · CSV — up to 50 MB
+            PDF · Word · Excel · PowerPoint · Text · Markdown · CSV · Transcripts (.vtt) — up to 50
+            MB
           </p>
           <input
             ref={fileInput}
