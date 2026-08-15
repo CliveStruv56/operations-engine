@@ -3,10 +3,12 @@ owner handover, fleet listing, and the invite-only signup switch."""
 
 from uuid import uuid4
 
+import asyncpg
+
 from app.config import get_settings
 from app.db import db
 from app.litellm import litellm_client
-from tests.conftest import auth, make_token
+from tests.conftest import OWNER_URL, auth, make_token, seed_tenant
 
 
 def admin_auth(user_id) -> dict[str, str]:
@@ -419,3 +421,93 @@ async def test_closed_signup_blocks_self_serve(client, monkeypatch):
     finally:
         monkeypatch.setenv("OPEN_SIGNUP", "true")
         get_settings.cache_clear()
+
+
+# -- purge (the irreversible second step) -------------------------------------
+
+
+class _FakeStorage:
+    enabled = True
+
+    def __init__(self):
+        self.prefixes: list[str] = []
+
+    async def delete_prefix(self, prefix: str) -> int:
+        self.prefixes.append(prefix)
+        return 3
+
+
+async def test_purge_is_a_deliberate_two_step(client, monkeypatch):
+    name = f"purge-{uuid4().hex[:6]}"
+    t = await seed_tenant(client, name)
+    operator = admin_auth(uuid4())
+
+    # An active workspace cannot be purged — suspend is step one.
+    resp = await client.post(
+        f"/api/v1/admin/tenants/{t.id}/purge", json={"confirm_name": name}, headers=operator
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "purge_requires_suspension"
+
+    resp = await client.post(
+        f"/api/v1/admin/tenants/{t.id}/suspend",
+        json={"reason": "client offboarded"},
+        headers=operator,
+    )
+    assert resp.status_code == 200
+
+    # A mistyped name cancels, and nothing has been touched.
+    resp = await client.post(
+        f"/api/v1/admin/tenants/{t.id}/purge",
+        json={"confirm_name": "not the name"},
+        headers=operator,
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "confirm_mismatch"
+
+    fake_storage = _FakeStorage()
+    monkeypatch.setattr("app.routers.admin.storage", fake_storage)
+    revoked: list[str] = []
+
+    async def fake_delete_key(key: str) -> None:
+        revoked.append(key)
+
+    monkeypatch.setattr(litellm_client, "delete_key", fake_delete_key)
+
+    resp = await client.post(
+        f"/api/v1/admin/tenants/{t.id}/purge", json={"confirm_name": name}, headers=operator
+    )
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["objects_deleted"] == 3
+    # Gateway off in tests: no key was ever held, so none was revoked.
+    assert body["key_revoked"] is False
+    assert fake_storage.prefixes == [f"{t.id}/"]
+
+    # Gone from the fleet, and every cascaded row with it.
+    rows = await client.get("/api/v1/admin/tenants", headers=operator)
+    assert str(t.id) not in {r["id"] for r in rows.json()}
+    conn = await asyncpg.connect(OWNER_URL)
+    try:
+        for table in ("memberships", "documents", "claims", "conversations", "audit_log"):
+            count = await conn.fetchval(f"select count(*) from {table} where tenant_id = $1", t.id)
+            assert count == 0, f"{table} kept {count} rows after purge"
+    finally:
+        await conn.close()
+
+    # Purging again finds nothing — a re-run after failure is safe, a re-run
+    # after success is a 404, never a surprise.
+    resp = await client.post(
+        f"/api/v1/admin/tenants/{t.id}/purge", json={"confirm_name": name}, headers=operator
+    )
+    assert resp.status_code == 404
+
+
+async def test_purge_function_refuses_an_unsuspended_tenant(client, two_tenants):
+    """The database enforces suspend-first independently of the route."""
+    a, _ = two_tenants
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        assert await conn.fetchval("select purge_tenant($1)", a.id) is False
+    # And the workspace is untouched.
+    resp = await client.get("/api/v1/members", headers=auth(a.owner_id, a.id))
+    assert resp.status_code == 200

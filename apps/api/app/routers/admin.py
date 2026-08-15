@@ -35,6 +35,8 @@ from app.schemas import (
     AdminFeaturesOut,
     AdminInviteOut,
     AdminOwnerInviteIn,
+    AdminPurgeIn,
+    AdminPurgeOut,
     AdminSuspendIn,
     AdminTenantCreate,
     AdminTenantCreatedOut,
@@ -44,6 +46,7 @@ from app.schemas import (
 )
 from app.secrets import decrypt_llm_key, encrypt_llm_key
 from app.sqlutil import patch_sets
+from app.storage import storage
 
 router = APIRouter(tags=["admin"])
 
@@ -292,7 +295,8 @@ async def admin_suspend_tenant(
     all survive, so resume restores the workspace exactly.
 
     This is not deletion. A real purge has to reach outside Postgres — the R2
-    prefix and the LiteLLM virtual key — and is deliberately a separate job.
+    prefix and the LiteLLM virtual key — and is deliberately the separate,
+    second step below.
     """
     async with db.tenant_tx(user.id, tenant_id) as conn:
         row = await conn.fetchrow(
@@ -339,6 +343,78 @@ async def admin_resume_tenant(
             meta={"platform_admin": True},
         )
     return _tenant_out(row)
+
+
+@router.post("/admin/tenants/{tenant_id}/purge", response_model=AdminPurgeOut)
+async def admin_purge_tenant(
+    tenant_id: UUID,
+    body: AdminPurgeIn,
+    user: AuthUser = Depends(require_platform_admin),
+):
+    """Delete a workspace for good — files, key, rows. Irreversible.
+
+    Deliberately a two-step: only a suspended workspace can be purged (the
+    database's `purge_tenant()` enforces that independently of this check),
+    and the workspace's exact name must be typed. Order of operations follows
+    the document-delete rule: objects and key first, rows last — a leftover
+    row after a failure means "run purge again", while a deleted row with
+    stranded files means storage nobody can see or bill.
+
+    The runtime role has no delete policy on `tenants`; the row delete lives
+    in one owner-run SECURITY DEFINER function (migration 0023). The audit
+    trail cascades away with the tenant, so the outcome is logged
+    platform-side and returned with numbers.
+    """
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        tenant = await conn.fetchrow(
+            "select name, suspended_at, litellm_key_encrypted from tenants where id = $1",
+            tenant_id,
+        )
+    if tenant is None:
+        raise ApiError(404, "not_found", "Workspace not found")
+    if tenant["suspended_at"] is None:
+        raise ApiError(
+            409,
+            "purge_requires_suspension",
+            "Suspend the workspace first — purge is the irreversible second step",
+        )
+    if body.confirm_name.strip() != tenant["name"]:
+        raise ApiError(
+            400, "confirm_mismatch", "Type the workspace's exact name to confirm the purge"
+        )
+
+    # Network first, rows last. Both steps are idempotent, so a failure here
+    # leaves a re-runnable purge, never a half-invisible workspace.
+    objects_deleted = 0
+    if storage.enabled:
+        objects_deleted = await storage.delete_prefix(f"{tenant_id}/")
+    key = decrypt_llm_key(tenant["litellm_key_encrypted"])
+    try:
+        await litellm_client.delete_key(key or "")
+    except httpx.HTTPError as exc:
+        raise ApiError(
+            502,
+            "gateway_failed",
+            "The workspace's model key could not be revoked — nothing was deleted;"
+            " run the purge again",
+        ) from exc
+
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        purged = await conn.fetchval("select purge_tenant($1)", tenant_id)
+    if not purged:
+        # Raced: resumed or already purged between the check and the delete.
+        raise ApiError(409, "purge_requires_suspension", "The workspace is no longer suspended")
+    logging.getLogger("app.admin").info(
+        "tenant %s purged by %s: %d objects deleted, key %s",
+        tenant_id,
+        user.email,
+        objects_deleted,
+        "revoked" if key and litellm_client.enabled else "none held",
+    )
+    return {
+        "objects_deleted": objects_deleted,
+        "key_revoked": bool(key) and litellm_client.enabled,
+    }
 
 
 @router.get("/admin/tenants", response_model=list[AdminTenantRow])

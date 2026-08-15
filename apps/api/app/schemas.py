@@ -140,6 +140,18 @@ class AdminSuspendIn(BaseModel):
     reason: str = Field(min_length=1, max_length=300)
 
 
+class AdminPurgeIn(BaseModel):
+    """The workspace's exact name, typed — the same confirmation GitHub asks
+    for before deleting a repository, and for the same reason."""
+
+    confirm_name: str = Field(min_length=1, max_length=200)
+
+
+class AdminPurgeOut(BaseModel):
+    objects_deleted: int
+    key_revoked: bool
+
+
 class AdminInviteOut(BaseModel):
     token: str
     email: str

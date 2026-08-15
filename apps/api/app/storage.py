@@ -95,6 +95,30 @@ class Storage:
             lambda: _s3().delete_object(Bucket=get_settings().storage_bucket, Key=key)
         )
 
+    async def delete_prefix(self, prefix: str) -> int:
+        """Everything under one tenant's prefix, for workspace purge.
+
+        Batched (S3 caps delete_objects at 1000 keys); returns how many
+        objects went, because "purged" should come with a number.
+        """
+        self._require()
+
+        def _sweep() -> int:
+            client = _s3()
+            bucket = get_settings().storage_bucket
+            deleted = 0
+            for page in client.get_paginator("list_objects_v2").paginate(
+                Bucket=bucket, Prefix=prefix
+            ):
+                keys = [{"Key": obj["Key"]} for obj in page.get("Contents", [])]
+                if not keys:
+                    continue
+                client.delete_objects(Bucket=bucket, Delete={"Objects": keys, "Quiet": True})
+                deleted += len(keys)
+            return deleted
+
+        return await anyio.to_thread.run_sync(_sweep)
+
     async def upload_bytes(self, key: str, data: bytes, mime: str) -> None:
         """Server-generated artefacts (slide exports). User uploads still go
         browser → storage via presigned PUT; this is not for file ingest."""

@@ -49,6 +49,14 @@ export const suspendTenant = (tenantId: string, reason: string) =>
 export const resumeTenant = (tenantId: string) =>
   admin<AdminTenant>(`/admin/tenants/${tenantId}/resume`, { method: "POST" });
 
+/** Irreversible: files, model key, every row. Suspended workspaces only;
+ *  the exact name is the confirmation. */
+export const purgeTenant = (tenantId: string, confirmName: string) =>
+  admin<{ objects_deleted: number; key_revoked: boolean }>(
+    `/admin/tenants/${tenantId}/purge`,
+    { method: "POST", body: JSON.stringify({ confirm_name: confirmName }) }
+  );
+
 export type AdminTenant = {
   id: string;
   name: string;

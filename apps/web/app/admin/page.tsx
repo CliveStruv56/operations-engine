@@ -9,6 +9,7 @@ import {
   AdminTenantRow,
   FEATURE_FLAGS,
   admin,
+  purgeTenant,
   resumeTenant,
 } from "@/lib/admin";
 import { InviteLink, NewWorkspace } from "./NewWorkspace";
@@ -73,6 +74,22 @@ export default function AdminConsole() {
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Could not resume — try again.");
+    }
+  }
+
+  // Purge is the irreversible second step: it takes the workspace's exact
+  // name, and a mistype cancels rather than warns.
+  async function purge(t: AdminTenantRow) {
+    const typed = window.prompt(
+      `Delete “${t.name}” for good — its files, its model key and every row.\n` +
+        "This cannot be undone. Type the workspace's exact name to confirm:"
+    );
+    if (typed === null) return;
+    try {
+      await purgeTenant(t.id, typed);
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Purge failed — nothing was deleted.");
     }
   }
 
@@ -179,12 +196,21 @@ export default function AdminConsole() {
                           Owner invite
                         </button>
                         {t.suspended_at ? (
-                          <button
-                            onClick={() => resume(t)}
-                            className="text-grounded underline hover:opacity-80"
-                          >
-                            Resume
-                          </button>
+                          <>
+                            <button
+                              onClick={() => resume(t)}
+                              className="text-grounded underline hover:opacity-80"
+                            >
+                              Resume
+                            </button>
+                            <button
+                              onClick={() => purge(t)}
+                              title="Delete this workspace for good — files, key and rows"
+                              className="text-danger underline hover:opacity-80"
+                            >
+                              Purge…
+                            </button>
+                          </>
                         ) : (
                           <button
                             onClick={() => setSuspending(t)}
