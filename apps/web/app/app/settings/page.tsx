@@ -100,7 +100,7 @@ function OrganisationSection() {
         </p>
       )}
       <Link href="/app/claims" className={`${btn} mt-4 inline-block`}>
-        {live.length === 0 && proposals === 0 ? "Set this up" : "Open the register"}
+        {live.length === 0 && proposals === 0 ? "Set this up" : "See your facts"}
       </Link>
     </section>
   );
@@ -278,7 +278,7 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
         </p>
         <div className="mt-2 flex items-center gap-3">
           {typeof tenant.brand?.slides_template_key === "string" && (
-            <span className="stamp bg-accent-soft text-accent">custom template active</span>
+            <span className="stamp bg-accent-soft text-accent-deep">custom template active</span>
           )}
           <input
             ref={templateRef}

@@ -219,8 +219,8 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
         )}
         {harvestNote === "failed" && (
           <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
-            The application is marked submitted, but we could not queue a scan of it for the
-            register. You can add those facts by hand on{" "}
+            The application is marked submitted, but we could not queue a scan of it for new
+            facts. You can add them by hand on{" "}
             <Link href="/app/claims" className="underline hover:text-ink">
               Your organisation
             </Link>

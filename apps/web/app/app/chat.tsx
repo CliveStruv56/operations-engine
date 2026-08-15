@@ -216,9 +216,9 @@ function AssistantMessageInner({
         )}
         {m.model && (
           <span className="ml-auto text-[11px] font-semibold text-faint">
+            {scope === "project" && "Drafted from project documents · "}
+            {scope === "vault" && "Drafted from your whole vault · "}
             {m.model}
-            {scope === "project" && " · from project documents"}
-            {scope === "vault" && " · from the whole vault"}
           </span>
         )}
       </div>

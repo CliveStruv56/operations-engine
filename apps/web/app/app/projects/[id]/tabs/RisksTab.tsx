@@ -31,6 +31,11 @@ export function RisksTab({ id }: { id: string }) {
   return (
     <div>
       <LoadError failed={failed} onRetry={refresh} />
+      {risks.length === 0 && !failed ? (
+        <p className="text-sm text-ink-faint">
+          No risks on the register yet — describe the first one below.
+        </p>
+      ) : (
       <table className="w-full rounded-card border border-edge bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">
@@ -72,6 +77,7 @@ export function RisksTab({ id }: { id: string }) {
           ))}
         </tbody>
       </table>
+      )}
       <form onSubmit={add} className="mt-3 flex flex-wrap items-center gap-2">
         <input required value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Describe a new risk…" className={`min-w-0 flex-1 ${input}`} />
         <label className="text-sm text-ink-muted">

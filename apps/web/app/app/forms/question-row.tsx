@@ -5,6 +5,34 @@ import { Question } from "@/lib/questions";
 const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
 const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
 
+/** The same row, read-only — how a catalogue set's questions are inspected.
+ * Catalogue sets are never editable here, but they must never be a black box
+ * either: drafting sizes answers to these limits, so a person has to be able
+ * to see them. */
+export function QuestionDisplay({ q }: { q: Question }) {
+  return (
+    <li className="rounded-card border border-edge bg-surface p-3">
+      <div className="flex items-start gap-2">
+        <span className="data mt-0.5 text-xs text-ink-faint">{q.order}</span>
+        <div className="min-w-0 flex-1 space-y-1">
+          <p className="text-sm">{q.text}</p>
+          {q.guidance && <p className="text-xs text-ink-muted">{q.guidance}</p>}
+          <p className="flex flex-wrap items-center gap-2 text-xs text-ink-faint">
+            {q.limit === null ? (
+              <span className="text-warn">no limit found — check the funder&apos;s form</span>
+            ) : (
+              <span className="data">
+                {q.limit.toLocaleString("en-GB")} {q.limit_kind}
+              </span>
+            )}
+            {q.uses_vault && <span>cites the vault</span>}
+          </p>
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export function QuestionRow({
   q,
   onChange,

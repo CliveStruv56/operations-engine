@@ -30,6 +30,16 @@ const GBP_PER_USD = Number(process.env.NEXT_PUBLIC_GBP_PER_USD ?? "0.79");
 
 const card = "rounded-card border border-edge bg-card p-5 shadow-card";
 
+// What each internal routing alias does, in the reader's terms.
+const MODEL_LABELS: Record<string, string> = {
+  workhorse: "Chat",
+  drafter: "Drafting",
+  reasoner: "Reasoning",
+  longdoc: "Long documents",
+  embedder: "Document indexing",
+  exa: "Web search",
+};
+
 const num = new Intl.NumberFormat("en-GB");
 const usd = (v: number) => `$${v.toFixed(v >= 1 ? 2 : 4)}`;
 const gbp = (v: number) => `£${(v * GBP_PER_USD).toFixed(v * GBP_PER_USD >= 1 ? 2 : 4)}`;
@@ -140,6 +150,10 @@ export default function UsagePage() {
     [emailByUser]
   );
 
+  // Routing aliases (app/routing.py) in words a client would use. Chat rows
+  // may carry the provider's own model id instead — those show as they are.
+  const modelLabel = (key: string) => MODEL_LABELS[key] ?? key;
+
   if (!tenant) return null;
 
   const tiles = summary
@@ -197,7 +211,7 @@ export default function UsagePage() {
                   </div>
                 ))}
               </section>
-              <BucketTable title="By model" rows={summary.by_model} label={(k) => k} />
+              <BucketTable title="By model" rows={summary.by_model} label={modelLabel} />
               <BucketTable title="By member" rows={summary.by_user} label={userLabel} />
             </>
           )

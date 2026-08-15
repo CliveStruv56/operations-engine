@@ -20,6 +20,7 @@ import {
 } from "@/lib/questions";
 import { TranscribePanel } from "./transcribe-panel";
 import { EditFormPanel } from "./edit-panel";
+import { QuestionDisplay } from "./question-row";
 
 const card = "rounded-card border border-edge bg-card p-5 shadow-card";
 const btn =
@@ -35,6 +36,9 @@ function StageLabel({ stage }: { stage: QuestionSet["stage"] }) {
 function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }) {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState(false);
+  // Catalogue sets are non-editable but never non-inspectable: every card
+  // opens read-only so the questions and limits can be seen before drafting.
+  const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const note = staleNote(set);
   const missing = set.questions.filter((q) => q.limit === null).length;
@@ -56,9 +60,16 @@ function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }
     <li className={card}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div className="min-w-0">
-          <p className="font-medium">
+          <button
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="flex items-center gap-1.5 text-left font-medium hover:text-accent-deep"
+          >
+            <span aria-hidden="true" className="text-xs text-ink-faint">
+              {open ? "▾" : "▸"}
+            </span>
             {set.funder} — {set.name}
-          </p>
+          </button>
           <p className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-ink-faint">
             <StageLabel stage={set.stage} />
             <span>{set.questions.length} questions</span>
@@ -125,6 +136,13 @@ function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }
           }}
         />
       )}
+      {open && !editing && (
+        <ul className="mt-3 space-y-2">
+          {set.questions.map((q) => (
+            <QuestionDisplay key={q.order} q={q} />
+          ))}
+        </ul>
+      )}
     </li>
   );
 }
@@ -143,7 +161,8 @@ export default function FormsPage() {
   useEffect(refresh, [refresh]);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-6">
+    <main className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-4xl space-y-4 p-6">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h1 className="text-xl font-medium">Funder forms</h1>
@@ -191,6 +210,7 @@ export default function FormsPage() {
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </main>
   );
 }

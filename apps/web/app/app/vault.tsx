@@ -44,7 +44,8 @@ const STATUS_STYLE: Record<Doc["status"], string> = {
   uploaded: "text-ink-muted",
   parsing: "text-warn bg-warn-soft",
   embedding: "text-warn bg-warn-soft",
-  ready: "text-accent bg-accent-soft",
+  // accent-deep, not accent — #b14e2e on the tint misses AA at stamp size.
+  ready: "text-accent-deep bg-accent-soft",
   failed: "text-danger bg-danger-soft",
 };
 
@@ -329,7 +330,7 @@ export default function VaultPanel({
                           onClick={() => reprocess(d)}
                           className="text-ink-muted underline hover:text-ink"
                         >
-                          Re-index
+                          Refresh
                         </button>
                       )}
                     {confirmingId === d.id ? (

@@ -77,7 +77,7 @@ describe("removing somebody who looked after facts", () => {
     await removeAde();
 
     const notice = await screen.findByText(/2 facts about your organisation/i);
-    expect(notice).toHaveTextContent(/still in your register/i);
+    expect(notice).toHaveTextContent(/still among your facts/i);
     expect(notice.closest(".text-danger")).toBeNull();
   });
 });

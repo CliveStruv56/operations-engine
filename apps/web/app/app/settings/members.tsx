@@ -195,7 +195,7 @@ export default function Members({ tenant }: { tenant: Tenant }) {
             {released.email ? ` that ${released.email} looked after ` : " "}
             {released.count === 1 ? "has" : "have"} nobody looking after{" "}
             {released.count === 1 ? "it" : "them"} now. {released.count === 1 ? "It is" : "They are"}{" "}
-            still in your register and still used in drafts.
+            still among your facts and still used in drafts.
           </p>
           <Link href="/app/claims?owner=none" className="mt-1 inline-block font-medium underline">
             Hand {released.count === 1 ? "it" : "them"} to somebody →

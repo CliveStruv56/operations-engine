@@ -37,6 +37,11 @@ export function ConditionsTab({ id }: { id: string }) {
   return (
     <div>
       <LoadError failed={failed} onRetry={refresh} />
+      {conditions.length === 0 && !failed ? (
+        <p className="text-sm text-ink-faint">
+          No planning conditions yet — add them from the decision notice below.
+        </p>
+      ) : (
       <table className="w-full rounded-card border border-edge bg-surface text-sm">
         <thead>
           <tr className="data border-b border-line text-left text-ink-muted uppercase">
@@ -72,6 +77,7 @@ export function ConditionsTab({ id }: { id: string }) {
           ))}
         </tbody>
       </table>
+      )}
       <form onSubmit={add} className="mt-3 flex flex-wrap items-center gap-2">
         <input value={form.application_ref} onChange={(e) => setForm({ ...form, application_ref: e.target.value })} placeholder="LPA ref" className={`w-32 ${input}`} />
         <input required value={form.number} onChange={(e) => setForm({ ...form, number: e.target.value })} placeholder="No." className={`w-16 ${input}`} />

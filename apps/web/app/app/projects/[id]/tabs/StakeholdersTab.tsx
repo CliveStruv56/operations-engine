@@ -29,6 +29,11 @@ export function StakeholdersTab({ id }: { id: string }) {
   return (
     <div>
       <LoadError failed={failed} onRetry={refresh} />
+      {people.length === 0 && !failed && (
+        <p className="text-sm text-ink-faint">
+          No stakeholders yet — add the people and organisations this project depends on below.
+        </p>
+      )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {people.map((p) => (
           <div key={p.id} className="rounded-card border border-edge bg-surface p-3 text-sm">

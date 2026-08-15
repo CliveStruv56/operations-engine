@@ -102,7 +102,11 @@ export function DocumentsTab({ id }: { id: string }) {
                 </select>
               </td>
               <td className="data px-4 py-2">{d.versions.length}</td>
-              <td className="data px-4 py-2 text-ink-faint">{fmtDate(d.updated_at)}</td>
+              {/* A never-touched registry row's updated_at is its seeding
+                  date, which would read as a real update. */}
+              <td className="data px-4 py-2 text-ink-faint">
+                {d.versions.length === 0 ? "—" : fmtDate(d.updated_at)}
+              </td>
               <td className="px-4 py-2">
                 <span className="flex items-center gap-3">
                   <label className={btnGhost}>

@@ -140,7 +140,7 @@ export default function PortfolioPage() {
                         </span>
                       )}
                       {r.status === "complete" && (
-                        <span className="stamp ml-2 text-accent bg-accent-soft">complete</span>
+                        <span className="stamp ml-2 text-accent-deep bg-accent-soft">complete</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{r.client_org ?? "—"}</td>

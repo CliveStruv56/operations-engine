@@ -83,7 +83,14 @@ export function TasksTab({ id }: { id: string }) {
         )}
       </div>
 
-      <ul className="divide-y divide-line rounded-card border border-edge bg-surface">
+      {tasks.length === 0 && !failed && (
+        <p className="text-sm text-ink-faint">
+          {stage || status || overdue
+            ? "No tasks match these filters."
+            : "No tasks yet — add the first one below."}
+        </p>
+      )}
+      <ul className="divide-y divide-line rounded-card border border-edge bg-surface empty:hidden">
         {tasks.map((t) => (
           <li key={t.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
             <input

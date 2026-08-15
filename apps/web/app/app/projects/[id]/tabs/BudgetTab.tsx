@@ -78,7 +78,13 @@ export function BudgetTab({ id }: { id: string }) {
             <td className="px-3 py-2">{fmtMoney(total("budget"))}</td>
             <td className={`px-3 py-2 ${variance > 0 ? "text-danger" : ""}`}>{fmtMoney(total("forecast"))}</td>
             <td className="px-3 py-2">{fmtMoney(total("actual"))}</td>
-            <td className={`data px-3 py-2 ${variance > 0 ? "text-danger" : "text-accent"}`}>
+            {/* Danger only for a real overspend; on-budget is neutral, not a
+                trust state to celebrate. */}
+            <td
+              className={`data px-3 py-2 ${
+                variance > 0 ? "text-danger" : variance < 0 ? "text-accent" : ""
+              }`}
+            >
               {variance > 0 ? "+" : ""}
               {fmtMoney(variance)} var.
             </td>
