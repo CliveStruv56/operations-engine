@@ -106,3 +106,25 @@ jobs:
       - run: pnpm build
       # Fails on high/critical advisories, including transitive deps.
       - run: pnpm audit --audit-level high
+
+  web-e2e:
+    name: Web (Playwright e2e)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: apps/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Mocked backend — the specs intercept every API and auth request, so
+      # no database or API process is needed (env comes from playwright.config).
+      - run: pnpm test:e2e
