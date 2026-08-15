@@ -6,6 +6,7 @@ import type { Claim } from "@/lib/claims";
 
 const listClaims = vi.fn();
 const updateClaim = vi.fn();
+const deleteClaim = vi.fn();
 const listClaimKinds = vi.fn();
 const createClaim = vi.fn();
 const listMembers = vi.fn();
@@ -20,6 +21,7 @@ vi.mock("@/lib/claims", async (importOriginal) => ({
   listClaimKinds: () => listClaimKinds(),
   createClaim: (...args: unknown[]) => createClaim(...args),
   updateClaim: (...args: unknown[]) => updateClaim(...args),
+  deleteClaim: (...args: unknown[]) => deleteClaim(...args),
 }));
 vi.mock("@/lib/members", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/members")>()),
@@ -233,6 +235,42 @@ describe("adding a fact by hand", () => {
         }),
       ),
     );
+  });
+
+  it("says what is missing instead of submitting an empty form", async () => {
+    // The statement auto-fills from the template, so an untouched form still
+    // reads as a sentence — the value check is what stops "…trades as .".
+    render(withWorkspace(<ClaimsPage />));
+    await userEvent.click(await screen.findByRole("button", { name: /add a fact yourself/i }));
+    await screen.findByLabelText(/what kind of fact/i);
+    await userEvent.click(screen.getByRole("button", { name: /add this fact/i }));
+    expect(await screen.findByText("This fact needs a value")).toBeInTheDocument();
+    expect(createClaim).not.toHaveBeenCalled();
+  });
+});
+
+describe("removing a fact", () => {
+  beforeEach(() => {
+    listClaims.mockReset().mockResolvedValue([claim()]);
+    deleteClaim.mockReset().mockResolvedValue(undefined);
+    listMembers.mockReset().mockResolvedValue([]);
+    searchParams.current = new URLSearchParams();
+  });
+
+  it("asks twice before deleting", async () => {
+    render(withWorkspace(<ClaimsPage />));
+    await userEvent.click(await screen.findByRole("button", { name: /^remove$/i }));
+    expect(deleteClaim).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: /remove for good/i }));
+    await waitFor(() => expect(deleteClaim).toHaveBeenCalledWith("c-1"));
+  });
+
+  it("offers a way back from the first click", async () => {
+    render(withWorkspace(<ClaimsPage />));
+    await userEvent.click(await screen.findByRole("button", { name: /^remove$/i }));
+    await userEvent.click(screen.getByRole("button", { name: /^keep$/i }));
+    expect(deleteClaim).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: /^remove$/i })).toBeInTheDocument();
   });
 });
 

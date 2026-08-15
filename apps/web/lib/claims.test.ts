@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { fillStatement, parseClaimValue, type ClaimKind } from "./claims";
+import { claimNote, fillStatement, parseClaimValue, type Claim, type ClaimKind } from "./claims";
 
 const kind = (over: Partial<ClaimKind> = {}): ClaimKind => ({
   key: "annual_income",
@@ -38,6 +38,33 @@ describe("fillStatement", () => {
         "Ade Cole",
       ),
     ).toBe("Ade Cole is a trustee.");
+  });
+
+  it("writes a date in words, not ISO — matching the API renderer", () => {
+    expect(
+      fillStatement(
+        kind({
+          key: "confirmation_statement_due",
+          label: "Confirmation statement due",
+          value_kind: "date",
+          statement_template: "The organisation's next confirmation statement is due {value}.",
+        }),
+        null,
+        "2026-09-15",
+      ),
+    ).toBe("The organisation's next confirmation statement is due 15 September 2026.");
+  });
+});
+
+describe("claimNote", () => {
+  it("formats the dates it quotes", () => {
+    const base = { status: "confirmed", stale: true, expired: false } as Claim;
+    expect(claimNote({ ...base, last_verified: "2025-11-02" } as Claim)).toBe(
+      "Last checked 2 Nov 2025, and now past review.",
+    );
+    expect(
+      claimNote({ ...base, stale: true, expired: true, expires_on: "2026-04-30" } as Claim),
+    ).toMatch(/^This lapsed on 30 Apr 2026\./);
   });
 });
 

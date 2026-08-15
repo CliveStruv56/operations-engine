@@ -10,6 +10,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Spinner } from "@/components/activity";
+import { useToast } from "@/components/toast";
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -42,6 +43,8 @@ export function AddFactPanel({
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ value?: string; subject?: string }>({});
+  const toast = useToast();
 
   useEffect(() => {
     listClaimKinds()
@@ -66,10 +69,17 @@ export function AddFactPanel({
 
   async function save() {
     if (!kind) return;
+    // An empty value renders a non-empty statement ("…trades as .") from the
+    // template, so the statement alone cannot be the check.
+    const errs: typeof fieldErrors = {};
+    if (!rawValue.trim()) errs.value = "This fact needs a value";
+    if (kind.cardinality === "multi" && !subject.trim()) errs.subject = "Say which one this is about";
+    setFieldErrors(errs);
+    if (errs.value || errs.subject) return;
     setBusy(true);
     setError(null);
     try {
-      await createClaim({
+      const created = await createClaim({
         kind: kind.key,
         subject: kind.cardinality === "multi" ? subject.trim() || null : null,
         period: kind.periodic ? period.trim() || null : null,
@@ -78,6 +88,7 @@ export function AddFactPanel({
         expires_on: expiresOn || null,
         notes: notes.trim() || null,
       });
+      toast({ message: `Added: ${created.statement}` });
       onSaved();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -131,12 +142,18 @@ export function AddFactPanel({
         <label className="block text-sm">
           Which one
           <input
-            required
             value={subject}
-            onChange={(e) => setSubject(e.target.value)}
+            onChange={(e) => {
+              setSubject(e.target.value);
+              setFieldErrors((f) => ({ ...f, subject: undefined }));
+            }}
             placeholder="e.g. Public liability, a trustee's name"
-            className={`${input} mt-1`}
+            aria-invalid={!!fieldErrors.subject}
+            className={`${input} mt-1 ${fieldErrors.subject ? "border-danger" : ""}`}
           />
+          {fieldErrors.subject && (
+            <span className="mt-0.5 block text-xs text-danger">{fieldErrors.subject}</span>
+          )}
         </label>
       )}
 
@@ -155,13 +172,19 @@ export function AddFactPanel({
       <label className="block text-sm">
         Value
         <input
-          required
           type={kind?.value_kind === "date" ? "date" : kind?.value_kind === "number" || kind?.value_kind === "money" ? "number" : "text"}
           value={rawValue}
-          onChange={(e) => setRawValue(e.target.value)}
+          onChange={(e) => {
+            setRawValue(e.target.value);
+            setFieldErrors((f) => ({ ...f, value: undefined }));
+          }}
           placeholder={kind?.value_kind === "money" ? "412000" : kind?.unit ?? ""}
-          className={`${input} mt-1`}
+          aria-invalid={!!fieldErrors.value}
+          className={`${input} mt-1 ${fieldErrors.value ? "border-danger" : ""}`}
         />
+        {fieldErrors.value && (
+          <span className="mt-0.5 block text-xs text-danger">{fieldErrors.value}</span>
+        )}
         {kind?.unit && <span className="mt-0.5 block text-xs text-ink-faint">{kind.unit}</span>}
       </label>
 
@@ -206,15 +229,10 @@ export function AddFactPanel({
 
       <div className="flex items-center gap-3">
         <button
+          // Stays clickable so an incomplete attempt gets told what is
+          // missing, rather than facing a dead button.
           type="submit"
-          // An empty value renders a non-empty statement ("…trades as .")
-          // from the template, so the statement check alone is not enough.
-          disabled={
-            busy ||
-            !statement.trim() ||
-            !rawValue.trim() ||
-            (kind?.cardinality === "multi" && !subject.trim())
-          }
+          disabled={busy || !statement.trim()}
           className={btn}
         >
           {busy ? <Spinner /> : "Add this fact"}

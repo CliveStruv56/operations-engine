@@ -179,11 +179,11 @@ export const importFromRegister = (route: string, number: string, allowInactive 
  */
 export function claimNote(claim: Claim): string | null {
   if (claim.expired)
-    return `This lapsed on ${claim.expires_on}. It should not be relied on in anything you send out.`;
+    return `This lapsed on ${fmtClaimDate(claim.expires_on)}. It should not be relied on in anything you send out.`;
   if (claim.status === "proposed") return null; // the row already reads as a question
   if (claim.stale)
     return claim.last_verified
-      ? `Last checked ${claim.last_verified}, and now past review.`
+      ? `Last checked ${fmtClaimDate(claim.last_verified)}, and now past review.`
       : "Nobody has checked this yet.";
   if (!claim.last_verified) return "Nobody has checked this yet.";
   return null;
@@ -259,5 +259,24 @@ function formatClaimValue(kind: ClaimKind, value: unknown): string {
       return `£${n.toLocaleString("en-GB", { maximumFractionDigits: 0 })}`;
     }
   }
+  if (kind.value_kind === "date" && typeof value === "string") {
+    const worded = dateInWords(value);
+    if (worded) return worded;
+  }
   return String(value);
 }
+
+/** "15 September 2026", or null when the string is not an ISO date. Must match
+ *  the API and worker statement renderers (`format_value` / `render_statement`). */
+function dateInWords(iso: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(iso.trim())) return null;
+  const d = new Date(iso.trim().slice(0, 10) + "T00:00:00");
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
+}
+
+/** Claims dates for row copy and notes — "15 Sep 2026". */
+export const fmtClaimDate = (iso: string | null | undefined) =>
+  iso
+    ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+    : "—";

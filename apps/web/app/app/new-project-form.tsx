@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fmtDate } from "@/lib/groundwork";
 import { listMembers, type MemberRow, type PlanTaskSeed } from "@/lib/project-plan";
 import { useWorkspace } from "./workspace";
 
@@ -101,7 +102,7 @@ export default function NewProjectForm({
           {seeds.map((s, i) => (
             <p key={`${s.title}-${i}`} className="truncate text-[11px] text-subtle">
               {s.title}
-              {s.due_date ? ` · ${s.due_date}` : ""}
+              {s.due_date ? ` · ${fmtDate(s.due_date)}` : ""}
             </p>
           ))}
           <input

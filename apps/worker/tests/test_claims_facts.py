@@ -13,6 +13,7 @@ from worker.claims.facts import (
     claims_block,
     claims_warning,
     merge_excerpts,
+    render_statement,
 )
 from worker.drafting.assemble import assemble_docx
 from worker.drafting.llm import MAX_CONTEXT_TOKENS_PER_CALL
@@ -63,6 +64,18 @@ def _pack(**overrides) -> GrantPack:
 
 
 # -- what the model is told about each fact ----------------------------------
+
+
+def test_render_statement_writes_dates_in_words():
+    """"due 15 September 2026", never "due 2026-09-15" — matching the API and
+    web renderers, per this module's drift warning."""
+    tmpl = "The organisation's next confirmation statement is due {value}."
+    label = "Confirmation statement due"
+    expected = "The organisation's next confirmation statement is due 15 September 2026."
+    assert render_statement(tmpl, label, None, date(2026, 9, 15), "date") == expected
+    assert render_statement(tmpl, label, None, "2026-09-15", "date") == expected
+    # A date-kind value that is not a date must not crash the sentence.
+    assert "not recorded" in render_statement(tmpl, label, None, "not recorded", "date")
 
 
 def test_a_document_backed_claim_is_citable_and_a_register_one_is_not():

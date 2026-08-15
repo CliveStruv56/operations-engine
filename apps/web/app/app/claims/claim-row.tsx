@@ -1,7 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { Claim, claimNote, deleteClaim, sourceLabel, updateClaim } from "@/lib/claims";
+import { useToast } from "@/components/toast";
+import {
+  Claim,
+  claimNote,
+  createClaim,
+  deleteClaim,
+  fmtClaimDate,
+  sourceLabel,
+  updateClaim,
+} from "@/lib/claims";
 import { Member, memberName } from "@/lib/members";
 
 const btn =
@@ -18,7 +27,9 @@ export function ClaimRow({
   onChanged: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
   const note = claimNote(claim);
   const proposed = claim.status === "proposed";
   const owner = memberName(members, claim.owner_membership_id);
@@ -34,6 +45,37 @@ export function ClaimRow({
     } finally {
       setBusy(false);
     }
+  }
+
+  function remove() {
+    setConfirming(false);
+    // Undo re-asserts the fact as typed — provenance (register link, source
+    // document) does not survive the round trip, but the fact itself does.
+    const restore = {
+      kind: claim.kind,
+      subject: claim.subject,
+      period: claim.period,
+      statement: claim.statement,
+      value: claim.value,
+      unit: claim.unit,
+      as_of: claim.as_of,
+      expires_on: claim.expires_on,
+      notes: claim.notes,
+    };
+    void act(async () => {
+      await deleteClaim(claim.id);
+      toast({
+        message: `Removed “${claim.statement}”`,
+        action: {
+          label: "Undo",
+          onClick: () => {
+            createClaim(restore)
+              .then(onChanged)
+              .catch(() => toast({ message: "Could not restore the fact — add it again by hand." }));
+          },
+        },
+      });
+    });
   }
 
   return (
@@ -56,7 +98,7 @@ export function ClaimRow({
               </a>
             )}
             {!proposed && claim.next_review && !claim.stale && (
-              <span>review by {claim.next_review}</span>
+              <span>review by {fmtClaimDate(claim.next_review)}</span>
             )}
             {/* Ownership is optional and most facts will never have an owner,
                 so this is stated plainly and never as a warning — see
@@ -110,6 +152,15 @@ export function ClaimRow({
                 Not this
               </button>
             </>
+          ) : confirming ? (
+            <>
+              <button onClick={remove} disabled={busy} className="text-xs font-medium text-danger underline">
+                Remove for good
+              </button>
+              <button onClick={() => setConfirming(false)} disabled={busy} className={btnGhost}>
+                Keep
+              </button>
+            </>
           ) : (
             <>
               {(claim.stale || !claim.last_verified) && (
@@ -121,11 +172,7 @@ export function ClaimRow({
                   I have checked this
                 </button>
               )}
-              <button
-                onClick={() => act(() => deleteClaim(claim.id))}
-                disabled={busy}
-                className={btnGhost}
-              >
+              <button onClick={() => setConfirming(true)} disabled={busy} className={btnGhost}>
                 Remove
               </button>
             </>

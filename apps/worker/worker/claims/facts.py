@@ -262,6 +262,15 @@ def _parse_date(raw: str | None) -> date | None:
         return None
 
 
+def _statement_date(value: Any) -> date | None:
+    if isinstance(value, date):
+        return value
+    try:
+        return date.fromisoformat(str(value).strip()[:10])
+    except ValueError:
+        return None
+
+
 def render_statement(
     template: str, label: str, subject: str | None, value: Any, value_kind: str = "text"
 ) -> str:
@@ -286,6 +295,9 @@ def render_statement(
         rendered = f"£{value:,.0f}"
     elif value_kind == "number" and isinstance(value, float) and value.is_integer():
         rendered = str(int(value))
+    elif value_kind == "date" and (d := _statement_date(value)) is not None:
+        # "15 September 2026" — must match the web and API renderers.
+        rendered = f"{d.day} {d.strftime('%B %Y')}"
     elif isinstance(value, float) and value.is_integer():
         rendered = str(int(value))
     else:

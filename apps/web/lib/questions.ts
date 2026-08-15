@@ -4,7 +4,7 @@
 // whether a development consultancy or a charity is filling it in, so the
 // types and the fetchers live here rather than in either module's lib.
 import { api } from "@/lib/api";
-import { tenantId } from "@/lib/groundwork";
+import { fmtDate, tenantId } from "@/lib/groundwork";
 
 const qs = <T,>(path: string, init: RequestInit = {}) =>
   api<T>(path, init, tenantId() ?? undefined);
@@ -154,7 +154,7 @@ export function staleNote(set: QuestionSet | null | undefined): string | null {
   if (set.status !== "open")
     return `The questions and limits for “${set.name}” have not been verified against the funder's own form.`;
   if (set.stale)
-    return `The questions and limits for “${set.name}” were last verified ${set.last_verified} and are past review.`;
+    return `The questions and limits for “${set.name}” were last verified ${fmtDate(set.last_verified)} and are past review.`;
   return null;
 }
 

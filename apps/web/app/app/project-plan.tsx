@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fmtDate } from "@/lib/groundwork";
 import {
   type MemberRow,
   type PlanTask,
@@ -308,7 +309,7 @@ function TaskRow({
         </span>
         {late && <span className="text-xs font-bold text-warn">overdue</span>}
         {task.due_date && !late && (
-          <span className="text-xs text-faint">{task.due_date}</span>
+          <span className="text-xs text-faint">{fmtDate(task.due_date)}</span>
         )}
       </li>
     );

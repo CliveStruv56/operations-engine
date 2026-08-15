@@ -16,6 +16,7 @@ import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
   Claim,
+  fmtClaimDate,
   listClaims,
 } from "@/lib/claims";
 import { Member, listMembers } from "@/lib/members";
@@ -29,9 +30,6 @@ const btn =
   "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
 const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
 
-const fmtDay = (iso: string) =>
-  new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-
 /** ECCTA readiness, derived from the register — never stored. From 18 Nov
  * 2026 an unverified director blocks Companies House filings, so this is the
  * one place the register editorialises about a deadline. Values on
@@ -44,7 +42,7 @@ function EcctaStrip({ claims }: { claims: Claim[] }) {
     (c) => typeof c.value === "string" && c.value.startsWith("verified")
   ).length;
   const cs = claims.find((c) => c.kind === "confirmation_statement_due");
-  const csDue = cs && typeof cs.value === "string" ? fmtDay(cs.value) : null;
+  const csDue = cs && typeof cs.value === "string" ? fmtClaimDate(cs.value) : null;
   const dueNote = csDue ? ` Next confirmation statement due ${csDue}.` : "";
 
   if (verified === idv.length) {
@@ -122,7 +120,8 @@ function ClaimsPageInner() {
   const confirmed = unownedOnly ? unowned : allConfirmed;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 p-6">
+    <main className="min-h-0 flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-4xl space-y-4 p-6">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
           <h1 className="text-xl font-medium">Your organisation</h1>
@@ -299,6 +298,7 @@ function ClaimsPageInner() {
         by Companies House, the Charity Commission for England and Wales, OSCR, and the Charity
         Commission for Northern Ireland.
       </p>
-    </div>
+      </div>
+    </main>
   );
 }

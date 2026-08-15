@@ -977,6 +977,30 @@ async def test_statement_templates_render_for_every_seeded_kind(client, two_tena
         assert statement.strip()
 
 
+def test_statement_writes_dates_in_words():
+    """"due 15 September 2026", never "due 2026-09-15".
+
+    The web and worker renderers must produce the same sentence — a drift test
+    of the same kind as the money branch (see the worker copy's docstring).
+    """
+    from app.claims.schemas import ClaimKindOut
+
+    kind = ClaimKindOut(
+        key="confirmation_statement_due",
+        label="Confirmation statement due",
+        category="governance",
+        value_kind="date",
+        cardinality="single",
+        periodic=False,
+        statement_template="The organisation's next confirmation statement is due {value}.",
+    )
+    expected = "The organisation's next confirmation statement is due 15 September 2026."
+    assert render_statement(kind, None, date(2026, 9, 15)) == expected
+    assert render_statement(kind, None, "2026-09-15") == expected
+    # A date-kind value that is not a date must not crash the sentence.
+    assert "not recorded" in render_statement(kind, None, "not recorded")
+
+
 # -- proposals written from a document (worker path, exercised here) ----------
 
 

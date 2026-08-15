@@ -18,6 +18,7 @@ import {
   promoteQuestionSet,
   withdrawQuestionSet,
 } from "@/lib/admin";
+import { fmtDate } from "@/lib/groundwork";
 import type { QuestionSet } from "@/lib/questions";
 
 const btn =
@@ -171,7 +172,7 @@ export function CatalogueEditor() {
                     <span className="data">{s.key}</span>
                     <span>{s.questions.length} questions</span>
                     <span className={s.stale ? "text-warn" : undefined}>
-                      {s.stale ? "past review" : `reviewed by ${s.next_review}`}
+                      {s.stale ? "past review" : `reviewed by ${fmtDate(s.next_review)}`}
                     </span>
                   </p>
                 </div>

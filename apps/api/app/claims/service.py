@@ -559,4 +559,16 @@ def format_value(kind: ClaimKindOut, value: Any) -> str:
         return f"£{value:,.0f}"
     if kind.value_kind == "number" and isinstance(value, float) and value.is_integer():
         return str(int(value))
+    if kind.value_kind == "date":
+        d = value if isinstance(value, date) else _coerce_date(value)
+        if d is not None:
+            # "15 September 2026" — must match the web and worker renderers.
+            return f"{d.day} {d.strftime('%B %Y')}"
     return str(value)
+
+
+def _coerce_date(value: Any) -> date | None:
+    try:
+        return date.fromisoformat(str(value).strip()[:10])
+    except ValueError:
+        return None
