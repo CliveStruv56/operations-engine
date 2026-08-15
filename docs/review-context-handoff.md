@@ -1,7 +1,7 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-14 (**§6k–§6o are the latest state**; §1–6j are
+**Handoff date:** 2026-08-15 (**§6k–§6p are the latest state**; §1–6j are
 history, oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
@@ -1360,14 +1360,41 @@ comments and not Groundwork tickets; the UI is a two-state checklist, and while
 
 ---
 
+## 6p. Test-findings remediation sweep (15 August 2026)
+
+Seven commits, `0b7546e` → `a474c92`, all green, from a 13-item external
+test/UX report — every finding re-verified against the code first. Plan file:
+`~/.claude/plans/i-ve-run-some-tests-sprightly-candle.md`.
+
+| Commit | What |
+|---|---|
+| `0b7546e` | Decimal-as-string money (Pydantic v2 serialises `Decimal` → JSON string; only `grants/schemas.py` uses Decimal). `fmtMoney`/`achievedShare`/`fmtNum` coerce; grants "Secured" tile no longer string-concatenates; **`components/toast.tsx`** (ToastProvider/useToast) mounted in the app layout |
+| `225cae6` | Claims: scroll wrapper (page must own scrolling — shell is `h-screen` + `min-h-0 flex-1`), dates in words in **three statement renderers that must not drift** (web `formatClaimValue`, api `format_value`, worker `render_statement` — "15 September 2026"), two-step Remove ("Remove for good"/"Keep") + undo toast, add-panel inline errors + success toast |
+| `f92af99` | Citation regex hardening: uppercase `[C:`, escaped `\[c:…\]`, punctuation in bracket, dressed-up `[Ref c:…]` (prose-protected when nothing resolves). Three synced copies: api `conversations.py`, worker `assemble.py`, web `markdown.tsx` |
+| `1531705` | `.stamp` contrast (`text-accent` → `text-accent-deep` on the tint), project-tab empty states, zero-variance neutral, versions-0 dash, forms cards expandable read-only (`QuestionDisplay`), usage-page alias labels, "Drafted from your whole vault" footer, Re-index→Refresh, "register" reserved for *public* registers |
+| `17187ff` | Chat exports: Save to Vault (client-only, reuses the 3-call upload) + Download as PDF via **migration 0024 `conversation_export_jobs`** (RLS + isolation tests), `render_answer_pdf` worker task (markdown-it-py, MIT; WeasyPrint) |
+| `3416460` | `done` event `coverage: "ok"|"none"|null`; `scope_used` suppressed when nothing cited (was claiming "whole vault" on zero-chunk answers). Recovery actions on `coverage:none` (`/app?view=vault&upload=1`, `/app/claims?add=1&topic=…`); suggestion chips built from real indexed doc titles — chips stay vault-groundable only, **chat does not read claims** |
+| `a474c92` | **Playwright greenfield**: config on port 3100, fully mocked backend, `E2E_AUTH_BYPASS=1` env check in `proxy.ts` (set only by playwright.config.ts, never a real deployment); keyboard-nav spec proves no sidebar focus trap; `web-e2e` CI job |
+
+**Findings that were already fixed / wrong:** chat already swaps stream text for
+the resolved message on `done`; add-panel already guarded empty value/subject;
+`_resolve_citations` handles plain `[c:<uuid>]` fine (the four adjacent shapes
+above were the real bugs); BudgetTab already limited danger to overspend.
+
+**Still manual:** axe re-run on `/app?view=vault` (contrast fix is
+deterministic: `#98401f` on `#f7e8e0` ≈ 6.7:1) — needs the full dev stack,
+which was not running this session.
+
+---
+
 ## 7. Read first in a new session
 
 **Active work brief:** `docs/claims-register-brief.md` **§14** — only §14.1
 steps 2–3 (the arq cron sweep, then email) remain unbuilt, and both are blocked
 on infrastructure that does not exist. Nothing else is in flight.
 
-**Suites as of 14 Aug 2026, all green:** api **346**, worker **182**, web
-**87**.
+**Suites as of 15 Aug 2026, all green:** api **390**, worker **196**, web
+**103** (+1 Playwright e2e).
 
 1. This file — **§6k** first (the claims register: what was built, the five
    rulings not to relitigate, the three traps not to reintroduce, and what the
