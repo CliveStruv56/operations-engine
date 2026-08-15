@@ -113,6 +113,8 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("POST", f"/api/v1/projects/{b.project_id}/plan-tasks"),
         ("PATCH", f"/api/v1/projects/{b.project_id}/plan-tasks/{b.plan_task_id}"),
         ("DELETE", f"/api/v1/projects/{b.project_id}/plan-tasks/{b.plan_task_id}"),
+        ("POST", f"/api/v1/conversations/{b.conversation_id}/messages/{uuid4()}/pdf"),
+        ("GET", f"/api/v1/conversations/exports/{uuid4()}"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})
@@ -234,6 +236,40 @@ async def test_shared_conversation_does_not_cross_tenants(client, two_tenants):
     convs = (await client.get("/api/v1/conversations", headers=headers)).json()
     assert str(b.conversation_id) not in {c["id"] for c in convs}
     resp = await client.get(f"/api/v1/conversations/{b.conversation_id}/messages", headers=headers)
+    assert resp.status_code == 404
+
+
+async def test_answer_pdf_export_jobs_are_tenant_scoped(client, two_tenants):
+    """B's export job id under A's context must 404, and B's conversation must
+    not accept an export submitted by A."""
+    a, b = two_tenants
+    async with db.tenant_tx(b.owner_id, b.id) as conn:
+        message_id = await conn.fetchval(
+            """
+            insert into messages (tenant_id, conversation_id, role, content)
+            values ($1, $2, 'assistant', 'An answer') returning id
+            """,
+            b.id,
+            b.conversation_id,
+        )
+        job_id = await conn.fetchval(
+            """
+            insert into conversation_export_jobs
+                (tenant_id, conversation_id, message_id, created_by)
+            values ($1, $2, $3, $4) returning id
+            """,
+            b.id,
+            b.conversation_id,
+            message_id,
+            b.owner_id,
+        )
+
+    headers = auth(a.owner_id, a.id)
+    resp = await client.get(f"/api/v1/conversations/exports/{job_id}", headers=headers)
+    assert resp.status_code == 404
+    resp = await client.post(
+        f"/api/v1/conversations/{b.conversation_id}/messages/{message_id}/pdf", headers=headers
+    )
     assert resp.status_code == 404
 
 

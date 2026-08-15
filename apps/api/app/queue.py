@@ -99,6 +99,17 @@ class IngestQueue:
             _job_id=f"impactcard:{job_id}",
         )
 
+    async def enqueue_answer_pdf(self, tenant_id: UUID, job_id: UUID, user_id: UUID) -> None:
+        """Render a chat answer to a branded PDF in the worker."""
+        pool = await self._conn()
+        await pool.enqueue_job(
+            "render_answer_pdf",
+            str(tenant_id),
+            str(job_id),
+            str(user_id),
+            _job_id=f"answerpdf:{job_id}",
+        )
+
     async def enqueue_health_card(
         self, tenant_id: UUID, project_id: UUID, job_id: UUID, user_id: UUID
     ) -> None:

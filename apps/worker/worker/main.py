@@ -20,6 +20,7 @@ import sentry_sdk
 from arq import cron
 from arq.connections import RedisSettings
 
+from worker.answer_pdf import render_answer_pdf
 from worker.blocks import estimate_tokens
 from worker.chunking import chunk_blocks
 from worker.claims.extract import EXTRACT_ALIAS, ScorableChunk, extract_claims
@@ -345,6 +346,7 @@ class WorkerSettings:
         grant_draft_document,
         generate_impact_card,
         harvest_claims_from_application,
+        render_answer_pdf,
     ]
     # The register's dates change at midnight with nobody touching anything —
     # these are the only jobs that run on a clock rather than an enqueue.

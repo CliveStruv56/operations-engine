@@ -121,6 +121,8 @@ CORE_TENANT_TABLES: tuple[str, ...] = (
     "claims",
     "claim_revisions",
     "project_tasks",
+    # Chat-answer exports (PDF): chat is core, so its export jobs are too.
+    "conversation_export_jobs",
 )
 
 #: Everything the RLS coverage check must see.

@@ -15,6 +15,7 @@ import {
   StopIcon,
 } from "@/components/icons";
 import { AnswerMarkdown, stripCiteMarkers } from "@/components/markdown";
+import { useToast } from "@/components/toast";
 import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
 import ProjectPlanPanel from "./project-plan";
 import ShareBar from "./share-bar";
@@ -134,6 +135,10 @@ function AssistantMessageInner({
   scope,
   onExport,
   exporting,
+  onSaveToVault,
+  saving,
+  onPdf,
+  pdfBusy,
   readOnly,
 }: {
   m: Message;
@@ -143,6 +148,10 @@ function AssistantMessageInner({
    *  defeat the memo). */
   onExport: (id: string) => void;
   exporting: boolean;
+  onSaveToVault: (id: string) => void;
+  saving: boolean;
+  onPdf: (id: string) => void;
+  pdfBusy: boolean;
   readOnly: boolean;
 }) {
   const [showAllSources, setShowAllSources] = useState(false);
@@ -214,6 +223,24 @@ function AssistantMessageInner({
             {exporting ? "Building deck…" : "Download .pptx"}
           </button>
         )}
+        {!readOnly && !m.id.startsWith("local-") && (
+          <>
+            <button
+              onClick={() => onPdf(m.id)}
+              disabled={pdfBusy}
+              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
+            >
+              {pdfBusy ? "Building PDF…" : "Download as PDF"}
+            </button>
+            <button
+              onClick={() => onSaveToVault(m.id)}
+              disabled={saving}
+              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save to Vault"}
+            </button>
+          </>
+        )}
         {m.model && (
           <span className="ml-auto text-[11px] font-semibold text-faint">
             {scope === "project" && "Drafted from project documents · "}
@@ -233,6 +260,15 @@ function AssistantMessageInner({
  *  made long replies stutter. Keep every prop here primitive or referentially
  *  stable or this silently stops working. */
 const AssistantMessage = memo(AssistantMessageInner);
+
+/** A vault title for a saved answer: its first heading or line, else dated. */
+function vaultTitle(content: string): string {
+  const line = content
+    .split("\n")
+    .map((l) => l.replace(/^#+\s*/, "").replace(/\*\*/g, "").trim())
+    .find(Boolean);
+  return (line ?? `Chat answer — ${new Date().toLocaleDateString("en-GB")}`).slice(0, 120);
+}
 
 export default function ChatPanel({
   activeProjectId,
@@ -263,6 +299,9 @@ export default function ChatPanel({
   const [uploadingCount, setUploadingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [exportingId, setExportingId] = useState<string | null>(null);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [pdfId, setPdfId] = useState<string | null>(null);
+  const toast = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -425,6 +464,88 @@ export default function ChatPanel({
         setError(err instanceof Error ? err.message : String(err));
       } finally {
         setExportingId(null);
+      }
+    },
+    [conversationId, tenantId]
+  );
+
+  // The save/pdf callbacks read messages through a ref so their identity
+  // stays stable and AssistantMessage's memo keeps holding.
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
+  const saveToVault = useCallback(
+    async (messageId: string) => {
+      const msg = messagesRef.current.find((x) => x.id === messageId);
+      if (!msg || !conversationId) return;
+      setSavingId(messageId);
+      setError(null);
+      try {
+        const title = vaultTitle(msg.content);
+        const body = new Blob([msg.content], { type: "text/markdown" });
+        const { id, upload_url } = await api<{ id: string; upload_url: string }>(
+          "/documents",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              title,
+              mime: "text/markdown",
+              size_bytes: body.size,
+              project_id: activeProjectId,
+              conversation_id: conversationId,
+            }),
+          },
+          tenantId
+        );
+        const put = await fetch(upload_url, {
+          method: "PUT",
+          headers: { "Content-Type": "text/markdown" },
+          body,
+        });
+        if (!put.ok) throw new Error(`Upload failed (${put.status})`);
+        await api(`/documents/${id}/complete`, { method: "POST" }, tenantId);
+        toast({ message: `Saved to vault — “${title}” is indexing.` });
+        refreshDocs();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setSavingId(null);
+      }
+    },
+    [conversationId, tenantId, activeProjectId, toast, refreshDocs]
+  );
+
+  const exportPdf = useCallback(
+    async (messageId: string) => {
+      if (!conversationId) return;
+      setPdfId(messageId);
+      setError(null);
+      try {
+        const job = await api<{ id: string }>(
+          `/conversations/${conversationId}/messages/${messageId}/pdf`,
+          { method: "POST" },
+          tenantId
+        );
+        // Same shape as the health-card poll: the worker renders, we wait.
+        for (;;) {
+          await new Promise((r) => setTimeout(r, 2000));
+          const j = await api<{ status: string; error: string | null; download_url: string | null }>(
+            `/conversations/exports/${job.id}`,
+            {},
+            tenantId
+          );
+          if (j.status === "succeeded" && j.download_url) {
+            openPresigned(j.download_url);
+            break;
+          }
+          if (j.status === "failed") throw new Error(j.error ?? "The PDF could not be built");
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setPdfId(null);
       }
     },
     [conversationId, tenantId]
@@ -624,6 +745,10 @@ export default function ChatPanel({
                     scope={scopes[m.id]}
                     onExport={exportSlides}
                     exporting={exportingId === m.id}
+                    onSaveToVault={saveToVault}
+                    saving={savingId === m.id}
+                    onPdf={exportPdf}
+                    pdfBusy={pdfId === m.id}
                     readOnly={readOnly}
                   />
                 )
