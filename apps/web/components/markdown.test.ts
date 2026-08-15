@@ -34,6 +34,14 @@ describe("stripCiteMarkers", () => {
   it("hides the half of a marker that straddles two deltas", () => {
     expect(stripCiteMarkers("Leave is 25 days [c:3174bc")).toBe("Leave is 25 days ");
   });
+
+  it("hides the marker shapes found 15 Aug 2026, matching the API", () => {
+    // Uppercase prefix, markdown-escaped brackets, punctuation inside the
+    // bracket, and a dressed-up prefix.
+    for (const marker of [`[C:${UUID}]`, `\\[c:${UUID}\\]`, `[c:${UUID}.]`, `[Ref c:${UUID}]`]) {
+      expect(stripCiteMarkers(`Leave is 25 days ${marker}.`)).toBe("Leave is 25 days .");
+    }
+  });
 });
 
 describe("stripCiteMarkers — several ids in one bracket", () => {

@@ -17,11 +17,16 @@ export type CiteRenderer = (n: number) => React.ReactNode;
 // A prefixed bracket may carry several ids — `[c:p1, c:b1]` seen live 11 Aug
 // 2026. Tokens are comma-separated and space-free, which keeps
 // `[c: see the note below]` prose rather than something to hide.
+// 15 Aug 2026: uppercase [C:…], markdown-escaped \[c:…\] and dressed-up
+// prefixes ([Ref c:…]) now count as markers, matching the API. Mid-stream a
+// dressed-up bracket that is really prose vanishes for the stream's duration
+// and comes back resolved as prose on `done` — the lesser evil next to a raw
+// uuid on screen.
 const CITE_MARKER_RE =
-  /[[【]\s*(?:c:\s*((?:[^\s,\]】]{1,64})(?:\s*,\s*(?:c:\s*)?[^\s,\]】]{1,64})*)|([0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*[\]】]/g;
+  /\\?[[【]\s*(?:(?:[^\s\]】][^\]】\n]{0,23}\s)??[cC]:\s*((?:[^\s,\]】\\]{1,64})(?:\s*,\s*(?:[cC]:\s*)?[^\s,\]】\\]{1,64})*)|([0-9a-fA-F][0-9a-fA-F-]{3,35}))\s*\\?[\]】]/g;
 // The tail of a marker that straddles two deltas — hide the half that landed
 // rather than let it flash as text for a frame.
-const PARTIAL_CITE_MARKER_RE = /[[【]\s*(?:c:)?\s*[0-9a-fA-F-]{0,35}$/;
+const PARTIAL_CITE_MARKER_RE = /\\?[[【]\s*(?:[cC]:)?\s*[0-9a-fA-F-]{0,35}\\?$/;
 
 /** Strip citation markers from a partially streamed answer. Until the stream
  * finishes there are no resolved [n] numbers to show — and an unstripped

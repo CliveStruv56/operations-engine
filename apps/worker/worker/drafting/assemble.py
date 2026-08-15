@@ -45,13 +45,20 @@ from worker.drafting.sections import Section, measure
 #: The tokens must be comma-separated and space-free, which is what keeps
 #: `[c: see the note below]` prose: its content has spaces inside a token, so
 #: it does not match and is left alone.
-_ID = r"[^\s,\]】]{1,64}"
+#:
+#: 15 Aug 2026, in step with the api: uppercase [C:…], markdown-escaped
+#: \[c:…\], punctuation inside the bracket and a dressed-up prefix
+#: ([Ref c:…]) all count as markers; a dressed-up bracket resolving to
+#: nothing stays prose.
+_ID = r"[^\s,\]】\\]{1,64}"
+_ID_PUNCT = ".,;:!?"
 CITATION_RE = re.compile(
-    rf"[\[【]\s*(?:c:\s*(?P<prefixed>{_ID}(?:\s*,\s*(?:c:\s*)?{_ID})*)"
-    rf"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{{3,35}}))\s*[\]】]"
+    rf"\\?[\[【]\s*(?:(?P<lead>[^\s\]】][^\]】\n]{{0,23}}\s)??[cC]:\s*"
+    rf"(?P<prefixed>{_ID}(?:\s*,\s*(?:[cC]:\s*)?{_ID})*)"
+    rf"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{{3,35}}))\s*\\?[\]】]"
 )
 #: Splits a prefixed bracket's payload into its individual ids.
-_ID_SPLIT = re.compile(r"\s*,\s*(?:c:\s*)?")
+_ID_SPLIT = re.compile(r"\s*,\s*(?:[cC]:\s*)?")
 # A prefix-less marker is only believed at full-id length — short bracketed hex
 # is ordinary prose far more often than it is a citation.
 MIN_UNPREFIXED_ID = 8
@@ -113,9 +120,13 @@ class CitationIndex:
                 # strip the ones that are inventions.
                 out = "".join(
                     self._number(cid.lower(), certain=True) or ""
-                    for cid in _ID_SPLIT.split(prefixed.strip())
+                    for cid in (t.rstrip(_ID_PUNCT) for t in _ID_SPLIT.split(prefixed.strip()))
                     if cid
                 )
+                if not out and match.group("lead"):
+                    # A dressed-up bracket ("[the file c:config]") resolving
+                    # to nothing is likelier prose than a hallucination.
+                    return match.group(0)
                 return out
             cid = match.group("bare").lower()
             # Without the prefix, only a whole uuid is a marker beyond doubt.

@@ -167,6 +167,72 @@ def test_resolve_citations_strips_unresolvable_full_uuid_without_prefix():
     assert citations == []
 
 
+def test_resolve_citations_accepts_uppercase_prefix():
+    # [C:<uuid>] — the prefix case-folded by the model. Without this the
+    # marker was left verbatim and the reader saw a raw uuid.
+    c1 = _chunk(title="Handbook")
+    content, citations = _resolve_citations(f"Leave is 25 days [C:{c1.chunk_id}].", [c1])
+    assert content == "Leave is 25 days [1]."
+    assert citations[0]["chunk_id"] == str(c1.chunk_id)
+
+
+def test_resolve_citations_accepts_markdown_escaped_brackets():
+    # Report-mode markdown sometimes escapes the brackets: \[c:…\]. The
+    # backslash used to be swallowed into the id, fail lookup, and delete
+    # the marker — a real citation lost.
+    c1 = _chunk()
+    content, citations = _resolve_citations(rf"Leave is 25 days \[c:{c1.chunk_id}\].", [c1])
+    assert content == "Leave is 25 days [1]."
+    assert len(citations) == 1
+
+
+def test_resolve_citations_survives_punctuation_inside_the_bracket():
+    # [c:<uuid>.] — a stop inside the bracket used to break the lookup and
+    # delete the marker.
+    c1 = _chunk()
+    content, citations = _resolve_citations(f"Leave is 25 days [c:{c1.chunk_id}.].", [c1])
+    assert content == "Leave is 25 days [1]."
+    assert len(citations) == 1
+
+
+def test_resolve_citations_accepts_wrapped_prefix():
+    # "[Ref c:…]" and "[source: c:…]" — the model dressing the marker up.
+    c1 = _chunk()
+    text = f"A [Ref c:{c1.chunk_id}] and B [source: c:{c1.chunk_id}]."
+    content, citations = _resolve_citations(text, [c1])
+    assert content == "A [1] and B [1]."
+    assert len(citations) == 1
+
+
+def test_resolve_citations_wrapped_bracket_that_resolves_nothing_stays_prose():
+    # A dressed-up bracket resolving to nothing is likelier prose than a
+    # hallucination — unlike a plain [c:…], which is dropped by design.
+    c1 = _chunk()
+    content, citations = _resolve_citations("See [the file c:config].", [c1])
+    assert content == "See [the file c:config]."
+    assert citations == []
+
+
+def test_resolve_citations_report_mode_markdown():
+    """The originally reported symptom: a report-shaped answer with full-UUID
+    markers must come back numbered with a populated citations list."""
+    c1, c2 = _chunk(title="Accounts"), _chunk(title="Policy")
+    text = (
+        f"## Findings\n\n"
+        f"- Income rose 12% [c:{c1.chunk_id}]\n"
+        f"- Cover renewed [c:{c2.chunk_id}]\n\n"
+        f"| Item | Source |\n| --- | --- |\n| Income | [c:{c1.chunk_id}] |\n\n"
+        f"**In short**: both hold [c:{c1.chunk_id}, c:{c2.chunk_id}]."
+    )
+    content, citations = _resolve_citations(text, [c1, c2])
+    assert "[c:" not in content
+    assert "- Income rose 12% [1]" in content
+    assert "- Cover renewed [2]" in content
+    assert "| Income | [1] |" in content
+    assert "both hold [1][2]." in content
+    assert [c["n"] for c in citations] == [1, 2]
+
+
 # -- hybrid SQL under RLS ----------------------------------------------------
 
 

@@ -80,12 +80,20 @@ logger = logging.getLogger("app.chat.latency")
 #
 # Tokens are comma-separated and space-free, which is what keeps
 # `[c: see the note below]` prose rather than something to eat.
-_ID = r"[^\s,\]】]{1,64}"
+#
+#  15 Aug  four more shapes found by testing, each read as prose or eaten:
+#          uppercase [C:…], markdown-escaped \[c:…\], punctuation inside the
+#          bracket [c:….], and a dressed-up prefix [Ref c:…] / [source: c:…].
+#          Backslash is excluded from _ID so an escape never joins the id, and
+#          a dressed-up bracket that resolves to nothing stays prose.
+_ID = r"[^\s,\]】\\]{1,64}"
+_ID_PUNCT = ".,;:!?"
 CITATION_RE = re.compile(
-    rf"[\[【]\s*(?:c:\s*(?P<prefixed>{_ID}(?:\s*,\s*(?:c:\s*)?{_ID})*)"
-    rf"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{{3,35}}))\s*[\]】]"
+    rf"\\?[\[【]\s*(?:(?P<lead>[^\s\]】][^\]】\n]{{0,23}}\s)??[cC]:\s*"
+    rf"(?P<prefixed>{_ID}(?:\s*,\s*(?:[cC]:\s*)?{_ID})*)"
+    rf"|(?P<bare>[0-9a-fA-F][0-9a-fA-F-]{{3,35}}))\s*\\?[\]】]"
 )
-_ID_SPLIT = re.compile(r"\s*,\s*(?:c:\s*)?")
+_ID_SPLIT = re.compile(r"\s*,\s*(?:[cC]:\s*)?")
 # A prefix-less marker is only believed at full-id length. Short bracketed hex
 # is ordinary prose far more often than it is a citation ("[42]", "[dead]"),
 # and the truncations we have actually seen ran to 8 chars.
@@ -181,7 +189,16 @@ def _resolve_citations(
         if prefixed is not None:
             # The prefix is the model saying it meant a citation, so every id in
             # the bracket is a citation attempt — resolve each, drop inventions.
-            return "".join(_number(cid.lower()) for cid in _ID_SPLIT.split(prefixed.strip()) if cid)
+            result = "".join(
+                _number(cid.lower())
+                for cid in (t.rstrip(_ID_PUNCT) for t in _ID_SPLIT.split(prefixed.strip()))
+                if cid
+            )
+            if not result and match.group("lead"):
+                # A dressed-up bracket ("[the file c:config]") resolving to
+                # nothing is likelier prose than a hallucination.
+                return match.group(0)
+            return result
         cid_raw = match.group("bare").lower()
         # Without the prefix, only a whole uuid is a marker beyond doubt.
         # Anything shorter is left exactly as written when it fails to resolve:
