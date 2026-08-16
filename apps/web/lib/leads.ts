@@ -30,12 +30,10 @@ const webhookAdapter: LeadAdapter = {
   async deliver(lead) {
     const url = process.env.LEAD_WEBHOOK_URL;
     if (!url) {
-      console.info("[leads] no LEAD_WEBHOOK_URL configured; lead:", {
-        ...lead,
-        // Keep full details out of shared logs.
-        email: lead.email.replace(/(.).*(@.*)/, "$1***$2"),
-        need: lead.need ? `${lead.need.length} chars` : undefined,
-      });
+      // With no webhook, this log line IS the lead record — keep it complete
+      // enough to respond to (Vercel runtime logs are short-lived; configure
+      // LEAD_WEBHOOK_URL before relying on this for real volume).
+      console.info("[leads] no LEAD_WEBHOOK_URL configured; lead:", lead);
       return;
     }
     const res = await fetch(url, {
