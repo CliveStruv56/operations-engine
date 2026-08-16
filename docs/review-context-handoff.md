@@ -1390,10 +1390,12 @@ which was not running this session.
 
 ## 6q. Public marketing website — built and verified (16 August 2026)
 
-Committed on `main` as `de08412` (site + the PRD it implements) and `ebc9a77`
-(this handoff section), **not pushed**. The rest of `output/marketing/`
-(one-pager PDFs, generator script, messaging source) is deliberately left
-untracked — only `website-prd.md` was committed, because this file cites it.
+Committed on `main` as `de08412` (site + the PRD it implements) plus
+follow-ups through `dc54cfd`, all **pushed**, and **live in Vercel
+production** at https://ops-engine-staging-web.vercel.app — see "Deployed"
+below. The rest of `output/marketing/` (one-pager PDFs, generator script,
+messaging source) is deliberately left untracked — only `website-prd.md` was
+committed, because this file cites it.
 
 ### What it is
 
@@ -1473,9 +1475,37 @@ and the 375px mobile menu — all render correctly. Note: deleting
 `app/page.tsx` leaves stale `.next/types` that fail `tsc` until the next
 `pnpm build` regenerates them — build first if typecheck fails oddly.
 
+### Deployed (16 August 2026, same day)
+
+Live in **Vercel production**, project `ops-engine-staging-web`, deployment
+`dpl_2RssuSx2XEL5BqtA9uaTFJeAGRVp` from `dc54cfd`, aliased to
+https://ops-engine-staging-web.vercel.app. Smoke-checked: `/`, `/contact`,
+`/solutions/groundwork`, `/robots.txt` all 200 with correct titles; `/app`
+still 307s unauthenticated visitors to `/login`; a test POST to `/api/leads`
+returned `{"ok":true}` (Idempotency-Key `deploy-check-dc54cfd`,
+`deploy-check@flowgridos.co.uk` — ignore it if it turns up in lead logs).
+
+- **Deploy command gotcha, now in the checklist** (`ef0e599`): the Vercel
+  project's Root Directory is `apps/web/`, so `pnpm dlx vercel@latest --prod`
+  must run from the **repo root** — from `apps/web` it fails. `.vercel/` links
+  exist at both root and `apps/web`, both gitignored. The CLI is not installed
+  globally.
+- **Leads log to the server, deliberately** (founder decision, 16 Aug):
+  `LEAD_WEBHOOK_URL` is unset and `dc54cfd` changed the fallback to log the
+  **complete** lead (email unmasked) — with no webhook the log line is the
+  only record, and a masked email meant an uncontactable lead. Consequences:
+  personal data sits in Vercel runtime logs (short retention — roughly an
+  hour to a day), so check `vercel logs` / dashboard Logs (filter `[leads]`)
+  for real submissions, and set `LEAD_WEBHOOK_URL` before relying on the form
+  for real volume — setting it switches the logging path off automatically.
+- **`NEXT_PUBLIC_SITE_URL` is also unset** — canonical/sitemap/OG URLs point
+  at `https://flowgridos.co.uk` (the intended final domain), not the staging
+  alias. Fine until the domain cutover; set it only if that ever matters.
+
 ### Open items, in order
 
-1. **Push `main`** when ready (`de08412`/`ebc9a77` are local-only).
+1. **Choose the lead destination** and set `LEAD_WEBHOOK_URL` in Vercel —
+   until then leads live only in short-retention runtime logs (see above).
 2. PRD "remaining inputs" still owed by the user: lead-response owner,
    scheduler/CRM/analytics choices, approved legal wording + processor list,
    real product screenshots (the CSS hero mock is a stand-in), and the
@@ -1483,9 +1513,9 @@ and the 375px mobile menu — all render correctly. Note: deleting
    fallback and contact address; confirm it exists before launch.
 3. Analytics events (PRD §8) and consent banner: not built, pending the
    consent decision. The cookies page currently truthfully says "no trackers".
-4. Production deploy: needs `NEXT_PUBLIC_SITE_URL` (defaults to
-   `https://flowgridos.co.uk` in layout/sitemap/robots) and `LEAD_WEBHOOK_URL`
-   set in Vercel; then the PRD §11 launch checks (Lighthouse ≥90, CWV, axe).
+4. PRD §11 launch checks against the live site: Lighthouse ≥90 on the
+   homepage and both solution pages, Core Web Vitals, axe, and the
+   five-second-exposure test. (The deploy itself is done — see above.)
 5. E2E coverage: the Playwright greenfield from §6p (port 3100, mocked
    backend) is the natural home for a marketing-page spec (menu keyboard
    journey, form submit against a mocked `/api/leads`); none written yet.
@@ -1494,9 +1524,10 @@ and the 375px mobile menu — all render correctly. Note: deleting
 
 ## 7. Read first in a new session
 
-**Active work: the marketing site (§6q) is committed on `main` (not pushed)**
-— its open items are next (push, lead destination, analytics/consent, legal
-sign-off). The other open brief is `docs/claims-register-brief.md`
+**Active work: the marketing site (§6q) is pushed and LIVE in Vercel
+production** (https://ops-engine-staging-web.vercel.app, from `dc54cfd`) —
+its open items are next (lead destination, analytics/consent, legal
+sign-off, launch checks). The other open brief is `docs/claims-register-brief.md`
 **§14** — only §14.1 steps 2–3 (the arq cron sweep, then email) remain
 unbuilt, and both are blocked on infrastructure that does not exist.
 
