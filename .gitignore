@@ -28,3 +28,6 @@ out/
 # Supabase local
 supabase/.temp/
 .playwright-mcp/
+
+# Vercel CLI link
+.vercel/

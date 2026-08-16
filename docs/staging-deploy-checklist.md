@@ -44,6 +44,22 @@
 > and `railway logs` without an explicit id shows the last *successful*
 > deployment, not the one that just failed).
 >
+> **Deploying web to Vercel** (corrected 16 Aug 2026). Run from the **repo
+> root**, not from `apps/web`:
+>
+> ```sh
+> pnpm dlx vercel@latest --prod    # from the repo root
+> ```
+>
+> The Vercel project (`ops-engine-staging-web`) has Root Directory set to
+> `apps/web/`, so the CLI must upload the whole repo and let Vercel build the
+> subdirectory — running it from inside `apps/web` fails with "The specified
+> Root Directory \"apps/web/\" does not exist". The `.vercel/` link lives at
+> the repo root (and in `apps/web`, a leftover from before the root-directory
+> setting); both are gitignored. The CLI is not installed globally — hence
+> `pnpm dlx`. A failed build leaves the previous deployment serving, so this
+> too is safe to get wrong.
+>
 > **Migrations run as a Railway pre-deploy hook** (set 3 Aug 2026). The api
 > service has `preDeployCommand = ["alembic upgrade head"]`, so Railway runs
 > migrations against the new image after build and **before** switching
