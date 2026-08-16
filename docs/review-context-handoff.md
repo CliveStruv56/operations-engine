@@ -1,11 +1,12 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-15 (**§6k–§6p are the latest state**; §1–6j are
+**Handoff date:** 2026-08-16 (**§6k–§6q are the latest state**; §1–6j are
 history, oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
-claims-register build, and the 14 Aug evaluation-gap and project-plan work
+claims-register build, the 14 Aug evaluation-gap and project-plan work, and
+the 16 Aug public marketing-site build
 **Purpose:** Resume in a new context window without re-deriving this work.
 **Start at §7** — it names the active task and the order to read things in.
 
@@ -1387,15 +1388,122 @@ which was not running this session.
 
 ---
 
+## 6q. Public marketing website — built, verified, NOT committed (16 August 2026)
+
+⚠️ **This work is uncommitted in the working tree.** Everything below exists
+only as untracked/modified files under `apps/web` (plus the PRD in `output/`).
+First move in a new session: `git status`, review, commit. Nothing is pushed.
+
+### What it is
+
+The Flowgrid OS public marketing site, built into the existing Next.js app per
+`output/marketing/website-prd.md` (PRD v1.0, 16 Aug — routes, conversion
+model, copy spines, accessibility and performance budgets all come from it).
+Delivery slices 1–3 plus the lead endpoint are done; analytics, scheduler/CRM
+choice and legal sign-off are deliberately not.
+
+**Design ruling:** the PRD says "Hearth palette" (§9, §13) but the user
+explicitly supplied the **Huddle** style reference and said to follow it — and
+the app itself had already moved to Huddle (`241e4cb`, after §6p; `c91699d`
+was a Clearbit-inspired intermediate the same day). The marketing site uses
+the Huddle tokens already in `apps/web/app/globals.css` (paper-white canvas,
+Ink Black, hairlines, no shadows, burnt-amber `--accent` primary CTA,
+deep-violet interactive, pastel status taxonomy). Treat the PRD's "Hearth"
+wording as stale, not as an instruction.
+
+### Structure
+
+- **`app/(marketing)/`** route group. `app/page.tsx` (the old
+  `getUser()` → redirect to `/app` or `/login`) is **deleted**; `/` is now the
+  public homepage. `proxy.ts` needed **no change** — its matcher was already
+  `/app/:path*`, so it never touched `/`. Authed users reach the app via the
+  header's quiet "Sign in" link (PRD §3); the header does **no** server auth
+  check, deliberately, so every marketing page stays statically prerendered.
+- Routes (all static): `/`, `/platform`, `/solutions/groundwork`,
+  `/solutions/grantwork`, `/security-and-data`, `/about`, `/contact`, plus
+  `/privacy` / `/terms` / `/cookies` (drafts, each page says "pending legal
+  review", `robots: noindex`). Also `app/sitemap.ts`, `app/robots.ts`
+  (disallows `/app/`, `/admin/`, `/api/`) and a styled root `app/not-found.tsx`.
+- Shared pieces in the group: `ui.tsx` (Kicker, Section, CTA class strings,
+  TagPill, `StatusCard` with the pastel taxonomy + a `neutral`/bone tone),
+  `site-header.tsx` (client; mobile menu with focus trap + Escape per PRD §5),
+  `site-footer.tsx`, `hero-visual.tsx` (CSS-composed "representative product
+  view — example data": cited answer, source excerpt, confirmed claim, PDF
+  export cue — no fabricated customer data), `legal.tsx`.
+- **Both solution pages share `solutions/solution-page.tsx`**, the PRD §6
+  eight-step decision path, fed by a typed `SolutionContent` object per page —
+  this is the PRD §8 "typed content files" requirement; capability claims live
+  in those objects, keep them reviewable and true.
+- Nav divergence from PRD §5: flat links (Platform, Groundwork, Grantwork,
+  Security & data, About) instead of a "Solutions" dropdown — simpler and
+  keyboard-friendly. Tenderhouse/Assurance are **not** mentioned anywhere
+  (PRD §5 forbids "coming soon" without an owner).
+
+### Lead flow — the repo's first Next route handler
+
+- `app/api/leads/route.ts` (`POST`, node runtime): server-side validation
+  (kind `demo|pilot`, email regex, workflow/team-size allowlists, length
+  caps), honeypot `website` field answered with a fake 202, per-IP rate limit
+  (5/min), `Idempotency-Key` dedupe (1h TTL), consent version constant
+  `2026-08-16`. Free text is capped at 500 chars; nothing is sent to
+  analytics (there is no analytics).
+- `lib/leads.ts` — `LeadAdapter` interface; the default adapter POSTs to
+  **`LEAD_WEBHOOK_URL`** or, unset, logs to the server with the email masked.
+  Swap the adapter when the CRM/email destination is chosen; the route
+  handler shouldn't change.
+- Forms: `contact/demo-form.tsx` (PRD §7's exact field set, inline
+  errors, success state, mailto fallback) and `pilot-form.tsx` (email +
+  workflow, inline on the homepage). Both use `lead-client.ts::submitLead`,
+  which attaches sourcePage + UTM params and a per-mount `crypto.randomUUID()`
+  idempotency key.
+- ⚠️ **The rate limiter and idempotency store are in-memory Maps.** Fine on a
+  single long-lived instance; the web app deploys to **Vercel**
+  (`docs/staging-deploy-checklist.md`), where serverless instances make them
+  best-effort. Move to Redis if lead abuse ever matters; the handler comment
+  says the same.
+
+### Verification (all green at handoff)
+
+`pnpm lint`, `pnpm typecheck`, `pnpm build` (29 routes, all public pages
+static), `pnpm test` (103 unit tests — none touch the marketing pages;
+coverage there is zero). Visual QA done via Playwright screenshots against
+the running dev server (:3000): `/`, `/contact`, `/solutions/groundwork`,
+and the 375px mobile menu — all render correctly. Note: deleting
+`app/page.tsx` leaves stale `.next/types` that fail `tsc` until the next
+`pnpm build` regenerates them — build first if typecheck fails oddly.
+
+### Open items, in order
+
+1. **Commit the work** (it is only in the working tree).
+2. PRD "remaining inputs" still owed by the user: lead-response owner,
+   scheduler/CRM/analytics choices, approved legal wording + processor list,
+   real product screenshots (the CSS hero mock is a stand-in), and the
+   **`hello@flowgridos.co.uk` mailbox** — it appears as the form-failure
+   fallback and contact address; confirm it exists before launch.
+3. Analytics events (PRD §8) and consent banner: not built, pending the
+   consent decision. The cookies page currently truthfully says "no trackers".
+4. Production deploy: needs `NEXT_PUBLIC_SITE_URL` (defaults to
+   `https://flowgridos.co.uk` in layout/sitemap/robots) and `LEAD_WEBHOOK_URL`
+   set in Vercel; then the PRD §11 launch checks (Lighthouse ≥90, CWV, axe).
+5. E2E coverage: the Playwright greenfield from §6p (port 3100, mocked
+   backend) is the natural home for a marketing-page spec (menu keyboard
+   journey, form submit against a mocked `/api/leads`); none written yet.
+
+---
+
 ## 7. Read first in a new session
 
-**Active work brief:** `docs/claims-register-brief.md` **§14** — only §14.1
-steps 2–3 (the arq cron sweep, then email) remain unbuilt, and both are blocked
-on infrastructure that does not exist. Nothing else is in flight.
+**Active work: the marketing site (§6q) is finished but UNCOMMITTED** — commit
+it first, then pick up its open items (lead destination, analytics/consent,
+legal sign-off). The other open brief is `docs/claims-register-brief.md`
+**§14** — only §14.1 steps 2–3 (the arq cron sweep, then email) remain
+unbuilt, and both are blocked on infrastructure that does not exist.
 
-**Suites as of 15 Aug 2026, all green:** api **390**, worker **196**, web
+**Suites as of 16 Aug 2026, all green:** api **390**, worker **196**, web
 **103** (+1 Playwright e2e).
 
+0. **§6q** if touching the public site, `/` routing, or lead capture — it
+   also records why the marketing pages follow Huddle, not the PRD's "Hearth".
 1. This file — **§6k** first (the claims register: what was built, the five
    rulings not to relitigate, the three traps not to reintroduce, and what the
    user still owes), then **§6l** (the summary badge) and **§6m** (ownership, and
