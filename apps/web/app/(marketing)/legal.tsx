@@ -19,7 +19,7 @@ export function LegalPage({
       <h1 className="mt-4 text-[40px] font-light leading-[1.15] tracking-[-0.92px] text-ink">
         {title}
       </h1>
-      <p className="mt-3 text-[14px] text-faint">Last updated {updated}. Draft pending legal review.</p>
+      <p className="mt-3 text-[14px] text-slate">Last updated {updated}. Draft pending legal review.</p>
       <div className="mt-10 space-y-8 text-[16px] leading-[1.55] text-slate [&_h2]:text-[22px] [&_h2]:font-medium [&_h2]:tracking-[-0.22px] [&_h2]:text-ink [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-1.5">
         {children}
       </div>

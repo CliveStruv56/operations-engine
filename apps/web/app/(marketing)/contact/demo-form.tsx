@@ -127,7 +127,7 @@ export function DemoForm() {
         </div>
         <div>
           <label htmlFor="demo-team" className={labelCls}>
-            Team size <span className="normal-case text-faint">(optional)</span>
+            Team size <span className="normal-case">(optional)</span>
           </label>
           <select
             id="demo-team"
@@ -147,7 +147,7 @@ export function DemoForm() {
       <div>
         <label htmlFor="demo-need" className={labelCls}>
           What do you repeatedly need to find, check or produce?{" "}
-          <span className="normal-case text-faint">(optional)</span>
+          <span className="normal-case">(optional)</span>
         </label>
         <textarea
           id="demo-need"
@@ -158,7 +158,7 @@ export function DemoForm() {
           className={inputCls}
           aria-describedby="demo-need-hint"
         />
-        <p id="demo-need-hint" className="mt-1.5 text-[13px] text-faint">
+        <p id="demo-need-hint" className="mt-1.5 text-[13px] text-slate">
           Up to 500 characters. Please don&rsquo;t include sensitive personal
           data.
         </p>
@@ -177,7 +177,7 @@ export function DemoForm() {
       </div>
       <p className="text-[14px] leading-[1.5] text-slate">
         We use these details only to respond to your enquiry — see the{" "}
-        <a href="/privacy" className="text-deep-violet underline-offset-4 hover:underline">
+        <a href="/privacy" className="text-deep-violet underline underline-offset-4">
           privacy notice
         </a>
         . No marketing list unless you separately opt in.

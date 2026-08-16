@@ -63,7 +63,7 @@ export function SiteFooter() {
         </div>
       </div>
       <div className="border-t border-bone">
-        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-2 px-6 py-6 text-[13px] text-faint md:flex-row md:justify-between">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-col gap-2 px-6 py-6 text-[13px] text-slate md:flex-row md:justify-between">
           <p>© {new Date().getFullYear()} Flowgrid OS. All rights reserved.</p>
           <p>Made in the United Kingdom.</p>
         </div>

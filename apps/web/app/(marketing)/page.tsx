@@ -83,7 +83,7 @@ export default function HomePage() {
               Explore the platform
             </Link>
           </div>
-          <p className="mt-8 text-[13px] font-medium uppercase tracking-[0.08em] text-faint">
+          <p className="mt-8 text-[13px] font-medium uppercase tracking-[0.08em] text-slate">
             Built for UK small organisations and specialist teams
           </p>
         </div>
@@ -95,7 +95,7 @@ export default function HomePage() {
         <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-6 py-12 md:grid-cols-3">
           {BEFORE_AFTER.map((pair) => (
             <div key={pair.before}>
-              <p className="text-[14px] text-faint line-through decoration-1">
+              <p className="text-[14px] text-slate line-through decoration-1">
                 {pair.before}
               </p>
               <p className="mt-1.5 text-[18px] leading-[1.42] text-ink">

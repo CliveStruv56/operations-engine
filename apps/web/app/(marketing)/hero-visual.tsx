@@ -6,7 +6,7 @@ export function HeroVisual() {
   return (
     <figure aria-label="Representative product view showing a cited answer, its source document, a confirmed organisational fact and a report export">
       <div className="rounded-[24px] border border-stone bg-canvas p-5">
-        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-faint">
+        <p className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate">
           Representative product view — example data
         </p>
 

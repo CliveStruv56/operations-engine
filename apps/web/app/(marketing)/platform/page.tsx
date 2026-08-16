@@ -107,11 +107,11 @@ export default function PlatformPage() {
       >
         <p className="max-w-2xl text-[18px] leading-[1.42] text-slate">
           The core platform carries every workspace. Sector modules —{" "}
-          <Link href="/solutions/groundwork" className="text-deep-violet underline-offset-4 hover:underline">
+          <Link href="/solutions/groundwork" className="text-deep-violet underline underline-offset-4">
             Groundwork
           </Link>{" "}
           for community-led development and{" "}
-          <Link href="/solutions/grantwork" className="text-deep-violet underline-offset-4 hover:underline">
+          <Link href="/solutions/grantwork" className="text-deep-violet underline underline-offset-4">
             Grantwork
           </Link>{" "}
           for grant-funded organisations — add specialist registers and
