@@ -1513,9 +1513,17 @@ returned `{"ok":true}` (Idempotency-Key `deploy-check-dc54cfd`,
    fallback and contact address; confirm it exists before launch.
 3. Analytics events (PRD §8) and consent banner: not built, pending the
    consent decision. The cookies page currently truthfully says "no trackers".
-4. PRD §11 launch checks against the live site: Lighthouse ≥90 on the
-   homepage and both solution pages, Core Web Vitals, axe, and the
-   five-second-exposure test. (The deploy itself is done — see above.)
+4. ~~PRD §11 launch checks~~ — **run 16 Aug against deployment `8d1963b`**
+   (after that commit fixed the axe findings: mist-gray-on-white contrast and
+   colour-only prose links). Results: Lighthouse mobile `/` 96/100/100/100,
+   `/solutions/groundwork` 98/100/100/100, `/solutions/grantwork`
+   96/100/100/100 (perf/a11y/BP/SEO); LCP 2.2s, CLS 0 on all three; JS 158KB
+   transferred (budget <170KB). Axe WCAG 2.2 AA: **0 violations across all 8
+   public pages**. Keyboard journey: skip link first, menu opens/traps/
+   Escape-closes with focus return. Metadata/sitemap/robots/canonical/404 all
+   verified in production. **Still open from §11:** the human five-second
+   exposure test, real-user monitoring, and `og:image` share cards (none
+   exist — social shares render without an image).
 5. E2E coverage: the Playwright greenfield from §6p (port 3100, mocked
    backend) is the natural home for a marketing-page spec (menu keyboard
    journey, form submit against a mocked `/api/leads`); none written yet.
