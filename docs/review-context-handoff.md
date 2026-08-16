@@ -1524,9 +1524,15 @@ returned `{"ok":true}` (Idempotency-Key `deploy-check-dc54cfd`,
    verified in production. **Still open from §11:** the human five-second
    exposure test and real-user monitoring. ~~og:image share cards~~ — built
    and deployed later the same day, see below.
-5. E2E coverage: the Playwright greenfield from §6p (port 3100, mocked
-   backend) is the natural home for a marketing-page spec (menu keyboard
-   journey, form submit against a mocked `/api/leads`); none written yet.
+5. ~~E2E coverage~~ — `e2e/marketing.spec.ts` written 16 Aug (4 tests):
+   homepage public + skip link first tab stop; mobile-menu keyboard journey
+   (open, focus trap wrap, Escape returns focus); demo form submits one lead
+   with a UUID `Idempotency-Key` and empty honeypot; pilot form fails
+   recoverably on a 502 and **retries with the same key**. Local gotcha: the
+   §6p webServer (`pnpm dev --port 3100`) cannot start while another dev
+   server holds Next 16's per-directory dev lock — run
+   `pnpm exec next start --port 3100` against a fresh build instead
+   (`reuseExistingServer` picks it up); CI is unaffected.
 
 ### Share cards (og:image) — built and live (16 Aug, evening)
 
