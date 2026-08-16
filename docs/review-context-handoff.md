@@ -1528,11 +1528,13 @@ returned `{"ok":true}` (Idempotency-Key `deploy-check-dc54cfd`,
    homepage public + skip link first tab stop; mobile-menu keyboard journey
    (open, focus trap wrap, Escape returns focus); demo form submits one lead
    with a UUID `Idempotency-Key` and empty honeypot; pilot form fails
-   recoverably on a 502 and **retries with the same key**. Local gotcha: the
-   §6p webServer (`pnpm dev --port 3100`) cannot start while another dev
-   server holds Next 16's per-directory dev lock — run
-   `pnpm exec next start --port 3100` against a fresh build instead
-   (`reuseExistingServer` picks it up); CI is unaffected.
+   recoverably on a 502 and **retries with the same key**. The **full suite
+   (5 tests — these four plus §6p's keyboard-nav) ran green locally**,
+   2.6s. Local gotcha: the §6p webServer (`pnpm dev --port 3100`) cannot
+   start while another dev server holds Next 16's per-directory dev lock —
+   run `pnpm exec next start --port 3100` against a fresh build instead
+   (`reuseExistingServer` picks it up), and set `E2E_AUTH_BYPASS=1` on that
+   process or the keyboard-nav spec redirects to `/login`; CI is unaffected.
 
 ### Share cards (og:image) — built and live (16 Aug, evening)
 
@@ -1567,7 +1569,7 @@ sign-off, launch checks). The other open brief is `docs/claims-register-brief.md
 unbuilt, and both are blocked on infrastructure that does not exist.
 
 **Suites as of 16 Aug 2026, all green:** api **390**, worker **196**, web
-**103** (+1 Playwright e2e).
+**103** (+5 Playwright e2e).
 
 0. **§6q** if touching the public site, `/` routing, or lead capture — it
    also records why the marketing pages follow Huddle, not the PRD's "Hearth".
