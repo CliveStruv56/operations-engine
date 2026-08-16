@@ -1388,11 +1388,12 @@ which was not running this session.
 
 ---
 
-## 6q. Public marketing website — built, verified, NOT committed (16 August 2026)
+## 6q. Public marketing website — built and verified (16 August 2026)
 
-⚠️ **This work is uncommitted in the working tree.** Everything below exists
-only as untracked/modified files under `apps/web` (plus the PRD in `output/`).
-First move in a new session: `git status`, review, commit. Nothing is pushed.
+Committed on `main` as `de08412` (site + the PRD it implements) and `ebc9a77`
+(this handoff section), **not pushed**. The rest of `output/marketing/`
+(one-pager PDFs, generator script, messaging source) is deliberately left
+untracked — only `website-prd.md` was committed, because this file cites it.
 
 ### What it is
 
@@ -1474,7 +1475,7 @@ and the 375px mobile menu — all render correctly. Note: deleting
 
 ### Open items, in order
 
-1. **Commit the work** (it is only in the working tree).
+1. **Push `main`** when ready (`de08412`/`ebc9a77` are local-only).
 2. PRD "remaining inputs" still owed by the user: lead-response owner,
    scheduler/CRM/analytics choices, approved legal wording + processor list,
    real product screenshots (the CSS hero mock is a stand-in), and the
@@ -1493,9 +1494,9 @@ and the 375px mobile menu — all render correctly. Note: deleting
 
 ## 7. Read first in a new session
 
-**Active work: the marketing site (§6q) is finished but UNCOMMITTED** — commit
-it first, then pick up its open items (lead destination, analytics/consent,
-legal sign-off). The other open brief is `docs/claims-register-brief.md`
+**Active work: the marketing site (§6q) is committed on `main` (not pushed)**
+— its open items are next (push, lead destination, analytics/consent, legal
+sign-off). The other open brief is `docs/claims-register-brief.md`
 **§14** — only §14.1 steps 2–3 (the arq cron sweep, then email) remain
 unbuilt, and both are blocked on infrastructure that does not exist.
 
