@@ -211,7 +211,9 @@ export const STAGE_LABEL: Record<string, string> = {
   live: "Live",
 };
 export const RAG_DOT: Record<string, string> = {
-  green: "bg-accent",
+  // --ok, not --grounded: RAG health is a status, and the trust green must
+  // not become a general-purpose green.
+  green: "bg-ok",
   amber: "bg-warn",
   red: "bg-danger",
 };

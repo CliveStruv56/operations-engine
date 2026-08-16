@@ -241,7 +241,7 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
               type="color"
               value={/^#[0-9a-fA-F]{6}$/.test(accent) ? accent : "#1f6d53"}
               onChange={(e) => setAccent(e.target.value)}
-              className="h-9 w-12 cursor-pointer rounded-[10px] border border-line bg-surface"
+              className="h-9 w-12 cursor-pointer rounded-card border border-line bg-surface"
               aria-label="Pick accent colour"
             />
             <input
@@ -254,13 +254,13 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
           </span>
         </label>
         <span
-          className="rounded-[10px] px-3 py-2 text-sm"
+          className="rounded-card px-3 py-2 text-sm"
           style={deriveBrandVars(accent)}
         >
-          <span className="rounded-[10px] bg-accent px-2 py-1 text-xs font-medium text-accent-ink">
+          <span className="rounded-btn bg-accent px-2 py-1 text-xs font-medium text-accent-ink">
             Preview
           </span>{" "}
-          <span className="rounded-[10px] bg-accent-soft px-2 py-1 text-xs text-accent">soft</span>
+          <span className="rounded-card bg-accent-soft px-2 py-1 text-xs text-accent">soft</span>
         </span>
         <button type="submit" disabled={busy !== null || accent === stored} className={btn}>
           {busy === "colour" ? <Spinner /> : "Save colour"}

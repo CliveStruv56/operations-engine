@@ -50,7 +50,7 @@ export function NewWorkspace({
     <Panel title="New client workspace" onClose={onClose}>
       <form onSubmit={create} className="flex flex-col gap-3">
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
         <div>
           <span className={label}>Workspace name</span>
@@ -127,7 +127,7 @@ export function NewWorkspace({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
+            className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
           >
             Create workspace
           </button>
@@ -166,7 +166,7 @@ export function InviteLink({
         {new Date(invite.invite.expires_at).toLocaleDateString("en-GB")}.
       </p>
       <div className="mt-3 flex items-center gap-2">
-        <code className="data min-w-0 flex-1 truncate rounded-[10px] border border-edge bg-card px-3 py-2">
+        <code className="data min-w-0 flex-1 truncate rounded-card border border-edge bg-card px-3 py-2">
           {url}
         </code>
         <button
@@ -178,7 +178,7 @@ export function InviteLink({
               setCopy("failed"); // the link above stays selectable by hand
             }
           }}
-          className="shrink-0 rounded-[10px] bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+          className="shrink-0 rounded-btn bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
         >
           {copy === "copied" ? "Copied" : copy === "failed" ? "Copy failed" : "Copy"}
         </button>

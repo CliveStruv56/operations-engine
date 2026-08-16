@@ -201,7 +201,7 @@ export default function EmptyHero({
           href={`/app?view=vault&project=${activeProject!.id}`}
           className="mt-7 flex w-full max-w-[420px] items-center justify-center gap-3 rounded-[14px] border border-edge bg-card px-4 py-3.5 text-[13.5px] font-semibold text-electric-blue shadow-card hover:border-edge-strong"
         >
-          <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] bg-accent-tint text-electric-blue">
+          <span className="grid h-8 w-8 flex-none place-items-center rounded-chip bg-accent-tint text-electric-blue">
             <DocIcon className="h-[15px] w-[15px]" />
           </span>
           Add documents to {shorten(activeProject!.name, 30)} →
@@ -214,7 +214,7 @@ export default function EmptyHero({
               onClick={() => onPick(s)}
               className="relative flex items-center gap-3 rounded-[14px] border border-edge bg-card px-4 py-3.5 text-left text-[13.5px] font-semibold text-ink shadow-card hover:border-edge-strong"
             >
-              <span className="grid h-8 w-8 flex-none place-items-center rounded-[9px] bg-accent-tint text-electric-blue">
+              <span className="grid h-8 w-8 flex-none place-items-center rounded-chip bg-accent-tint text-electric-blue">
                 {s.icon === "pen" ? (
                   <PenIcon className="h-[15px] w-[15px]" />
                 ) : (

@@ -75,7 +75,7 @@ function Candidate({
       </div>
 
       {blocked ? (
-        <p className="mt-2 rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">
+        <p className="mt-2 rounded-card bg-warn-soft px-3 py-2 text-xs text-warn">
           Not ready to publish — {blocked}.
         </p>
       ) : (
@@ -107,7 +107,7 @@ function Candidate({
         </div>
       )}
       {error && (
-        <p className="mt-2 rounded-[10px] bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
+        <p className="mt-2 rounded-card bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
       )}
     </li>
   );
@@ -142,7 +142,7 @@ export function CatalogueEditor() {
   return (
     <div className="space-y-4">
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       <section>

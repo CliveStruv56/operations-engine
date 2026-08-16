@@ -1,9 +1,14 @@
 import type { ReactNode } from "react";
 
 /**
- * Hearth's pill badge. Tones map to the palette's jobs, which is why there is
+ * The pill badge. Tones map to the palette's jobs, which is why there is
  * no "info" or "brand" tone: `grounded` is reserved for trust states (vault
  * connected, grounded answers) and must not become a general-purpose green.
+ *
+ * The pastel tones are the Huddle status taxonomy and keep a fixed meaning:
+ * sage = upcoming/monitoring, lavender = in progress (`active` is the same
+ * tile lifted by deep-violet text), rose = shipped/complete. Don't reassign
+ * them decoratively — swapping the colours breaks the categorical code.
  *
  * Every tone carries a word. Colour never states the condition on its own —
  * a red dot with no label is unreadable to anyone who cannot see red.
@@ -11,7 +16,7 @@ import type { ReactNode } from "react";
 const TONES = {
   /** Ordinary metadata: counts, categories, stages. */
   neutral: "bg-sidebar text-subtle",
-  /** Terracotta wash. The non-urgent highlight; counts against nothing. */
+  /** Lavender wash with deep-violet type. The non-urgent highlight. */
   accent: "border border-electric-blue/25 bg-accent-tint text-electric-blue",
   /** Trust only: vault connected, answer grounded, identity verified. */
   grounded: "bg-grounded-tint text-grounded",
@@ -19,6 +24,14 @@ const TONES = {
   warn: "bg-warn-soft text-warn",
   /** Something failed or will be destroyed. */
   danger: "bg-danger-soft text-danger",
+  /** Status taxonomy — upcoming, monitored, in pipeline. */
+  sage: "border border-stone/50 bg-pale-sage text-ink",
+  /** Status taxonomy — in progress, building, submitted. */
+  lavender: "border border-stone/50 bg-lavender-mist text-ink",
+  /** Status taxonomy — the live one; lavender tile, deep-violet type. */
+  active: "border border-stone/50 bg-lavender-mist text-deep-violet",
+  /** Status taxonomy — shipped, awarded, complete. */
+  rose: "border border-stone/50 bg-dusty-rose text-ink",
 } as const;
 
 export type StampTone = keyof typeof TONES;

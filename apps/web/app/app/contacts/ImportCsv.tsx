@@ -50,17 +50,17 @@ export function ImportCsv({ onDone }: { onDone: () => void }) {
         onClick={() => fileRef.current?.click()}
         disabled={busy}
         title="Columns: name (or first/last name), email, phone, mobile, job title, company, address, notes, tags"
-        className="rounded-[10px] border border-edge bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-edge-strong hover:text-ink disabled:opacity-50"
+        className="rounded-card border border-edge bg-surface px-4 py-2 text-sm font-medium text-ink-muted hover:border-edge-strong hover:text-ink disabled:opacity-50"
       >
         {busy ? "Importing…" : "Import CSV"}
       </button>
       {(result || error) && (
         <div className="w-full">
           {error && (
-            <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+            <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
           )}
           {result && (
-            <div className="rounded-[10px] border border-edge bg-surface px-3 py-2 text-sm">
+            <div className="rounded-card border border-edge bg-surface px-3 py-2 text-sm">
               <span className="font-medium">
                 {result.created} added · {result.updated} updated · {result.skipped} skipped
               </span>

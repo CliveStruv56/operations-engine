@@ -190,7 +190,7 @@ export function DraftModal({
                 </p>
               ))}
             {kind === "application_form" && staleNote(chosenSet) && (
-              <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">
+              <p className="rounded-card bg-warn-soft px-3 py-2 text-xs text-warn">
                 {staleNote(chosenSet)}
               </p>
             )}
@@ -216,7 +216,7 @@ export function DraftModal({
             </p>
 
             {error && (
-              <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+              <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
             )}
             <button
               onClick={submit}
@@ -262,7 +262,7 @@ export function DraftModal({
                 stale={staleNote(chosenSet)}
               />
             ) : (
-              <p className="rounded-[10px] bg-accent-soft px-3 py-2">
+              <p className="rounded-card bg-accent-soft px-3 py-2">
                 Draft ready — {job.to_confirm_count}{" "}
                 {job.to_confirm_count === 1 ? "item" : "items"} marked [TO CONFIRM]. It is filed as
                 a draft; read it before anything goes to the funder.
@@ -277,7 +277,7 @@ export function DraftModal({
         )}
 
         {job?.status === "failed" && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
             {job.error ?? "The draft failed."}
           </p>
         )}

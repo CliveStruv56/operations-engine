@@ -206,7 +206,7 @@ export default function CommandPalette() {
                     key={`${row.kind}-${row.id}`}
                     onClick={() => go(row)}
                     onMouseEnter={() => setActive(i)}
-                    className={`flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-[13.5px] font-semibold ${
+                    className={`flex w-full items-center gap-2.5 rounded-card px-3 py-2 text-left text-[13.5px] font-semibold ${
                       i === active ? "bg-accent-tint text-electric-blue" : "text-subtle"
                     }`}
                   >

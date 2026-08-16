@@ -137,7 +137,7 @@ export function FundingTab({ id }: { id: string }) {
             <option value="wales">Wales</option>
           </select>
           {progFailed && (
-            <p role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-[10px] bg-danger-soft px-2 py-1.5 text-xs text-danger">
+            <p role="alert" className="mb-2 flex items-center justify-between gap-2 rounded-card bg-danger-soft px-2 py-1.5 text-xs text-danger">
               Programme catalogue failed to load.
               <button onClick={loadProgrammes} className="shrink-0 underline">
                 Retry
@@ -146,7 +146,7 @@ export function FundingTab({ id }: { id: string }) {
           )}
           <ul className="max-h-130 space-y-2 overflow-y-auto">
             {programmes.map((p) => (
-              <li key={p.key} className="rounded-[10px] border border-line p-2 text-sm">
+              <li key={p.key} className="rounded-card border border-line p-2 text-sm">
                 <p className="font-medium">
                   {p.name}
                   {p.stale && (

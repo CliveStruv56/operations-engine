@@ -16,7 +16,7 @@ import {
 import { useWorkspace } from "./workspace";
 
 const field =
-  "rounded-[10px] border border-edge bg-surface px-2 py-1 text-sm disabled:text-faint";
+  "rounded-card border border-edge bg-surface px-2 py-1 text-sm disabled:text-faint";
 
 export default function ProjectPlanPanel({
   projectId,
@@ -146,7 +146,7 @@ export default function ProjectPlanPanel({
           type="button"
           disabled={busy}
           onClick={enable}
-          className="mt-3 rounded-[10px] bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-50"
+          className="mt-3 rounded-btn bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink disabled:opacity-50"
         >
           {busy ? "Adding…" : "Add a plan"}
         </button>
@@ -231,7 +231,7 @@ export default function ProjectPlanPanel({
             </select>
             <button
               type="submit"
-              className="rounded-[10px] bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink"
+              className="rounded-btn bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink"
             >
               Add
             </button>
@@ -316,7 +316,7 @@ function TaskRow({
   }
 
   return (
-    <li className="rounded-[10px] border border-edge bg-surface px-2 py-2">
+    <li className="rounded-card border border-edge bg-surface px-2 py-2">
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <Tick task={task} onPatch={onPatch} />
         <input

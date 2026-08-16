@@ -178,7 +178,7 @@ export function EditApplicationPanel({
         </label>
       </div>
       {warning && (
-        <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
           This catalogue entry is {warning}.
         </p>
       )}
@@ -191,7 +191,7 @@ export function EditApplicationPanel({
         Restricted funding
       </label>
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
       <div className="flex items-center gap-3">
         <button type="submit" disabled={busy || !form.title} className={btn}>

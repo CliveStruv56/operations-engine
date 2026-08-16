@@ -52,7 +52,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={copy}
-      className="rounded-[10px] border border-line px-2 py-1 text-xs hover:border-edge-strong"
+      className="rounded-card border border-line px-2 py-1 text-xs hover:border-edge-strong"
       aria-live="polite"
     >
       {copied ? "Copied" : failed ? "Select and copy" : "Copy"}
@@ -93,7 +93,7 @@ function Sources({ answer }: { answer: Answer }) {
 function OriginStamp({ answer }: { answer: Answer }) {
   if (answer.origin === "claim")
     return (
-      <span className="rounded-[10px] bg-grounded-tint px-2 py-0.5 text-xs font-medium text-grounded">
+      <span className="rounded-btn bg-grounded-tint px-2 py-0.5 text-xs font-medium text-grounded">
         From your register
       </span>
     );
@@ -120,7 +120,7 @@ function AnswerCard({ answer, index }: { answer: Answer; index: number }) {
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <span className={`data text-xs ${countTone(answer)}`}>{countLabel(answer)}</span>
         {answer.over_by > 0 && (
-          <span className="rounded-[10px] bg-danger-soft px-2 py-0.5 text-xs text-danger">
+          <span className="rounded-btn bg-danger-soft px-2 py-0.5 text-xs text-danger">
             {answer.over_by.toLocaleString("en-GB")} over — shorten before pasting
           </span>
         )}
@@ -176,7 +176,7 @@ export function AnswerSheetView({
       )}
 
       {stale && (
-        <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">
+        <p className="rounded-card bg-warn-soft px-3 py-2 text-xs text-warn">
           {stale} A limit that has changed since we checked produces an answer that will not
           paste.
         </p>

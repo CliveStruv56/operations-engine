@@ -116,13 +116,13 @@ function ContactsPageInner() {
         </header>
 
         <div className="mb-4 flex flex-wrap items-center gap-3">
-          <div className="flex rounded-[10px] border border-edge bg-surface p-0.5">
+          <div className="flex rounded-btn border border-edge bg-surface p-0.5">
             {(["people", "companies"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`rounded-[8px] px-3 py-1.5 text-sm capitalize ${
-                  view === v ? "bg-accent text-accent-ink font-medium" : "text-ink-muted hover:text-ink"
+                className={`rounded-btn px-3 py-1.5 text-sm capitalize ${
+                  view === v ? "bg-deep-violet text-on-ink font-medium" : "text-ink-muted hover:text-ink"
                 }`}
               >
                 {v === "people" ? `People${contacts ? ` · ${contacts.length}` : ""}` : `Companies${companies ? ` · ${companies.length}` : ""}`}
@@ -133,14 +133,14 @@ function ContactsPageInner() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder={view === "people" ? "Search people, companies, tags…" : "Search companies…"}
-            className="w-64 rounded-[10px] border border-line bg-surface px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-none focus:border-edge-strong"
+            className="w-64 rounded-card border border-line bg-surface px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-none focus:border-edge-strong"
           />
           {view === "people" &&
             allTags.map((t) => (
               <button
                 key={t}
                 onClick={() => setTag(tag === t ? null : t)}
-                className={`stamp ${tag === t ? "bg-accent text-accent-ink border-accent" : "text-ink-muted hover:text-ink"}`}
+                className={`stamp ${tag === t ? "bg-deep-violet text-on-ink border-deep-violet" : "text-ink-muted hover:text-ink"}`}
               >
                 {t}
               </button>
@@ -148,7 +148,7 @@ function ContactsPageInner() {
         </div>
 
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
         {view === "people" && contacts && (

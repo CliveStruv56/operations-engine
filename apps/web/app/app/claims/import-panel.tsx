@@ -115,7 +115,7 @@ export function ImportPanel({
       </div>
 
       {inactive && (
-        <div className="rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">
+        <div className="rounded-card bg-warn-soft px-3 py-2 text-xs text-warn">
           <p>{inactive}</p>
           <button
             onClick={() => run(true)}
@@ -128,7 +128,7 @@ export function ImportPanel({
       )}
 
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
       )}
 
       <div className="flex items-center gap-3">

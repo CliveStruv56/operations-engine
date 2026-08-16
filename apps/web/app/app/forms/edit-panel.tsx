@@ -87,7 +87,7 @@ export function EditFormPanel({
       </div>
 
       {missing > 0 && (
-        <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
           {missing} of {questions.length} questions have no limit. A limit that is wrong is only
           discovered when an answer will not paste.
         </p>
@@ -105,7 +105,7 @@ export function EditFormPanel({
       </ul>
 
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
       <div className="flex items-center gap-3">
         <button onClick={save} disabled={busy || !ready} className={btn}>

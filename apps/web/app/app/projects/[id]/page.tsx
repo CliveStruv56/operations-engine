@@ -111,7 +111,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
   if (error)
     return (
       <main className="p-8">
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       </main>
     );
   if (!detail) return <main className="p-8 data text-ink-faint">Loading project…</main>;
@@ -143,7 +143,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
                 onClick={() => setTab("Stages & gates")}
                 className={`stamp ${
                   s === detail.stage_current
-                    ? "bg-accent text-accent-ink border-accent"
+                    ? "bg-deep-violet text-on-ink border-deep-violet"
                     : "text-ink-faint"
                 }`}
               >
@@ -166,12 +166,12 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
       </header>
 
       {detail.status === "dormant" && (
-        <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="mb-3 rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
           Dormant — {detail.dormancy_reason}. Set the project back to Active to resume.
         </p>
       )}
       {hrb && (
-        <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+        <p className="mb-3 rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
           Higher-Risk Building — Building Safety Act gateways apply; track them manually for now.
         </p>
       )}
@@ -183,7 +183,7 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
             onClick={() => setTab(t)}
             className={`px-3 py-2 text-sm ${
               tab === t
-                ? "border-b-2 border-accent font-medium"
+                ? "border-b-2 border-deep-violet font-medium text-deep-violet"
                 : "text-ink-muted hover:text-ink"
             }`}
           >

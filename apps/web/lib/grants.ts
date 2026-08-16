@@ -1,4 +1,5 @@
 // Shared types + helpers for the Grant funding (Grantwork) module.
+import type { StampTone } from "@/components/ui";
 import { api } from "@/lib/api";
 import { tenantId } from "@/lib/groundwork";
 
@@ -298,9 +299,24 @@ export const DRAFT_LABEL: Record<string, string> = {
 };
 
 export const RAG_DOT: Record<string, string> = {
-  green: "bg-accent",
+  // --ok, not --grounded: RAG health is a status, and the trust green must
+  // not become a general-purpose green.
+  green: "bg-ok",
   amber: "bg-warn",
   red: "bg-danger",
+};
+
+/** Huddle status taxonomy: sage = upcoming, lavender = in flight (submitted
+ *  is the live one, lifted by deep-violet type), rose = closed well. Declined
+ *  and withdrawn stay neutral — the taxonomy tracks progress, not blame. */
+export const STATUS_TONE: Record<ApplicationStatus, StampTone> = {
+  pipeline: "sage",
+  drafting: "lavender",
+  submitted: "active",
+  awarded: "rose",
+  complete: "rose",
+  declined: "neutral",
+  withdrawn: "neutral",
 };
 
 export const fmtDate = (d: string | null | undefined) =>

@@ -37,7 +37,7 @@ export function LoadError({ failed, onRetry }: { failed: boolean; onRetry: () =>
   return (
     <p
       role="alert"
-      className="mb-3 flex items-center justify-between gap-3 rounded-[10px] border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger"
+      className="mb-3 flex items-center justify-between gap-3 rounded-card border border-danger/40 bg-danger-soft px-3 py-2 text-sm text-danger"
     >
       Some of this application&rsquo;s data failed to load.
       <button onClick={onRetry} className="shrink-0 underline">

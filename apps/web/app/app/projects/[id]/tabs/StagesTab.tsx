@@ -48,7 +48,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
   return (
     <div className="space-y-3">
       <LoadError failed={failed} onRetry={refresh} className="mb-0" />
-      {error && <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
       {stages.map((s) => {
         const outstanding = s.gate.filter((g) => !g.done).length;
         const expanded = open === s.id;
@@ -64,7 +64,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
                 <span
                   className={`stamp ${
                     s.status === "passed"
-                      ? "text-accent bg-accent-soft"
+                      ? "text-electric-blue bg-accent-soft"
                       : s.status === "active"
                         ? "text-warn bg-warn-soft"
                         : s.status === "regressed"
@@ -134,7 +134,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
                   ))}
                 </ul>
                 {s.gate_exceptions && (
-                  <p className="mt-3 rounded-[10px] bg-warn-soft px-3 py-2 text-xs whitespace-pre-wrap text-warn">
+                  <p className="mt-3 rounded-card bg-warn-soft px-3 py-2 text-xs whitespace-pre-wrap text-warn">
                     Exceptions & notes: {s.gate_exceptions}
                   </p>
                 )}

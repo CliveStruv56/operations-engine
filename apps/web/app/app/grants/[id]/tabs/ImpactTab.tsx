@@ -62,12 +62,12 @@ function ImpactCard({ id }: { id: string }) {
         </button>
       )}
       {job?.status === "failed" && (
-        <p className="mt-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+        <p className="mt-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
           {job.error ?? "The impact card failed."}
         </p>
       )}
       {error && (
-        <p className="mt-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="mt-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
     </div>
   );
@@ -178,7 +178,7 @@ export function ImpactTab({ id }: { id: string }) {
       )}
 
       {error && (
-        <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="mb-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       {measures.length === 0 ? (

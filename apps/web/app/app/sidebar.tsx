@@ -84,7 +84,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               className="max-h-9 w-auto max-w-[160px]"
             />
           ) : (
-            <span className="grid h-[34px] w-[34px] place-items-center rounded-[10px] bg-accent font-display text-lg font-semibold text-white">
+            <span className="grid h-[34px] w-[34px] place-items-center rounded-card bg-ink font-display text-lg font-semibold text-white">
               {tenant.name.slice(0, 1).toUpperCase()}
             </span>
           )}
@@ -101,7 +101,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         <div className="px-3.5">
           <button
             onClick={() => window.dispatchEvent(new CustomEvent("open-command-palette"))}
-            className="mb-2 flex w-full items-center gap-2 rounded-[10px] border border-edge bg-card px-3 py-2 text-[13px] text-faint hover:border-edge-strong"
+            className="mb-2 flex w-full items-center gap-2 rounded-card border border-edge bg-card px-3 py-2 text-[13px] text-faint hover:border-edge-strong"
           >
             <SearchIcon className="h-3.5 w-3.5" />
             Search chats &amp; documents
@@ -293,7 +293,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             </div>
             <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-sidebar">
               <div
-                className="h-full rounded-full bg-accent"
+                className="h-full rounded-full bg-deep-violet"
                 style={{ width: `${Math.min(100, Math.round((trialDaysLeft / 14) * 100))}%` }}
               />
             </div>

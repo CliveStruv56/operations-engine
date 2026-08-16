@@ -133,7 +133,7 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
   if (error)
     return (
       <main className="p-8">
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       </main>
     );
   if (!detail) return <main className="data p-8 text-ink-faint">Loading application…</main>;
@@ -177,7 +177,7 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
                   onClick={() => setTab("Stages & gates")}
                   className={`stamp ${
                     s === detail.stage_current
-                      ? "bg-accent text-accent-ink border-accent"
+                      ? "bg-deep-violet text-on-ink border-deep-violet"
                       : "text-ink-faint"
                   }`}
                 >
@@ -218,7 +218,7 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
         )}
 
         {harvestNote === "queued" && (
-          <p className="mb-3 rounded-[10px] bg-accent-soft px-3 py-2 text-sm">
+          <p className="mb-3 rounded-card bg-accent-soft px-3 py-2 text-sm">
             We&apos;ll look through the answers you sent for facts to add to{" "}
             <Link href="/app/claims" className="underline hover:text-ink">
               Your organisation
@@ -227,7 +227,7 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
           </p>
         )}
         {harvestNote === "failed" && (
-          <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+          <p className="mb-3 rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
             The application is marked submitted, but we could not queue a scan of it for new
             facts. You can add them by hand on{" "}
             <Link href="/app/claims" className="underline hover:text-ink">
@@ -238,7 +238,7 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
         )}
 
         {warning && (
-          <p className="mb-3 rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+          <p className="mb-3 rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
             Funder catalogue entry &ldquo;{catalogue?.name}&rdquo; is {warning}. Any application
             drafted from it carries the same warning on its first page.
           </p>
@@ -251,7 +251,7 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
               onClick={() => setTab(t)}
               className={`px-3 py-2 text-sm ${
                 tab === t
-                  ? "border-b-2 border-accent font-medium"
+                  ? "border-b-2 border-deep-violet font-medium text-deep-violet"
                   : "text-ink-muted hover:text-ink"
               }`}
             >

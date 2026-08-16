@@ -45,7 +45,6 @@ const STATUS_STYLE: Record<Doc["status"], string> = {
   uploaded: "text-ink-muted",
   parsing: "text-warn bg-warn-soft",
   embedding: "text-warn bg-warn-soft",
-  // accent-deep, not accent — #b14e2e on the tint misses AA at stamp size.
   ready: "text-electric-blue bg-accent-soft",
   failed: "text-danger bg-danger-soft",
 };
@@ -226,7 +225,7 @@ export default function VaultPanel({
           onClick={() => fileInput.current?.click()}
           className={`cursor-pointer rounded-card border border-dashed px-8 py-10 text-center transition-colors ${
             dragging
-              ? "border-accent bg-accent-soft"
+              ? "border-deep-violet bg-accent-soft"
               : "border-line bg-paper hover:border-ink-faint"
           }`}
         >
@@ -252,7 +251,7 @@ export default function VaultPanel({
           </p>
         )}
         {error && (
-          <p className="mt-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="mt-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
         {visible.length === 0 && !busy ? (
@@ -316,7 +315,7 @@ export default function VaultPanel({
                         onChange={(e) =>
                           patchDoc(d, { project_id: e.target.value || null })
                         }
-                        className="max-w-28 rounded-[10px] border border-line bg-surface px-1 py-0.5 text-xs text-ink-muted"
+                        className="max-w-28 rounded-card border border-line bg-surface px-1 py-0.5 text-xs text-ink-muted"
                         title="Assign to a project"
                       >
                         <option value="">No project</option>
@@ -375,7 +374,7 @@ export default function VaultPanel({
                   </span>
                 </div>
                 {expandedId === d.id && d.summary && (
-                  <p className="mt-2 ml-13 rounded-[10px] border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink-muted">
+                  <p className="mt-2 ml-13 rounded-card border border-line bg-paper px-3 py-2 text-xs leading-relaxed text-ink-muted">
                     {d.summary}
                   </p>
                 )}

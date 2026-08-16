@@ -19,7 +19,7 @@ export function href(params: { view?: "vault"; project?: string | null; c?: stri
 }
 
 export const item =
-  "group relative flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13.5px] font-semibold";
+  "group relative flex items-center gap-2.5 rounded-card px-3 py-2 text-[13.5px] font-semibold";
 export const itemRest = "text-subtle hover:bg-ink/[.045]";
 export const itemActive =
   "bg-accent-tint text-ink before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded before:bg-electric-blue before:content-['']";
@@ -132,7 +132,7 @@ export default function SidebarChats({
             <div key={c.id} className="group relative">
               {confirmDeleteId === c.id ? (
                 <div
-                  className="mb-0.5 flex items-center justify-between gap-2 rounded-[10px] bg-danger-soft px-3 py-2"
+                  className="mb-0.5 flex items-center justify-between gap-2 rounded-card bg-danger-soft px-3 py-2"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <span className="truncate text-xs font-semibold text-danger">

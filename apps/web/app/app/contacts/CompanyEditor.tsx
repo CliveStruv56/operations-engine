@@ -89,7 +89,7 @@ export function CompanyEditor({
     <Panel title={company ? "Edit company" : "New company"} onClose={onClose}>
       <form onSubmit={save} className="flex flex-col gap-3">
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
         <div>
           <span className={label}>Name</span>

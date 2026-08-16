@@ -20,7 +20,7 @@ export default function AppError({
         </p>
         <button
           onClick={reset}
-          className="mt-4 rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+          className="mt-4 rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
         >
           Try again
         </button>

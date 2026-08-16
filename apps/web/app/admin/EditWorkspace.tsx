@@ -65,7 +65,7 @@ export function EditWorkspace({
     <Panel title={`Edit ${tenant.name}`} onClose={onClose}>
       <form onSubmit={save} className="flex flex-col gap-3">
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
         <div>
           <span className={label}>Workspace name</span>
@@ -101,7 +101,7 @@ export function EditWorkspace({
           </div>
         </div>
         {seats !== tenant.seats && (
-          <p className="rounded-[10px] bg-card px-3 py-2 text-sm text-ink-muted">
+          <p className="rounded-card bg-card px-3 py-2 text-sm text-ink-muted">
             Changing seats also moves this workspace&apos;s fair-use ceiling at the model
             gateway.
           </p>
@@ -130,7 +130,7 @@ export function EditWorkspace({
           <button
             type="submit"
             disabled={saving || !changed}
-            className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
+            className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
           >
             {changed ? "Save changes" : "No changes"}
           </button>
@@ -179,7 +179,7 @@ export function SuspendWorkspace({
     <Panel title={`Suspend ${tenant.name}`} onClose={onClose}>
       <form onSubmit={suspend} className="flex flex-col gap-3">
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
         <p className="text-sm text-ink-muted">
           Everyone in this workspace loses access immediately, including chat, and it stops
@@ -202,7 +202,7 @@ export function SuspendWorkspace({
           <button
             type="submit"
             disabled={saving || !reason.trim()}
-            className="rounded-[10px] bg-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
+            className="rounded-btn bg-danger px-4 py-2 text-sm font-medium text-white hover:opacity-90 disabled:opacity-50"
           >
             Suspend workspace
           </button>

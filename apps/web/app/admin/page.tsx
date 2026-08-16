@@ -142,14 +142,14 @@ function AdminConsole() {
           </div>
           <button
             onClick={() => setCreating(true)}
-            className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+            className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
           >
             New client workspace
           </button>
         </header>
 
         {error && (
-          <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p className="mb-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
             {error}
           </p>
         )}

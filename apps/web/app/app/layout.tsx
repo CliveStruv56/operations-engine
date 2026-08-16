@@ -16,7 +16,7 @@ function Onboarding() {
       <div className="w-full max-w-md">
         <p className="data mb-2 text-ink-faint uppercase">Flowgrid</p>
         {ws.error && (
-          <p className="mb-4 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+          <p className="mb-4 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
             {ws.error}
           </p>
         )}
@@ -55,11 +55,11 @@ function Onboarding() {
                 placeholder="Company name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-card border border-line bg-surface px-3 py-2 text-sm"
               />
               <button
                 type="submit"
-                className="w-full rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+                className="w-full rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
               >
                 Create workspace
               </button>
@@ -96,7 +96,7 @@ function Suspended() {
                 localStorage.removeItem("tenantId");
                 ws.selectTenant();
               }}
-              className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+              className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
             >
               Use a different workspace
             </button>
@@ -145,7 +145,7 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
         <button
           onClick={() => setNavOpen(true)}
           aria-label="Open navigation"
-          className="rounded-[10px] border border-line px-2 py-1 text-sm"
+          className="rounded-card border border-line px-2 py-1 text-sm"
         >
           ☰
         </button>

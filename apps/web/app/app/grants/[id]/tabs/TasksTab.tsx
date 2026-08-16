@@ -116,7 +116,7 @@ export function TasksTab({ id }: { id: string }) {
                   {task.title}
                 </span>
                 {task.is_milestone && (
-                  <span className="stamp ml-2 text-accent bg-accent-soft">milestone</span>
+                  <span className="stamp ml-2 text-electric-blue bg-accent-soft">milestone</span>
                 )}
                 {task.details && (
                   <span className="mt-0.5 block text-xs text-ink-faint">{task.details}</span>

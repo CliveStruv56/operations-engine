@@ -79,12 +79,12 @@ export function ContactsTab({ id }: { id: string }) {
   return (
     <div>
       {actionError && (
-        <p role="alert" className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+        <p role="alert" className="mb-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
           {actionError}
         </p>
       )}
       {failed && (
-        <p role="alert" className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">
+        <p role="alert" className="mb-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
           Contacts failed to load.{" "}
           <button onClick={refresh} className="underline">
             Retry

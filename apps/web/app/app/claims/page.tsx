@@ -48,7 +48,7 @@ function EcctaStrip({ claims }: { claims: Claim[] }) {
 
   if (verified === idv.length) {
     return (
-      <p className="rounded-[10px] bg-grounded-tint px-3 py-2 text-sm text-grounded">
+      <p className="rounded-card bg-grounded-tint px-3 py-2 text-sm text-grounded">
         {idv.length === 1
           ? "Your director has verified their identity with Companies House."
           : `All ${idv.length} directors have verified their identity with Companies House.`}
@@ -57,7 +57,7 @@ function EcctaStrip({ claims }: { claims: Claim[] }) {
     );
   }
   return (
-    <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+    <p className="rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
       {verified} of {idv.length} directors have verified their identity with Companies House.
       From 18 Nov 2026 an unverified director blocks filings.{dueNote}
     </p>
@@ -181,7 +181,7 @@ function ClaimsPageInner() {
       )}
 
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       {claims === null ? (
@@ -234,7 +234,7 @@ function ClaimsPageInner() {
           )}
 
           {needsAttention > 0 && !unownedOnly && (
-            <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+            <p className="rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
               {needsAttention} {needsAttention === 1 ? "fact needs" : "facts need"} checking before
               you rely on {needsAttention === 1 ? "it" : "them"} again.
             </p>
@@ -244,7 +244,7 @@ function ClaimsPageInner() {
               are true and simply nobody's, which is the ordinary state of most
               of them. */}
           {unownedOnly ? (
-            <p className="flex flex-wrap items-baseline justify-between gap-2 rounded-[10px] bg-accent-soft px-3 py-2 text-sm">
+            <p className="flex flex-wrap items-baseline justify-between gap-2 rounded-card bg-accent-soft px-3 py-2 text-sm">
               <span>
                 {unowned.length === 0
                   ? "Somebody looks after every fact here."

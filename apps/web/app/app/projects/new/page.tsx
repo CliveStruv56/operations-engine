@@ -78,7 +78,7 @@ export default function NewProjectPage() {
     }
   }
 
-  const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
+  const input = "w-full rounded-card border border-line bg-surface px-3 py-2 text-sm";
 
   if (flagOn === false) return <ModuleDisabled {...PROJECTS_DISABLED} />;
 
@@ -147,11 +147,11 @@ export default function NewProjectPage() {
           ))}
         </fieldset>
 
-        {error && <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+        {error && <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
         <button
           type="submit"
           disabled={busy}
-          className="w-full rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
+          className="w-full rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
         >
           {busy ? (
             <>

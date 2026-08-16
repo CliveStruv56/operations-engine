@@ -226,7 +226,7 @@ export function ReportingTab({ id }: { id: string }) {
       )}
 
       {error && (
-        <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="mb-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       <div className="space-y-3">

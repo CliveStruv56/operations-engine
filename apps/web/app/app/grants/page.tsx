@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
+import { Stamp } from "@/components/ui";
 import {
   CalendarRow,
   PortfolioRow,
   RAG_DOT,
   STATUS_LABEL,
+  STATUS_TONE,
   fmtDate,
   fmtMoney,
   gr,
@@ -139,14 +141,14 @@ export default function GrantsPage() {
           </h1>
           <Link
             href="/app/grants/new"
-            className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+            className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
           >
             New application
           </Link>
         </header>
 
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
 
         {rows && rows.length > 0 && <Money rows={rows} />}
@@ -157,7 +159,9 @@ export default function GrantsPage() {
               key={v}
               onClick={() => setView(v)}
               className={`px-3 py-2 text-sm capitalize ${
-                view === v ? "border-b-2 border-accent font-medium" : "text-ink-muted hover:text-ink"
+                view === v
+                  ? "border-b-2 border-deep-violet font-medium text-deep-violet"
+                  : "text-ink-muted hover:text-ink"
               }`}
             >
               {v === "calendar" ? "Reporting calendar" : "Applications"}
@@ -212,7 +216,7 @@ export default function GrantsPage() {
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{r.funder_name ?? "—"}</td>
                     <td className="px-4 py-3">
-                      <span className="stamp">{STATUS_LABEL[r.status]}</span>
+                      <Stamp tone={STATUS_TONE[r.status]}>{STATUS_LABEL[r.status]}</Stamp>
                     </td>
                     <td className="data px-4 py-3">{fmtMoney(r.amount_requested)}</td>
                     <td className="data px-4 py-3">{fmtMoney(r.amount_awarded)}</td>

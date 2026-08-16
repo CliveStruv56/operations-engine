@@ -93,14 +93,20 @@ relevant app's commands pass locally.
 
 ## Working conventions
 
-- UI design system: **Clearbit-inspired data observatory** — near-achromatic
-  cloud-paper surfaces, Midnight Ink, Inter, thin Frost borders and Electric
-  Blue reserved for links, focus and selected edges. Filled primary CTAs use
-  Midnight Ink, not blue; cards are flat and shadowless. `grounded` green stays
-  scoped to trust states. Tenant `brand.accent` colours remain **exports only**
-  (slides, health-card PDFs), never app chrome — see
-  `docs/groundwork/ASSUMPTIONS.md` #17. Legacy utility names alias the current
-  palette in `apps/web/app/globals.css`.
+- UI design system: **Huddle-inspired editorial catalogue** — paper-white
+  canvas, Ink Black (#151515) text, Inter, thin bone hairlines, flat and
+  shadowless cards at 8px with pill (999px) buttons. Two accents only, both
+  muted: Burnt Amber (#65451d) fills primary actions exclusively; Deep Violet
+  (#453b60) owns links, focus, selection and every "interactive/selected"
+  edge (no saturated colour anywhere — Electric Blue is retired, and
+  `--color-electric-blue` now aliases the violet). The pastel Stamp tones are
+  a fixed status taxonomy — sage = upcoming, lavender = in progress (`active`
+  = deep-violet text on lavender), rose = shipped/complete — never decorative.
+  `grounded` green stays scoped to trust states; `--ok` is the RAG status
+  green. Tenant `brand.accent` colours remain **exports only** (slides,
+  health-card PDFs), never app chrome — see `docs/groundwork/ASSUMPTIONS.md`
+  #17. Legacy utility names alias the current palette in
+  `apps/web/app/globals.css`.
 - Tenant scoping: every new API route runs inside the tenant RLS context
   (`app/tenant.py`); never query tenant tables without it.
 - Frontend API access goes through `apps/web/lib/api.ts`; shared response types

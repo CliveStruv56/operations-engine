@@ -70,8 +70,8 @@ export default function NewProjectForm({
     <button
       type="button"
       onClick={() => setKind(k)}
-      className={`rounded-[10px] border px-3 py-2 text-left ${
-        kind === k ? "border-accent bg-accent-soft" : "border-edge bg-card"
+      className={`rounded-card border px-3 py-2 text-left ${
+        kind === k ? "border-deep-violet bg-accent-soft" : "border-edge bg-card"
       }`}
     >
       <span className="block text-[13px] font-bold">{title}</span>
@@ -82,7 +82,7 @@ export default function NewProjectForm({
   return (
     <form
       onSubmit={submit}
-      className="mt-1 space-y-2 rounded-[10px] border border-edge bg-card p-2"
+      className="mt-1 space-y-2 rounded-card border border-edge bg-card p-2"
       onClick={(e) => e.stopPropagation()}
     >
       <input
@@ -91,7 +91,7 @@ export default function NewProjectForm({
         value={name}
         onChange={(e) => setName(e.target.value)}
         placeholder="Project name"
-        className="w-full rounded-[10px] border border-edge bg-surface px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
+        className="w-full rounded-card border border-edge bg-surface px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
       />
       <div className="grid grid-cols-2 gap-1.5">
         {card("blank", "Documents", "Vault and chat only")}
@@ -109,19 +109,19 @@ export default function NewProjectForm({
             value={taskTitle}
             onChange={(e) => setTaskTitle(e.target.value)}
             placeholder="First task (optional)"
-            className="w-full rounded-[10px] border border-edge bg-surface px-3 py-1.5 text-sm"
+            className="w-full rounded-card border border-edge bg-surface px-3 py-1.5 text-sm"
           />
           <div className="flex gap-1">
             <input
               type="date"
               value={taskDue}
               onChange={(e) => setTaskDue(e.target.value)}
-              className="min-w-0 flex-1 rounded-[10px] border border-edge bg-surface px-2 py-1 text-xs"
+              className="min-w-0 flex-1 rounded-card border border-edge bg-surface px-2 py-1 text-xs"
             />
             <select
               value={taskAssignee}
               onChange={(e) => setTaskAssignee(e.target.value)}
-              className="min-w-0 flex-1 rounded-[10px] border border-edge bg-surface px-2 py-1 text-xs"
+              className="min-w-0 flex-1 rounded-card border border-edge bg-surface px-2 py-1 text-xs"
             >
               <option value="">Anyone</option>
               {members.map((m) => (
@@ -145,7 +145,7 @@ export default function NewProjectForm({
         <button
           type="submit"
           disabled={busy}
-          className="flex-1 rounded-[10px] bg-accent px-3 py-1.5 text-xs font-bold text-accent-ink disabled:opacity-50"
+          className="flex-1 rounded-btn bg-accent px-3 py-1.5 text-xs font-bold text-accent-ink disabled:opacity-50"
         >
           {busy ? "Creating…" : "Create"}
         </button>

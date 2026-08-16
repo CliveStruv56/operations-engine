@@ -47,7 +47,7 @@ export function ModulesEditor({
     <Panel title={`Modules — ${tenant.name}`} onClose={onClose}>
       <div className="flex flex-col gap-3">
         {error && (
-          <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+          <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
         <div className="flex flex-col gap-1.5">
           {FEATURE_FLAGS.map((f) => (
@@ -62,7 +62,7 @@ export function ModulesEditor({
           ))}
         </div>
         {withdrawn.length > 0 && (
-          <p className="rounded-[10px] bg-card px-3 py-2 text-sm text-ink-muted">
+          <p className="rounded-card bg-card px-3 py-2 text-sm text-ink-muted">
             Switching off {withdrawn.map((f) => f.label).join(" and ")} hides it from the
             workspace immediately. Nothing is deleted — their data returns if you switch it
             back on.
@@ -72,7 +72,7 @@ export function ModulesEditor({
           <button
             onClick={save}
             disabled={saving || !changed.length}
-            className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
+            className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
           >
             {changed.length ? "Save modules" : "No changes"}
           </button>

@@ -177,7 +177,7 @@ export default function NewApplicationPage() {
           </div>
 
           {warning && (
-            <p className="rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+            <p className="rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
               This catalogue entry is {warning}. Any bid drafted from it carries the same warning on
               its first page.
             </p>
@@ -238,7 +238,7 @@ export default function NewApplicationPage() {
           </label>
 
           {error && (
-            <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+            <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
           )}
 
           <button type="submit" disabled={busy || !form.title} className={btn}>

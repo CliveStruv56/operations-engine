@@ -122,10 +122,10 @@ function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }
       </div>
 
       {note && (
-        <p className="mt-2 rounded-[10px] bg-warn-soft px-3 py-2 text-xs text-warn">{note}</p>
+        <p className="mt-2 rounded-card bg-warn-soft px-3 py-2 text-xs text-warn">{note}</p>
       )}
       {error && (
-        <p className="mt-2 rounded-[10px] bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
+        <p className="mt-2 rounded-card bg-danger-soft px-3 py-2 text-xs text-danger">{error}</p>
       )}
       {editing && (
         <EditFormPanel
@@ -193,7 +193,7 @@ export default function FormsPage() {
       )}
 
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       {sets === null ? (

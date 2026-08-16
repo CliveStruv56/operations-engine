@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ApiError } from "@/lib/api";
+import { Stamp } from "@/components/ui";
 import {
   PortfolioRow,
   RAG_DOT,
@@ -29,7 +30,7 @@ function StageStepper({ current }: { current: string }) {
         <span
           key={s}
           className={`h-1.5 w-4 rounded-full ${
-            i < idx ? "bg-accent/40" : i === idx ? "bg-accent" : "bg-line"
+            i < idx ? "bg-deep-violet/40" : i === idx ? "bg-deep-violet" : "bg-line"
           }`}
         />
       ))}
@@ -86,13 +87,13 @@ export default function PortfolioPage() {
         </div>
         <Link
           href="/app/projects/new"
-          className="rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+          className="rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
         >
           New development project
         </Link>
       </header>
 
-      {error && <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
+      {error && <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>}
 
       {rows && rows.length === 0 && (
         <div className="rounded-card border border-edge bg-surface p-10 text-center">
@@ -135,12 +136,14 @@ export default function PortfolioPage() {
                     <td className="px-4 py-3 font-medium">
                       {r.name}
                       {r.status === "dormant" && (
-                        <span className="stamp ml-2 text-warn bg-warn-soft">
+                        <Stamp tone="warn" className="ml-2">
                           dormant · {r.dormancy_reason}
-                        </span>
+                        </Stamp>
                       )}
                       {r.status === "complete" && (
-                        <span className="stamp ml-2 text-electric-blue bg-accent-soft">complete</span>
+                        <Stamp tone="rose" className="ml-2">
+                          complete
+                        </Stamp>
                       )}
                     </td>
                     <td className="px-4 py-3 text-ink-muted">{r.client_org ?? "—"}</td>

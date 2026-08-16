@@ -77,7 +77,7 @@ export function BidPackTab({ id }: { id: string }) {
     <div>
       <LoadError failed={failed} onRetry={refresh} />
       {error && (
-        <p className="mb-3 rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="mb-3 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
 
       {/* Every other draft launches from its own registry row. A funder's form

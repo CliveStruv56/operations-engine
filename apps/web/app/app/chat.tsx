@@ -78,7 +78,7 @@ function citeButton(
     nums.has(n) ? (
       <button
         onClick={() => onCite(n)}
-        className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-electric-blue hover:bg-accent hover:text-white"
+        className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-electric-blue hover:bg-deep-violet hover:text-white"
         aria-label={`Source ${n}`}
       >
         {n}
@@ -216,7 +216,7 @@ function AssistantMessageInner({
         {cites.length > 3 && (
           <button
             onClick={() => setShowAllSources((v) => !v)}
-            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white"
+            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white"
           >
             {showAllSources ? "Show fewer sources" : `Show all ${cites.length} sources`}
           </button>
@@ -225,7 +225,7 @@ function AssistantMessageInner({
           <button
             onClick={() => onExport(m.id)}
             disabled={exporting}
-            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white disabled:opacity-50"
+            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
           >
             {exporting ? "Building deck…" : "Download .pptx"}
           </button>
@@ -235,14 +235,14 @@ function AssistantMessageInner({
             <button
               onClick={() => onPdf(m.id)}
               disabled={pdfBusy}
-              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white disabled:opacity-50"
+              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
             >
               {pdfBusy ? "Building PDF…" : "Download as PDF"}
             </button>
             <button
               onClick={() => onSaveToVault(m.id)}
               disabled={saving}
-              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white disabled:opacity-50"
+              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save to Vault"}
             </button>
@@ -257,7 +257,7 @@ function AssistantMessageInner({
         )}
       </div>
       {coverage === "none" && !readOnly && (
-        <p className="mt-2.5 flex flex-wrap items-center gap-2.5 rounded-[10px] bg-sidebar px-3 py-2 text-xs text-ink-muted">
+        <p className="mt-2.5 flex flex-wrap items-center gap-2.5 rounded-card bg-sidebar px-3 py-2 text-xs text-ink-muted">
           <span>Your vault could not back this answer.</span>
           <button
             onClick={onAddDocument}
@@ -879,7 +879,7 @@ export default function ChatPanel({
                 onClick={() => setModes((s) => ({ ...s, [modeKey]: m.key }))}
                 className={`shrink-0 rounded-full px-[13px] py-1.5 text-xs font-bold whitespace-nowrap transition ${
                   mode === m.key
-                    ? "bg-accent text-white"
+                    ? "bg-deep-violet text-white"
                     : "text-subtle hover:bg-sidebar"
                 }`}
               >
@@ -974,7 +974,7 @@ export default function ChatPanel({
               <button
                 type="submit"
                 disabled={!draft.trim()}
-                className="inline-flex flex-none items-center gap-2 rounded-xl bg-accent px-[18px] py-[9px] text-[13.5px] font-bold text-white transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-edge disabled:text-faint"
+                className="inline-flex flex-none items-center gap-2 rounded-btn bg-accent px-[18px] py-[9px] text-[13.5px] font-medium text-white transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-edge disabled:text-faint"
               >
                 Send
                 <ArrowUpIcon className="h-3.5 w-3.5" />

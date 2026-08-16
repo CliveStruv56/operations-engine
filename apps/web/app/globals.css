@@ -1,44 +1,61 @@
 @import "tailwindcss";
 
-/* Clearbit-inspired platform chrome: cloud-paper surfaces, midnight ink and
-   one electric-blue current. Tenant colours remain confined to logos,
-   previews and exported artefacts. */
+/* Huddle-inspired editorial chrome: paper-white canvas, ink text, thin bone
+   hairlines, muted pastel status tiles (sage / lavender / rose) and two
+   accents only — burnt amber for actions, deep violet for anything
+   interactive. No saturated colour, no shadows. Tenant colours remain
+   confined to logos, previews and exported artefacts. */
 :root {
   color-scheme: light;
-  --color-midnight-ink: #091135;
-  --color-electric-blue: #0f77ff;
-  --color-cobalt-surface: #127ee3;
-  --color-slate: #36394a;
-  --color-frost-border: #e1e9f0;
-  --color-mist: #b1bbcd;
+  /* Huddle raw palette */
+  --paper-white: #ffffff;
+  --ink-black: #151515;
+  --graphite: #23241f;
+  --slate-gray: #3a4444;
+  --stone: #333333;
+  --mist-gray: #808080;
+  --bone: #e5e6e1;
+  --pale-sage: #d3e5e9;
+  --lavender-mist: #bbb2ce;
+  --dusty-rose: #cb9da2;
+  --deep-violet: #453b60;
+  --burnt-amber: #65451d;
+  --honey-gold: #e4b976;
+  --burgundy: #5c2529;
+  --blush-border: #d79caa;
   /* surfaces */
-  --canvas: #f8f8fc;
-  --sidebar: #f2f3fa;
+  --canvas: #ffffff;
+  /* Bone knocked back toward white; full bone is a chip/soft-card fill. */
+  --sidebar: #f2f2ef;
   --card: #ffffff;
-  --edge: var(--color-frost-border);
-  --edge-strong: var(--color-mist);
-  /* Darker than the structural Frost line so input boundaries remain clear. */
-  --edge-input: #78849a;
+  --edge: var(--bone);
+  --edge-strong: var(--stone);
+  /* Darker than the bone hairline so input boundaries remain clear. */
+  --edge-input: var(--mist-gray);
   /* text */
-  --ink: var(--color-midnight-ink);
-  --subtle: var(--color-slate);
-  --faint: #5e6678;
-  /* Text and marks sitting on Midnight Ink. */
+  --ink: var(--ink-black);
+  --subtle: var(--slate-gray);
+  --faint: var(--mist-gray);
+  /* Text and marks sitting on Ink Black or a filled accent. */
   --on-ink: #ffffff;
-  /* Compatibility accent family: filled CTAs are ink; tint is a blue wash. */
-  --accent: var(--color-midnight-ink);
-  --accent-deep: #17224d;
-  --accent-tint: #eaf3ff;
+  /* Accent family: filled CTAs are burnt amber; the tint is a lavender wash
+     because every tinted surface in the app is an interactive/selected one,
+     and interactive emphasis is deep violet. */
+  --accent: var(--burnt-amber);
+  --accent-deep: #523716;
+  --accent-tint: #e8e4ef;
   --accent-ink: #ffffff;
   /* grounded (trust states only: vault chip, vault switch, grounded badges) */
   --grounded: #33684b;
   --grounded-tint: #e5f0e7;
   /* status */
+  /* RAG "on track" — a status green, deliberately not --grounded. */
+  --ok: #4d6f5c;
   --warn: #8a5a14;
-  --warn-soft: #f7edda;
-  --danger: #9e2f1a;
-  --danger-deep: #8a2814;
-  --danger-soft: #f9e7e1;
+  --warn-soft: #f6eeda;
+  --danger: var(--burgundy);
+  --danger-deep: #47191c;
+  --danger-soft: #f0e2e4;
 }
 
 @theme inline {
@@ -53,19 +70,35 @@
   --color-subtle: var(--subtle);
   --color-faint: var(--faint);
   --color-on-ink: var(--on-ink);
-  /* A pale lavender band separates long data-heavy sections. */
+  /* A bone band separates long data-heavy sections. */
   --color-band: var(--sidebar);
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-accent-tint: var(--accent-tint);
   --color-accent-ink: var(--accent-ink);
-  --color-electric-blue: #0f77ff;
-  --color-cobalt-surface: #127ee3;
-  --color-slate: #36394a;
-  --color-frost-border: #e1e9f0;
-  --color-mist: #b1bbcd;
+  /* Huddle palette, exposed as utilities. Pastels are a fixed status
+     taxonomy — sage: upcoming/monitoring, lavender: in progress (deep-violet
+     text when live), rose: shipped/complete. Never mixed within one tile. */
+  --color-pale-sage: var(--pale-sage);
+  --color-lavender-mist: var(--lavender-mist);
+  --color-dusty-rose: var(--dusty-rose);
+  --color-deep-violet: var(--deep-violet);
+  --color-burnt-amber: var(--burnt-amber);
+  --color-honey-gold: var(--honey-gold);
+  --color-burgundy: var(--burgundy);
+  --color-blush-border: var(--blush-border);
+  --color-bone: var(--bone);
+  --color-stone: var(--stone);
+  /* Interactive accent. The name is legacy — every link, focus edge and
+     selected border that said "electric blue" now reads deep violet. */
+  --color-electric-blue: var(--deep-violet);
+  --color-cobalt-surface: #574a78;
+  --color-slate: var(--slate-gray);
+  --color-frost-border: var(--edge);
+  --color-mist: #b5b6b1;
   --color-grounded: var(--grounded);
   --color-grounded-tint: var(--grounded-tint);
+  --color-ok: var(--ok);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-danger: var(--danger);
@@ -83,18 +116,21 @@
   --font-display: var(--font-ui);
   --font-mono: var(--font-geist-mono);
 
-  /* Named type steps retained as stable API; hierarchy comes from Inter's
-     size, weight and tracking rather than a second display face. */
-  --text-hearth-display: 2.625rem;
-  --text-hearth-page: 1.625rem;
+  /* Named type steps retained as stable API, snapped to the Huddle scale
+     (44 / 29 / 22px). Display sizes stay at weight 300–500 — light large
+     type is the editorial signature; never bold a headline. */
+  --text-hearth-display: 2.75rem;
+  --text-hearth-page: 1.8125rem;
   --text-hearth-section: 1.375rem;
 
-  --radius-btn: 8px;
-  --radius-card: 12px;
-  --radius-composer: 14px;
-  /* Intermediate radii for icon boxes and inset source panels. */
-  --radius-chip: 7px;
-  --radius-inset: 10px;
+  /* Radius vocabulary: 4px badges, 8px cards and inputs, 24px composer,
+     pills for every button. Never 0. */
+  --radius-btn: 999px;
+  --radius-input: 8px;
+  --radius-card: 8px;
+  --radius-composer: 24px;
+  --radius-chip: 8px;
+  --radius-inset: 8px;
   --shadow-card: none;
   --shadow-hearth: none;
 }
@@ -106,29 +142,29 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--color-electric-blue);
+  outline: 2px solid var(--deep-violet);
   outline-offset: 3px;
-  box-shadow: 0 0 0 4px rgb(177 187 205 / 25%);
+  box-shadow: 0 0 0 4px rgb(187 178 206 / 35%);
 }
 
 ::selection {
-  background: #dbeaff;
+  background: #e2ddeb;
 }
 
-/* Label voice: small bold labels for statuses, dates, counts and section
-   headings. (Previously mono "register" type — retired with Hearth.)
-   Lining tabular figures so counts and money align down a column. */
+/* Label voice: uppercase micro-labels for statuses, dates, counts and section
+   headings — the catalogue register. Lining tabular figures so counts and
+   money align down a column. */
 .data {
   font-size: 0.6875rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 500;
+  letter-spacing: 0.07em;
   font-variant-numeric: tabular-nums;
 }
 
 /* Figure voice: the one number a screen is actually about. */
 .figure {
   font-family: var(--font-ui), system-ui, sans-serif;
-  font-weight: 650;
+  font-weight: 500;
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
 }
@@ -200,7 +236,7 @@ body {
 .md-answer h3,
 .md-answer h4 {
   margin: 1.1em 0 0.35em;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.005em;
 }
 .md-answer h3 {
@@ -222,21 +258,21 @@ body {
   margin: 0.2em 0;
 }
 .md-answer a {
-  color: var(--color-electric-blue);
+  color: var(--deep-violet);
   text-decoration: underline;
 }
 .md-answer code {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.85em;
-  background: var(--canvas);
+  background: var(--sidebar);
   border: 1px solid var(--edge);
-  border-radius: 5px;
+  border-radius: 4px;
   padding: 0.1em 0.35em;
 }
 .md-answer pre {
-  background: var(--canvas);
+  background: var(--sidebar);
   border: 1px solid var(--edge);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.75em 1em;
   overflow-x: auto;
 }
@@ -246,7 +282,7 @@ body {
   padding: 0;
 }
 .md-answer blockquote {
-  border-left: 3px solid var(--edge-strong);
+  border-left: 3px solid var(--mist-gray);
   padding-left: 0.9em;
   color: var(--subtle);
 }
@@ -262,8 +298,8 @@ body {
   text-align: left;
 }
 .md-answer th {
-  background: var(--canvas);
-  font-weight: 700;
+  background: var(--sidebar);
+  font-weight: 600;
 }
 .md-answer hr {
   border: 0;
@@ -271,9 +307,10 @@ body {
   margin: 1em 0;
 }
 
+/* Dot-prefixed status pill: every tone carries a word, never colour alone. */
 .stamp {
   font-size: 0.625rem;
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
   border-radius: 999px;

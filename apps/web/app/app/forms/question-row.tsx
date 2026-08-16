@@ -71,7 +71,7 @@ export function QuestionRow({
               }
               placeholder="limit"
               aria-label={`Limit for question ${q.order}`}
-              className={`w-24 rounded-[10px] border px-2 py-1 ${
+              className={`w-24 rounded-card border px-2 py-1 ${
                 missing ? "border-warn bg-warn-soft" : "border-line bg-surface"
               }`}
             />
@@ -81,7 +81,7 @@ export function QuestionRow({
                 onChange({ ...q, limit_kind: e.target.value as Question["limit_kind"] })
               }
               aria-label={`Units for question ${q.order}`}
-              className="rounded-[10px] border border-line bg-surface px-2 py-1"
+              className="rounded-card border border-line bg-surface px-2 py-1"
             >
               <option value="characters">characters</option>
               <option value="words">words</option>

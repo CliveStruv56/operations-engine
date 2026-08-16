@@ -67,7 +67,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
     <div className="space-y-3">
       <LoadError failed={failed} onRetry={refresh} />
       {error && (
-        <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
+        <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
       )}
       {stages.map((stage) => (
         <div key={stage.id} className={`${card} p-4`}>
@@ -111,7 +111,7 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
             ))}
           </ul>
           {stage.gate_exceptions && (
-            <p className="mt-2 whitespace-pre-line rounded-[10px] bg-warn-soft px-3 py-2 text-sm text-warn">
+            <p className="mt-2 whitespace-pre-line rounded-card bg-warn-soft px-3 py-2 text-sm text-warn">
               {stage.gate_exceptions}
             </p>
           )}
