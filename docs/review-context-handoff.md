@@ -1557,6 +1557,19 @@ leave it unset). Both Lighthouse cleanup EPERM errors on Windows
 (`chrome-launcher` temp-dir removal) are noise — the report JSON is written
 before the failure.
 
+### Security review — clean (16 Aug, `/security-review` over `241e4cb..30b336b`)
+
+**No high-confidence findings.** Every user input (lead body fields,
+`Idempotency-Key`, `x-forwarded-for`, UTM params) was traced to its sinks:
+the webhook URL is env-only (no SSRF), free text is length-capped and
+allowlist-validated and reaches only JSON sinks, no `dangerouslySetInnerHTML`
+anywhere, no marketing page reads request data into the DOM, `proxy.ts` is
+untouched, and the OG renderer takes only hardcoded strings. Two
+sub-threshold notes, deliberately not fixed: the honeypot answers **202 vs
+200** for a real success (a bot can detect it was flagged — accepted), and
+validation errors reveal field names (standard). The full-email lead log is
+the documented decision above, not a finding.
+
 ---
 
 ## 7. Read first in a new session
