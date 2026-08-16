@@ -1522,11 +1522,32 @@ returned `{"ok":true}` (Idempotency-Key `deploy-check-dc54cfd`,
    public pages**. Keyboard journey: skip link first, menu opens/traps/
    Escape-closes with focus return. Metadata/sitemap/robots/canonical/404 all
    verified in production. **Still open from §11:** the human five-second
-   exposure test, real-user monitoring, and `og:image` share cards (none
-   exist — social shares render without an image).
+   exposure test and real-user monitoring. ~~og:image share cards~~ — built
+   and deployed later the same day, see below.
 5. E2E coverage: the Playwright greenfield from §6p (port 3100, mocked
    backend) is the natural home for a marketing-page spec (menu keyboard
    journey, form submit against a mocked `/api/leads`); none written yet.
+
+### Share cards (og:image) — built and live (16 Aug, evening)
+
+`6920cdd`, deployed as `dpl_2g4eigmBMeanXHpS8mzEY8juf11B`. Seven 1200×630
+cards generated **at build time** with `next/og` `ImageResponse` — no binary
+assets in the repo. `app/(marketing)/og-card.tsx` is the shared renderer
+(Huddle system: paper white, bone hairline frame, wordmark, three pastel
+tiles, kicker + weight-300 headline, burnt-amber domain pill); Inter is
+subset-fetched from Google Fonts **during build**, so `next build` needs
+network. One default `opengraph-image.tsx` on the group (homepage + legal
+pages inherit it) plus per-page cards for platform, both solutions,
+security-and-data, about and contact. Verified live: every public page's
+`og:image` tag serves a real PNG (200, ~38–51KB) on the staging host.
+
+**Caveat (same as canonicals):** the `og:image` URLs are absolute against
+`metadataBase` = `https://flowgridos.co.uk`, so scrapers of staging links
+won't resolve the card until the domain is live — or until
+`NEXT_PUBLIC_SITE_URL` is set to the staging URL in Vercel (founder chose to
+leave it unset). Both Lighthouse cleanup EPERM errors on Windows
+(`chrome-launcher` temp-dir removal) are noise — the report JSON is written
+before the failure.
 
 ---
 
