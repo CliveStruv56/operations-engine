@@ -46,7 +46,7 @@ const STATUS_STYLE: Record<Doc["status"], string> = {
   parsing: "text-warn bg-warn-soft",
   embedding: "text-warn bg-warn-soft",
   // accent-deep, not accent — #b14e2e on the tint misses AA at stamp size.
-  ready: "text-accent-deep bg-accent-soft",
+  ready: "text-electric-blue bg-accent-soft",
   failed: "text-danger bg-danger-soft",
 };
 

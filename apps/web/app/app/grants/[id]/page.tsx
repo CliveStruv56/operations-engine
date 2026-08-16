@@ -15,6 +15,7 @@ import {
   fmtMoney,
   gr,
 } from "@/lib/grants";
+import { useAsk } from "@/components/ui";
 import { GRANTS_DISABLED, ModuleDisabled, useModuleEnabled } from "../../module-gate";
 import { card, input } from "../ui";
 import { EditApplicationPanel } from "./EditApplicationPanel";
@@ -46,6 +47,7 @@ const STATUSES: ApplicationStatus[] = [
 
 export default function ApplicationRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const ask = useAsk();
   const [detail, setDetail] = useState<Application | null>(null);
   const [catalogue, setCatalogue] = useState<CatalogueRow | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Stages & gates");
@@ -84,7 +86,14 @@ export default function ApplicationRoom({ params }: { params: Promise<{ id: stri
   async function changeStatus(status: ApplicationStatus) {
     let amount_awarded: string | null = null;
     if (status === "awarded" && !detail?.amount_awarded) {
-      amount_awarded = window.prompt("How much did the funder offer? (£)");
+      amount_awarded = await ask.text({
+        title: "Record the award",
+        body: "The offer, not what you asked for — the two often differ, and the portfolio totals follow this figure.",
+        label: "Amount offered (£)",
+        inputType: "number",
+        placeholder: "25000",
+        confirmLabel: "Mark as awarded",
+      });
       if (!amount_awarded) return;
     }
     try {

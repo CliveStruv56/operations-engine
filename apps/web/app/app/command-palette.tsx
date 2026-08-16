@@ -158,7 +158,7 @@ export default function CommandPalette() {
         aria-modal="true"
         aria-label="Search chats and documents"
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-lg overflow-hidden rounded-[14px] border border-edge-strong bg-card shadow-hearth"
+        className="w-full max-w-lg overflow-hidden rounded-[14px] border border-edge-strong bg-card shadow-card"
       >
         <div className="flex items-center gap-2.5 border-b border-edge px-4 py-3">
           <SearchIcon className="h-4 w-4 text-faint" />
@@ -207,7 +207,7 @@ export default function CommandPalette() {
                     onClick={() => go(row)}
                     onMouseEnter={() => setActive(i)}
                     className={`flex w-full items-center gap-2.5 rounded-[10px] px-3 py-2 text-left text-[13.5px] font-semibold ${
-                      i === active ? "bg-accent-tint text-accent-deep" : "text-subtle"
+                      i === active ? "bg-accent-tint text-electric-blue" : "text-subtle"
                     }`}
                   >
                     {row.kind === "conversation" ? (

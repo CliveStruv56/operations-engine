@@ -22,10 +22,11 @@ import { TranscribePanel } from "./transcribe-panel";
 import { EditFormPanel } from "./edit-panel";
 import { QuestionDisplay } from "./question-row";
 
-const card = "rounded-card border border-edge bg-card p-5 shadow-card";
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
+import {
+  btnPrimary as btn,
+  btnQuiet as btnGhost,
+  cardPadded as card,
+} from "@/components/ui/styles";
 
 function StageLabel({ stage }: { stage: QuestionSet["stage"] }) {
   const label =
@@ -63,7 +64,7 @@ function FormRow({ set, onChanged }: { set: QuestionSet; onChanged: () => void }
           <button
             onClick={() => setOpen((o) => !o)}
             aria-expanded={open}
-            className="flex items-center gap-1.5 text-left font-medium hover:text-accent-deep"
+            className="flex items-center gap-1.5 text-left font-medium hover:text-electric-blue"
           >
             <span aria-hidden="true" className="text-xs text-ink-faint">
               {open ? "▾" : "▸"}

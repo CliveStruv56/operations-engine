@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { Button, ErrorNote } from "@/components/ui";
+import { input as inputCls } from "@/components/ui/styles";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -30,12 +32,14 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <p className="data mb-2 text-ink-faint uppercase">Flowgrid</p>
+        <p className="data mb-2 text-electric-blue uppercase">Flowgrid</p>
         <form
           onSubmit={onSubmit}
-          className="space-y-4 rounded-card border border-edge bg-surface p-6 shadow-sm"
+          className="space-y-4 rounded-card border border-edge bg-card p-6 shadow-card"
         >
-          <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Sign in</h1>
+          <h1 className="font-display text-hearth-page leading-tight font-medium tracking-[-0.01em]">
+            Sign in
+          </h1>
           <label className="block text-sm font-semibold">
             Email
             <input
@@ -44,7 +48,7 @@ export default function LoginPage() {
               autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full rounded-[10px] border border-line px-3 py-2 text-sm font-normal"
+              className={`mt-1 font-normal ${inputCls}`}
             />
           </label>
           <label className="block text-sm font-semibold">
@@ -55,20 +59,19 @@ export default function LoginPage() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="mt-1 w-full rounded-[10px] border border-line px-3 py-2 text-sm font-normal"
+              className={`mt-1 font-normal ${inputCls}`}
             />
           </label>
-          {error && (
-            <p className="rounded-[10px] bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
-          )}
-          <button
+          {error && <ErrorNote>{error}</ErrorNote>}
+          <Button
             type="submit"
-            disabled={busy}
-            className="w-full rounded-[10px] bg-accent px-3 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50"
+            loading={busy}
+            loadingLabel="Signing in…"
+            className="w-full"
           >
-            {busy ? "Signing in…" : "Sign in"}
-          </button>
-          <p className="text-sm text-ink-muted">
+            Sign in
+          </Button>
+          <p className="text-sm text-subtle">
             No account?{" "}
             <Link href="/signup" className="underline hover:text-ink">
               Sign up

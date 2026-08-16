@@ -25,10 +25,11 @@ import { AddFactPanel } from "./add-panel";
 import { ClaimRow } from "./claim-row";
 import { ImportPanel } from "./import-panel";
 
-const card = "rounded-card border border-edge bg-card p-5 shadow-card";
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
+import {
+  btnPrimary as btn,
+  btnQuiet as btnGhost,
+  cardPadded as card,
+} from "@/components/ui/styles";
 
 /** ECCTA readiness, derived from the register — never stored. From 18 Nov
  * 2026 an unverified director blocks Companies House filings, so this is the

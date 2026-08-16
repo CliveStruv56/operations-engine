@@ -24,7 +24,7 @@ export function Panel({
       <aside
         role="dialog"
         aria-label={title}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col overflow-y-auto border-l border-edge bg-surface p-6 shadow-xl"
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[440px] flex-col overflow-y-auto border-l border-edge bg-surface p-6 shadow-card"
       >
         <div className="mb-4 flex items-center justify-between">
           <h2 className="font-display text-xl font-medium tracking-[-0.01em]">{title}</h2>

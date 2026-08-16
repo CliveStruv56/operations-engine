@@ -12,10 +12,7 @@ import { Spinner } from "@/components/activity";
 import { ApiError } from "@/lib/api";
 import { REGISTERS, RegisterImport, importFromRegister } from "@/lib/claims";
 
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
-const input = "w-full rounded-[10px] border border-edge bg-card px-3 py-2 text-sm";
+import { btnPrimary as btn, btnQuiet as btnGhost, input } from "@/components/ui/styles";
 
 export function ImportPanel({
   onCancel,

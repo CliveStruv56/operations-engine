@@ -14,6 +14,7 @@ import { ConditionsTab } from "./tabs/ConditionsTab";
 import { StakeholdersTab } from "./tabs/StakeholdersTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { input } from "./tabs/ui";
+import { useAsk } from "@/components/ui";
 import { useWorkspace } from "../../workspace";
 import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../../module-gate";
 import { ApiError } from "@/lib/api";
@@ -34,6 +35,7 @@ const TABS = [
 export default function ProjectRoom({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const ws = useWorkspace();
+  const ask = useAsk();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [tab, setTab] = useState<(typeof TABS)[number]>("Overview");
   const [error, setError] = useState<string | null>(null);
@@ -65,9 +67,18 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
   async function changeStatus(status: string) {
     let dormancy_reason: string | null = null;
     if (status === "dormant") {
-      dormancy_reason = window.prompt(
-        "Why is this project going dormant? (e.g. funding_gap, group_capacity)"
-      );
+      // The old prompt offered "funding_gap, group_capacity" as examples, which
+      // are internal enum names the API never required — it takes any string up
+      // to 200 characters.
+      dormancy_reason = await ask.text({
+        title: "Make this project dormant",
+        body: "It stays in the portfolio and keeps everything recorded against it; it just stops appearing as live work. You can make it active again at any point.",
+        label: "Why is it going dormant?",
+        hint: "A short note for whoever picks this up later — a funding gap, no capacity in the group, waiting on a landowner.",
+        placeholder: "Waiting on the funding decision in the autumn",
+        confirmLabel: "Make dormant",
+        maxLength: 200,
+      });
       if (!dormancy_reason) return;
     }
     await gw(`/projects/${id}/status`, {

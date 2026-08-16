@@ -130,7 +130,7 @@ export function DraftModal({
           at a readable measure need the room, and the body scrolls so the
           header stays put. */}
       <div
-        className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-card border border-edge bg-surface p-5 shadow-lg ${
+        className={`flex max-h-[90vh] w-full flex-col overflow-hidden rounded-card border border-edge bg-surface p-5 shadow-card ${
           sheet ? "max-w-3xl" : "max-w-md"
         }`}
       >

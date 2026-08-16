@@ -78,7 +78,7 @@ function citeButton(
     nums.has(n) ? (
       <button
         onClick={() => onCite(n)}
-        className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-accent-deep hover:bg-accent hover:text-white"
+        className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-electric-blue hover:bg-accent hover:text-white"
         aria-label={`Source ${n}`}
       >
         {n}
@@ -93,13 +93,13 @@ function SourceCard({ c }: { c: Citation }) {
   return (
     <div id={`src-${c.chunk_id}`} className="rounded-[11px] border border-edge bg-canvas p-3">
       <div className="flex items-center gap-2 text-xs font-bold">
-        <span className="mr-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 text-[10.5px] font-extrabold text-accent-deep">
+        <span className="mr-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 text-[10.5px] font-extrabold text-electric-blue">
           {c.n}
         </span>
         {web ? (
-          <GlobeIcon className="h-3 w-3 text-accent-deep" />
+          <GlobeIcon className="h-3 w-3 text-electric-blue" />
         ) : (
-          <DocIcon className="h-3 w-3 text-accent-deep" />
+          <DocIcon className="h-3 w-3 text-electric-blue" />
         )}
         <span className="min-w-0 truncate">{c.title}</span>
         <em className="ml-auto shrink-0 text-[11px] font-semibold not-italic text-faint">
@@ -120,7 +120,7 @@ function SourceCard({ c }: { c: Citation }) {
           href={c.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-1.5 block truncate text-[11px] font-bold text-accent-deep hover:underline"
+          className="mt-1.5 block truncate text-[11px] font-bold text-electric-blue hover:underline"
         >
           Open source ↗
         </a>
@@ -216,7 +216,7 @@ function AssistantMessageInner({
         {cites.length > 3 && (
           <button
             onClick={() => setShowAllSources((v) => !v)}
-            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white"
+            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white"
           >
             {showAllSources ? "Show fewer sources" : `Show all ${cites.length} sources`}
           </button>
@@ -225,7 +225,7 @@ function AssistantMessageInner({
           <button
             onClick={() => onExport(m.id)}
             disabled={exporting}
-            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
+            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white disabled:opacity-50"
           >
             {exporting ? "Building deck…" : "Download .pptx"}
           </button>
@@ -235,14 +235,14 @@ function AssistantMessageInner({
             <button
               onClick={() => onPdf(m.id)}
               disabled={pdfBusy}
-              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
+              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white disabled:opacity-50"
             >
               {pdfBusy ? "Building PDF…" : "Download as PDF"}
             </button>
             <button
               onClick={() => onSaveToVault(m.id)}
               disabled={saving}
-              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-accent-deep hover:bg-accent hover:text-white disabled:opacity-50"
+              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-accent hover:text-white disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save to Vault"}
             </button>
@@ -261,13 +261,13 @@ function AssistantMessageInner({
           <span>Your vault could not back this answer.</span>
           <button
             onClick={onAddDocument}
-            className="font-medium text-accent-deep underline hover:text-ink"
+            className="font-medium text-electric-blue underline hover:text-ink"
           >
             Add a document
           </button>
           <button
             onClick={() => onAssertFact(m.id)}
-            className="font-medium text-accent-deep underline hover:text-ink"
+            className="font-medium text-electric-blue underline hover:text-ink"
           >
             Assert it as a fact
           </button>
@@ -863,7 +863,7 @@ export default function ChatPanel({
       <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
         <form
           onSubmit={send}
-          className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge-strong bg-card p-3 shadow-hearth"
+          className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge-strong bg-card p-3 shadow-card"
         >
           <div
             role="radiogroup"

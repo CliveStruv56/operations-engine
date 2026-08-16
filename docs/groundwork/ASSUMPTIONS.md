@@ -923,3 +923,73 @@ and every divergence is recorded here.
     (proposed + confirmed), never stored. The 18 Nov 2026 transition end is
     hard-coded copy in one place (`EcctaStrip`); after that date the line
     should change from a deadline warning to a standing compliance state.
+
+## Recorded during the Hearth design review (16 Aug 2026)
+
+53. **Hearth stays. The Clearbit visual language in the `design` skill does
+    not apply to this product.**
+
+    The skill's own precedence puts project brand above its defaults and says
+    not to restyle a product to look like Clearbit. Hearth is a real brand —
+    tokens in `globals.css`, two documented HTML specs, AA-verified pairings —
+    so the review applied the skill's *principles* (states, spacing discipline,
+    contrast, tabular figures, empty states) and kept terracotta, cream,
+    Fraunces and Plus Jakarta Sans.
+
+    The flatness the review was asked to fix was never the palette: it was the
+    app under-using it. Hearth's second surface existed only in the sidebar,
+    Fraunces appeared on exactly one screen (the chat greeting), and the
+    dashboards spent none of the three-per-view accent budget. `--color-band`,
+    the `Section` component's serif heading and the `.figure` voice exist to
+    spend that range on screens that already had it available.
+
+54. **Control styling is centralised in `apps/web/components/ui`. The
+    module-local style constants now re-export from it.**
+
+    `grants/ui.ts` previously documented the opposite rule — module-local
+    copies so one vertical's UI could not silently restyle another. Reversed:
+    fourteen screens each kept their own `btn` / `input` / `card`, and the
+    copies drifted rather than protecting anything (Grantwork on `bg-surface`
+    and `border-line`, claims on `bg-card` and `border-edge` — the same colours
+    under two names, plus `rounded-[10px]` hand-written everywhere despite
+    `--radius-btn` being 10px). Deliberate divergence should be an override at
+    the call site, not five near-identical constants nobody can diff by eye.
+
+    `contacts/ui.ts`, `grants/ui.ts` and `projects/[id]/tabs/ui.ts` keep their
+    import paths and now re-export the shared definitions.
+
+55. **Three Hearth values are extended where the spec fails WCAG 2.2 AA or is
+    silent. Access wins over the kit; the divergence is here.**
+
+    - `--edge-input: #a2907a` for control outlines. Hearth's `--edge-strong`
+      is 1.58:1 against a white card, which fails 1.4.11's 3:1 floor for the
+      border that identifies an input. This is the nearest warm tone that
+      passes, at 3.09:1.
+    - Disabled buttons use `text-subtle`, not the kit's `text-faint`. On
+      `--edge` that pairing measures 4.42:1, short of AA for 13.5px text;
+      `--subtle` is 5.64:1.
+    - `--text-hearth-page: 26px` records the page-title step the screens had
+      already settled on as `text-[26px]`. Hearth documents only 42px
+      (greeting) and 22px (section), and a dashboard `h1` needs something
+      between. Naming what the repo does beats inventing a fourth size or
+      leaving it as an arbitrary value. `--radius-chip: 9px` and
+      `--radius-inset: 11px` name Hearth's two intermediate radii for the same
+      reason. The serif floor of 22px is unchanged.
+
+56. **`window.prompt` / `window.confirm` are replaced by `useAsk()`. No new
+    code may use the native ones.**
+
+    Nine call sites used browser dialogs for real data entry — a dormancy
+    reason, a gate sign-off exception, an award amount, an owner invite email
+    and the typed workspace-purge confirmation. A native prompt cannot be
+    labelled, hinted, validated or styled, and it drops the user into browser
+    chrome with no relationship to the workspace. `DialogProvider` /
+    `useAsk()` (`components/ui/dialog.tsx`) keeps the promise-based shape of
+    the calls it replaced, and adds focus return, Escape, a contained tab
+    order, and a confirm button that stays inert until a typed confirmation
+    matches. `/admin` mounts its own provider because it sits outside the app
+    layout.
+
+    Consequence: the purge flow now gates client-side on the exact workspace
+    name *and* still sends it for the API to check. The API remains the real
+    gate.

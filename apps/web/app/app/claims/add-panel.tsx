@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Spinner } from "@/components/activity";
 import { useToast } from "@/components/toast";
+import { btnPrimary as btn, btnQuiet as btnGhost, input } from "@/components/ui/styles";
 import {
   CATEGORY_LABELS,
   CATEGORY_ORDER,
@@ -20,11 +21,6 @@ import {
   listClaimKinds,
   parseClaimValue,
 } from "@/lib/claims";
-
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
-const input = "w-full rounded-[10px] border border-edge bg-card px-3 py-2 text-sm";
 
 export function AddFactPanel({
   onCancel,

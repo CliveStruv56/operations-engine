@@ -1,26 +1,34 @@
 @import "tailwindcss";
 
-/* Hearth design tokens (docs/concept-01-hearth-warm-approachable.html).
-   The chrome palette is fixed platform-wide; the tenant's brand accent
-   appears only in exported artefacts (slides, health cards) and the logo.
-   Text floor: --faint (#6F6355, 5.5:1 on canvas) is the lightest colour
-   allowed for real text — edge colours are borders, never text. */
+/* Clearbit-inspired platform chrome: cloud-paper surfaces, midnight ink and
+   one electric-blue current. Tenant colours remain confined to logos,
+   previews and exported artefacts. */
 :root {
   color-scheme: light;
+  --color-midnight-ink: #091135;
+  --color-electric-blue: #0f77ff;
+  --color-cobalt-surface: #127ee3;
+  --color-slate: #36394a;
+  --color-frost-border: #e1e9f0;
+  --color-mist: #b1bbcd;
   /* surfaces */
-  --canvas: #faf7f2;
-  --sidebar: #f4ede3;
+  --canvas: #f8f8fc;
+  --sidebar: #f2f3fa;
   --card: #ffffff;
-  --edge: #e8decf;
-  --edge-strong: #d9ccb8;
+  --edge: var(--color-frost-border);
+  --edge-strong: var(--color-mist);
+  /* Darker than the structural Frost line so input boundaries remain clear. */
+  --edge-input: #78849a;
   /* text */
-  --ink: #221c15;
-  --subtle: #5c5347;
-  --faint: #6f6355;
-  /* terracotta accent family */
-  --accent: #b14e2e;
-  --accent-deep: #98401f;
-  --accent-tint: #f7e8e0;
+  --ink: var(--color-midnight-ink);
+  --subtle: var(--color-slate);
+  --faint: #5e6678;
+  /* Text and marks sitting on Midnight Ink. */
+  --on-ink: #ffffff;
+  /* Compatibility accent family: filled CTAs are ink; tint is a blue wash. */
+  --accent: var(--color-midnight-ink);
+  --accent-deep: #17224d;
+  --accent-tint: #eaf3ff;
   --accent-ink: #ffffff;
   /* grounded (trust states only: vault chip, vault switch, grounded badges) */
   --grounded: #33684b;
@@ -34,19 +42,28 @@
 }
 
 @theme inline {
-  /* Hearth names */
+  /* Stable semantic names used by the application. */
   --color-canvas: var(--canvas);
   --color-sidebar: var(--sidebar);
   --color-card: var(--card);
   --color-edge: var(--edge);
   --color-edge-strong: var(--edge-strong);
+  --color-edge-input: var(--edge-input);
   --color-ink: var(--ink);
   --color-subtle: var(--subtle);
   --color-faint: var(--faint);
+  --color-on-ink: var(--on-ink);
+  /* A pale lavender band separates long data-heavy sections. */
+  --color-band: var(--sidebar);
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-accent-tint: var(--accent-tint);
   --color-accent-ink: var(--accent-ink);
+  --color-electric-blue: #0f77ff;
+  --color-cobalt-surface: #127ee3;
+  --color-slate: #36394a;
+  --color-frost-border: #e1e9f0;
+  --color-mist: #b1bbcd;
   --color-grounded: var(--grounded);
   --color-grounded-tint: var(--grounded-tint);
   --color-warn: var(--warn);
@@ -54,7 +71,7 @@
   --color-danger: var(--danger);
   --color-danger-deep: var(--danger-deep);
   --color-danger-soft: var(--danger-soft);
-  /* Legacy aliases — pre-Hearth utility names still in use; same palette. */
+  /* Legacy aliases retained while feature screens converge on shared UI. */
   --color-paper: var(--canvas);
   --color-surface: var(--card);
   --color-line: var(--edge);
@@ -63,15 +80,23 @@
   --color-accent-soft: var(--accent-tint);
 
   --font-sans: var(--font-ui);
-  --font-display: var(--font-fraunces);
+  --font-display: var(--font-ui);
   --font-mono: var(--font-geist-mono);
 
-  --radius-btn: 10px;
-  --radius-card: 14px;
-  --radius-composer: 18px;
-  --shadow-card: 0 1px 2px rgba(60, 42, 28, 0.04);
-  --shadow-hearth:
-    0 1px 2px rgba(60, 42, 28, 0.05), 0 10px 30px rgba(60, 42, 28, 0.08);
+  /* Named type steps retained as stable API; hierarchy comes from Inter's
+     size, weight and tracking rather than a second display face. */
+  --text-hearth-display: 2.625rem;
+  --text-hearth-page: 1.625rem;
+  --text-hearth-section: 1.375rem;
+
+  --radius-btn: 8px;
+  --radius-card: 12px;
+  --radius-composer: 14px;
+  /* Intermediate radii for icon boxes and inset source panels. */
+  --radius-chip: 7px;
+  --radius-inset: 10px;
+  --shadow-card: none;
+  --shadow-hearth: none;
 }
 
 body {
@@ -81,20 +106,36 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 2px solid var(--color-electric-blue);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgb(177 187 205 / 25%);
 }
 
 ::selection {
-  background: var(--accent-tint);
+  background: #dbeaff;
 }
 
 /* Label voice: small bold labels for statuses, dates, counts and section
-   headings. (Previously mono "register" type — retired with Hearth.) */
+   headings. (Previously mono "register" type — retired with Hearth.)
+   Lining tabular figures so counts and money align down a column. */
 .data {
   font-size: 0.6875rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Figure voice: the one number a screen is actually about. */
+.figure {
+  font-family: var(--font-ui), system-ui, sans-serif;
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Numeric table cells: same alignment discipline without the label styling. */
+.tnum {
+  font-variant-numeric: tabular-nums;
 }
 
 /* Activity dots: staggered pulse, distinct enough to read at a glance. */
@@ -115,14 +156,35 @@ body {
   animation: pulse-dot 1.2s ease-in-out infinite;
 }
 
+/* Skeletons: a slow breath across the paper surfaces, never a bright sweep.
+   Only ever used in a shape that matches the content it stands in for. */
+@keyframes skeleton-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.skeleton {
+  background: var(--edge);
+  border-radius: 6px;
+  animation: skeleton-breathe 1.6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot {
     animation: none;
     opacity: 0.7;
   }
+  .skeleton {
+    animation: none;
+  }
 }
 
-/* Assistant-answer markdown (components/markdown.tsx). Hearth voice:
+/* Assistant-answer markdown (components/markdown.tsx). Clear, compact voice:
    quiet headings, tight vertical rhythm, canvas-inset code and tables. */
 .md-answer > :first-child {
   margin-top: 0;
@@ -160,7 +222,7 @@ body {
   margin: 0.2em 0;
 }
 .md-answer a {
-  color: var(--accent-deep);
+  color: var(--color-electric-blue);
   text-decoration: underline;
 }
 .md-answer code {

@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { Company, CompanyForm, crm } from "@/lib/crm";
 import { btn, btnGhost, input, label } from "./ui";
 import { Panel } from "@/components/Panel";
+import { useAsk } from "@/components/ui";
 
 const empty: CompanyForm = {
   name: "",
@@ -41,6 +42,7 @@ export function CompanyEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const ask = useAsk();
   const [form, setForm] = useState<CompanyForm>(company ? toForm(company) : empty);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -67,13 +69,18 @@ export function CompanyEditor({
 
   async function remove() {
     if (!company) return;
-    const warn =
-      company.contact_count > 0
-        ? `Delete ${company.name}? Its ${company.contact_count} contact${
-            company.contact_count === 1 ? "" : "s"
-          } will be kept but detached.`
-        : `Delete ${company.name}?`;
-    if (!window.confirm(warn)) return;
+    const confirmed = await ask.confirm({
+      title: `Delete ${company.name}`,
+      body:
+        company.contact_count > 0
+          ? `Its ${company.contact_count} contact${
+              company.contact_count === 1 ? "" : "s"
+            } stay in the contact book — they are kept, just no longer attached to a company.`
+          : "It comes out of the contact book for everyone in the workspace.",
+      confirmLabel: "Delete company",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     await crm(`/companies/${company.id}`, { method: "DELETE" });
     onSaved();
   }

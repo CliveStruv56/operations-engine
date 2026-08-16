@@ -1,9 +1,16 @@
-// Shared styling primitives for the Grantwork pages, mirroring the project
-// room's. Module-local rather than imported across modules, so a change to one
-// vertical's UI cannot silently restyle another.
-export const input = "rounded-[10px] border border-line bg-surface px-2 py-1 text-sm";
-export const btn =
-  "rounded-[10px] bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-export const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
-export const card = "rounded-card border border-edge bg-surface";
-export const th = "data px-4 py-2.5 text-left text-ink-muted uppercase";
+// Grantwork styling, re-exported from the shared Hearth primitives.
+//
+// This file used to hold its own copies, on the reasoning that a change to one
+// vertical's UI should not silently restyle another. In practice the copies
+// drifted instead of protecting anything — Grantwork ended up on `bg-surface`
+// and `border-line` while the claims register moved to `bg-card` and
+// `border-edge`, which are the same colours under different names. Divergence
+// where it is wanted should be a deliberate override at the call site, not five
+// near-identical constants nobody can diff by eye.
+export {
+  btnPrimarySm as btn,
+  btnQuiet as btnGhost,
+  card,
+  inputCompact as input,
+  th,
+} from "@/components/ui/styles";

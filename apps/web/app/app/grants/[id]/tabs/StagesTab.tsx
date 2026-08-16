@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { Stage, fmtDate, gr } from "@/lib/grants";
+import { useAsk } from "@/components/ui";
 import { btn, btnGhost, card } from "../../ui";
 import { LoadError, useGrantLoad } from "./load";
 
 export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => void }) {
+  const ask = useAsk();
   const [stages, setStages] = useState<Stage[]>([]);
   const [error, setError] = useState<string | null>(null);
   const { failed, refresh } = useGrantLoad<Stage[]>(
@@ -29,9 +31,23 @@ export function StagesTab({ id, onAdvanced }: { id: string; onAdvanced: () => vo
     const outstanding = stage.gate.filter((g) => !g.done);
     let exceptions: string | null = null;
     if (outstanding.length) {
-      exceptions = window.prompt(
-        `${outstanding.length} item(s) outstanding. Record why you are signing off anyway:`
-      );
+      exceptions = await ask.text({
+        title: `Sign off with ${outstanding.length} item${outstanding.length === 1 ? "" : "s"} outstanding`,
+        body: (
+          <>
+            The gate is not clear. Whatever you write here is kept with the sign-off as the
+            record of why the stage advanced anyway.
+            <ul className="mt-2 list-disc pl-5">
+              {outstanding.map((g) => (
+                <li key={g.id}>{g.criterion}</li>
+              ))}
+            </ul>
+          </>
+        ),
+        label: "Why are you signing off anyway?",
+        confirmLabel: "Sign off stage",
+        multiline: true,
+      });
       if (!exceptions) return;
     }
     setError(null);

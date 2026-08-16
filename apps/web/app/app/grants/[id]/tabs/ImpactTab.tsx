@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Spinner } from "@/components/activity";
 import { DraftJob, Measure, fmtNum, getDraftJob, gr, submitImpactCard } from "@/lib/grants";
 import { openPresigned } from "@/lib/groundwork";
+import { useAsk } from "@/components/ui";
 import { btn, btnGhost, card, input, th } from "../../ui";
 import { LoadError, useGrantLoad } from "./load";
 
@@ -73,6 +74,7 @@ function ImpactCard({ id }: { id: string }) {
 }
 
 export function ImpactTab({ id }: { id: string }) {
+  const ask = useAsk();
   const [measures, setMeasures] = useState<Measure[]>([]);
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -104,12 +106,13 @@ export function ImpactTab({ id }: { id: string }) {
   }
 
   async function remove(measure: Measure) {
-    if (
-      !window.confirm(
-        `Delete "${measure.name}"? Every outcome recorded against it goes too — the values have no meaning without the measure.`
-      )
-    )
-      return;
+    const confirmed = await ask.confirm({
+      title: `Delete ${measure.name}`,
+      body: "Every outcome recorded against it goes too — the values have no meaning without the measure they were counted for.",
+      confirmLabel: "Delete measure",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     await gr(`/grants/applications/${id}/measures/${measure.id}`, { method: "DELETE" });
     refresh();
   }

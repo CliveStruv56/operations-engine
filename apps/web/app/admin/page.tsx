@@ -16,12 +16,23 @@ import { InviteLink, NewWorkspace } from "./NewWorkspace";
 import { ModulesEditor } from "./ModulesEditor";
 import { EditWorkspace, SuspendWorkspace } from "./EditWorkspace";
 import { CatalogueEditor } from "./CatalogueEditor";
+import { DialogProvider, useAsk } from "@/components/ui";
 
 const fmtDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-GB") : "—";
 
-export default function AdminConsole() {
+/** /admin sits outside the app layout, so it mounts its own dialog host. */
+export default function AdminConsolePage() {
+  return (
+    <DialogProvider>
+      <AdminConsole />
+    </DialogProvider>
+  );
+}
+
+function AdminConsole() {
   const router = useRouter();
+  const ask = useAsk();
   const [rows, setRows] = useState<AdminTenantRow[] | null>(null);
   const [denied, setDenied] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +60,14 @@ export default function AdminConsole() {
   }, [refresh]);
 
   async function reissueInvite(t: AdminTenantRow) {
-    const email = window.prompt(`Owner invite for ${t.name} — send to which email?`);
+    const email = await ask.text({
+      title: `Owner invite for ${t.name}`,
+      body: "The new invite is live as soon as you send it. Any earlier owner invite for this workspace stops working.",
+      label: "Send to",
+      inputType: "email",
+      placeholder: "owner@client.co.uk",
+      confirmLabel: "Create invite",
+    });
     if (!email) return;
     try {
       const invite = await admin<AdminInvite>(`/admin/tenants/${t.id}/owner-invite`, {
@@ -78,15 +96,25 @@ export default function AdminConsole() {
   }
 
   // Purge is the irreversible second step: it takes the workspace's exact
-  // name, and a mistype cancels rather than warns.
+  // name. The dialog keeps the confirm button inert until the name matches, so
+  // a mistype cannot be submitted; the API still checks it as the real gate.
   async function purge(t: AdminTenantRow) {
-    const typed = window.prompt(
-      `Delete “${t.name}” for good — its files, its model key and every row.\n` +
-        "This cannot be undone. Type the workspace's exact name to confirm:"
-    );
-    if (typed === null) return;
+    const confirmed = await ask.confirmTyped({
+      title: `Delete ${t.name} for good`,
+      body: (
+        <>
+          Its files, its model key and every row it owns go with it. This cannot be undone, and
+          there is no backup to restore from.
+        </>
+      ),
+      label: `Type “${t.name}” to confirm`,
+      expected: t.name,
+      confirmLabel: "Delete for good",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     try {
-      await purgeTenant(t.id, typed);
+      await purgeTenant(t.id, t.name);
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Purge failed — nothing was deleted.");
@@ -131,13 +159,13 @@ export default function AdminConsole() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="data border-b border-line text-left text-ink-muted uppercase">
-                  <th className="px-4 py-2.5">Workspace</th>
-                  <th className="px-4 py-2.5">Created</th>
-                  <th className="px-4 py-2.5">Trial ends</th>
-                  <th className="px-4 py-2.5">Members</th>
-                  <th className="px-4 py-2.5">Month usage</th>
-                  <th className="px-4 py-2.5">Modules</th>
-                  <th className="px-4 py-2.5"></th>
+                  <th scope="col" className="px-4 py-2.5">Workspace</th>
+                  <th scope="col" className="px-4 py-2.5">Created</th>
+                  <th scope="col" className="px-4 py-2.5">Trial ends</th>
+                  <th scope="col" className="px-4 py-2.5">Members</th>
+                  <th scope="col" className="px-4 py-2.5">Month usage</th>
+                  <th scope="col" className="px-4 py-2.5">Modules</th>
+                  <th scope="col" className="px-4 py-2.5"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-line">

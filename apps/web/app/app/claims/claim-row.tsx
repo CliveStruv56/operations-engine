@@ -13,9 +13,7 @@ import {
 } from "@/lib/claims";
 import { Member, memberName } from "@/lib/members";
 
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
+import { btnPrimary as btn, btnQuiet as btnGhost } from "@/components/ui/styles";
 
 export function ClaimRow({
   claim,

@@ -21,9 +21,7 @@ import {
 import { fmtDate } from "@/lib/groundwork";
 import type { QuestionSet } from "@/lib/questions";
 
-const btn =
-  "rounded-[10px] bg-accent px-3 py-1.5 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
+import { btnPrimarySm as btn, btnQuiet as btnGhost } from "@/components/ui/styles";
 
 function Candidate({
   c,

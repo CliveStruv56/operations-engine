@@ -135,7 +135,7 @@ export default function NewProjectForm({
             type="button"
             onClick={addSeed}
             disabled={!taskTitle.trim()}
-            className="text-[11px] font-bold text-accent-deep hover:underline disabled:text-faint"
+            className="text-[11px] font-bold text-electric-blue hover:underline disabled:text-faint"
           >
             Add task
           </button>

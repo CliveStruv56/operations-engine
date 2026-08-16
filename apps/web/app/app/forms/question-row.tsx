@@ -2,8 +2,7 @@
 
 import { Question } from "@/lib/questions";
 
-const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
-const btnGhost = "text-xs text-ink-muted underline hover:text-ink";
+import { btnQuiet as btnGhost, input } from "@/components/ui/styles";
 
 /** The same row, read-only — how a catalogue set's questions are inspected.
  * Catalogue sets are never editable here, but they must never be a black box

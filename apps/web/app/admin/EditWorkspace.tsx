@@ -11,9 +11,7 @@ import {
 } from "@/lib/admin";
 import { Panel } from "@/components/Panel";
 
-const input =
-  "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm placeholder:text-ink-faint focus:outline-none focus:border-edge-strong";
-const label = "data mb-1 block text-ink-muted uppercase";
+import { input, label } from "@/components/ui/styles";
 
 /** `2026-08-14T00:00:00Z` -> `2026-08-14` for <input type="date">. */
 const toDateInput = (iso: string | null) => (iso ? iso.slice(0, 10) : "");

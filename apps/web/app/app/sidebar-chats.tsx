@@ -22,7 +22,7 @@ export const item =
   "group relative flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-[13.5px] font-semibold";
 export const itemRest = "text-subtle hover:bg-ink/[.045]";
 export const itemActive =
-  "bg-card text-ink shadow-card before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded before:bg-accent before:content-['']";
+  "bg-accent-tint text-ink before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded before:bg-electric-blue before:content-['']";
 // Each section starts with a hairline divider so the groups (Development
 // projects / Projects / Shared with team / Recent — …) read as clearly
 // segmented blocks.
@@ -121,7 +121,7 @@ export default function SidebarChats({
             {g.label === chatGroups[0].label && (
               <Link
                 href={href({ project: projectId })}
-                className="ml-auto text-[10.5px] font-bold text-accent-deep hover:underline"
+                className="ml-auto text-[10.5px] font-bold text-electric-blue hover:underline"
                 title="Start a new conversation"
               >
                 + New

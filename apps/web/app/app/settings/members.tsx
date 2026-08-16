@@ -16,9 +16,9 @@ type Invite = {
   email_sent: boolean;
 };
 
-const input = "rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
+// inputInline, not input: the role select lives in a table cell, where a
+// full-width control would stretch across the column.
+import { btnPrimary as btn, inputInline as input } from "@/components/ui/styles";
 
 export default function Members({ tenant }: { tenant: Tenant }) {
   const [members, setMembers] = useState<Member[] | null>(null);
@@ -126,10 +126,18 @@ export default function Members({ tenant }: { tenant: Tenant }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="data border-b border-line text-left text-ink-muted uppercase">
-                <th className="py-2 pr-4">Email</th>
-                <th className="py-2 pr-4">Role</th>
-                <th className="py-2 pr-4">Joined</th>
-                <th className="py-2" />
+                <th scope="col" className="py-2 pr-4">
+                  Email
+                </th>
+                <th scope="col" className="py-2 pr-4">
+                  Role
+                </th>
+                <th scope="col" className="py-2 pr-4">
+                  Joined
+                </th>
+                <th scope="col" className="py-2">
+                  <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">

@@ -171,7 +171,7 @@ export default function ProjectPlanPanel({
           <button
             type="button"
             onClick={() => setExpanded((v) => !v)}
-            className="ml-auto text-xs font-bold text-accent-deep hover:underline"
+            className="ml-auto text-xs font-bold text-electric-blue hover:underline"
           >
             {expanded ? "Hide" : "Edit"}
           </button>

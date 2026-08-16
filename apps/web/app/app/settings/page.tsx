@@ -9,10 +9,7 @@ import { Spinner } from "@/components/activity";
 import { useWorkspace, type Tenant } from "../workspace";
 import Members from "./members";
 
-const card = "rounded-card border border-edge bg-card p-5 shadow-card";
-const input = "w-full rounded-[10px] border border-line bg-surface px-3 py-2 text-sm";
-const btn =
-  "rounded-[10px] bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep disabled:opacity-50";
+import { btnPrimary as btn, cardPadded as card, input } from "@/components/ui/styles";
 
 function WorkspaceSection({ tenant }: { tenant: Tenant }) {
   const ws = useWorkspace();
@@ -278,7 +275,7 @@ function BrandSection({ tenant }: { tenant: Tenant }) {
         </p>
         <div className="mt-2 flex items-center gap-3">
           {typeof tenant.brand?.slides_template_key === "string" && (
-            <span className="stamp bg-accent-soft text-accent-deep">custom template active</span>
+            <span className="stamp bg-accent-soft text-electric-blue">custom template active</span>
           )}
           <input
             ref={templateRef}

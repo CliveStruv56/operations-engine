@@ -158,7 +158,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 className={`ml-auto rounded-full px-1.5 py-px text-[10.5px] font-bold ${
                   claims && claims.needs_attention > 0
                     ? "bg-warn-soft text-warn"
-                    : "bg-accent-soft text-accent-deep"
+                    : "bg-accent-soft text-electric-blue"
                 }`}
               >
                 {claimsCount}
@@ -196,7 +196,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 <Link
                   href="/app/projects"
                   className={`ml-auto text-[10.5px] font-bold ${
-                    onDevPages ? "text-accent-deep" : "text-faint hover:text-accent-deep"
+                    onDevPages ? "text-electric-blue" : "text-faint hover:text-electric-blue"
                   }`}
                 >
                   All ↗
@@ -225,7 +225,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                     href={`/app/projects/${p.id}`}
                     title="Open project room"
                     aria-label={`Open ${p.name} project room`}
-                    className="absolute top-1/2 right-2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-card text-faint hover:bg-card hover:text-accent-deep"
+                    className="absolute top-1/2 right-2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-card text-faint hover:bg-card hover:text-electric-blue"
                   >
                     ↗
                   </Link>
@@ -241,7 +241,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 e.stopPropagation();
                 setAddingProject(true);
               }}
-              className="ml-auto text-[10.5px] font-bold text-accent-deep hover:underline"
+              className="ml-auto text-[10.5px] font-bold text-electric-blue hover:underline"
             >
               + New
             </button>
@@ -289,7 +289,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           <div className="mx-3.5 mb-2 rounded-xl border border-edge bg-card p-3.5">
             <div className="flex justify-between text-[12.5px] font-bold">
               Trial — {trialDaysLeft} day{trialDaysLeft === 1 ? "" : "s"} left
-              <span className="text-accent-deep">{tenant.seats} seats</span>
+              <span className="text-electric-blue">{tenant.seats} seats</span>
             </div>
             <div className="mt-2 h-[5px] overflow-hidden rounded-full bg-sidebar">
               <div
@@ -305,7 +305,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
 
         <div className="border-t border-edge px-5 py-3.5">
           <div className="flex items-center gap-2.5">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-[13px] font-bold text-[#F8EFE2]">
+            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-[13px] font-bold text-on-ink">
               {(ws.email ?? "?").slice(0, 1).toUpperCase()}
             </span>
             <span className="min-w-0">
@@ -321,7 +321,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               onClick={onClose}
               className={`text-xs font-semibold ${
                 pathname.startsWith("/app/usage")
-                  ? "text-accent-deep"
+                  ? "text-electric-blue"
                   : "text-subtle hover:text-ink"
               }`}
             >
@@ -333,7 +333,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 onClick={onClose}
                 className={`text-xs font-semibold ${
                   pathname.startsWith("/app/settings")
-                    ? "text-accent-deep"
+                    ? "text-electric-blue"
                     : "text-subtle hover:text-ink"
                 }`}
               >

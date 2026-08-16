@@ -5,6 +5,7 @@ import { ApiError } from "@/lib/api";
 import { Company, Contact, ContactForm, crm } from "@/lib/crm";
 import { btn, btnGhost, input, label } from "./ui";
 import { Panel } from "@/components/Panel";
+import { useAsk } from "@/components/ui";
 
 const empty: ContactForm = {
   name: "",
@@ -43,6 +44,7 @@ export function ContactEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const ask = useAsk();
   const [form, setForm] = useState<ContactForm>(contact ? toForm(contact) : empty);
   const [tagsText, setTagsText] = useState(contact?.tags.join(", ") ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +76,14 @@ export function ContactEditor({
   }
 
   async function remove() {
-    if (!contact || !window.confirm(`Delete ${contact.name} from contacts?`)) return;
+    if (!contact) return;
+    const confirmed = await ask.confirm({
+      title: `Delete ${contact.name}`,
+      body: "They come out of the contact book for everyone in the workspace. Anything already drafted or sent stays as it is.",
+      confirmLabel: "Delete contact",
+      tone: "danger",
+    });
+    if (!confirmed) return;
     await crm(`/contacts/${contact.id}`, { method: "DELETE" });
     onSaved();
   }

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import CommandPalette from "./command-palette";
 import Sidebar from "./sidebar";
 import { ToastProvider } from "@/components/toast";
+import { DialogProvider } from "@/components/ui";
 import { useWorkspace, WorkspaceProvider } from "./workspace";
 
 function Onboarding() {
@@ -21,7 +22,7 @@ function Onboarding() {
         )}
 
         {ws.memberships && ws.memberships.length > 0 ? (
-          <section className="rounded-card border border-edge bg-surface p-6 shadow-sm">
+          <section className="rounded-card border border-edge bg-surface p-6 shadow-card">
             <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Choose a workspace</h1>
             <div className="mt-4 divide-y divide-line border-y border-line">
               {ws.memberships.map((m) => (
@@ -37,7 +38,7 @@ function Onboarding() {
             </div>
           </section>
         ) : (
-          <section className="rounded-card border border-edge bg-surface p-6 shadow-sm">
+          <section className="rounded-card border border-edge bg-surface p-6 shadow-card">
             <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Set up your workspace</h1>
             <p className="mt-1 text-sm text-ink-muted">
               Your team&apos;s documents and conversations live here.
@@ -79,7 +80,7 @@ function Suspended() {
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
         <p className="data mb-2 text-ink-faint uppercase">Flowgrid</p>
-        <section className="rounded-card border border-edge bg-surface p-6 shadow-sm">
+        <section className="rounded-card border border-edge bg-surface p-6 shadow-card">
           <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">
             This workspace is suspended
           </h1>
@@ -131,6 +132,15 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
   // only in the logo area and exported artefacts (slides, health cards).
   return (
     <div className="flex h-screen flex-col md:flex-row">
+      {/* The sidebar is a long run of links — module nav, then every project,
+          then every recent chat. Without this, reaching the page itself by
+          keyboard means tabbing past all of it on every navigation. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[70] focus:rounded-btn focus:bg-card focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-electric-blue focus:shadow-card"
+      >
+        Skip to content
+      </a>
       <header className="flex shrink-0 items-center gap-3 border-b border-edge bg-sidebar px-4 py-2.5 md:hidden">
         <button
           onClick={() => setNavOpen(true)}
@@ -143,7 +153,11 @@ function WorkspaceShell({ children }: { children: React.ReactNode }) {
       </header>
       <Sidebar open={navOpen} onClose={() => setNavOpen(false)} />
       <CommandPalette />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-canvas">
+      <div
+        id="main-content"
+        tabIndex={-1}
+        className="flex min-h-0 min-w-0 flex-1 flex-col bg-canvas focus:outline-none"
+      >
         {ws.error && (
           <p className="border-b border-line bg-danger-soft px-6 py-2 text-sm text-danger">
             {ws.error}
@@ -159,9 +173,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <WorkspaceProvider>
       <ToastProvider>
-        <Suspense fallback={null}>
-          <WorkspaceShell>{children}</WorkspaceShell>
-        </Suspense>
+        <DialogProvider>
+          <Suspense fallback={null}>
+            <WorkspaceShell>{children}</WorkspaceShell>
+          </Suspense>
+        </DialogProvider>
       </ToastProvider>
     </WorkspaceProvider>
   );
