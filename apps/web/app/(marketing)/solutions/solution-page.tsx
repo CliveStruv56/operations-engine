@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ctaGhost, DemoCta, Kicker, Section, TagPill } from "../ui";
+import { WorkflowDiagram, type WorkflowDiagramContent } from "../workflow-diagram";
 
 /* Shared decision-path template for solution pages (PRD §6). Content is a
  * typed object so availability and claims stay in one reviewable place. */
@@ -8,7 +9,7 @@ export interface SolutionContent {
   kicker: string;
   headline: string;
   workaround: string;
-  flow: string[];
+  diagram: WorkflowDiagramContent;
   outcomes: { title: string; body: string; evidence: string }[];
   workspace: string[];
   deliverables: string[];
@@ -40,20 +41,7 @@ export function SolutionPage({ content }: { content: SolutionContent }) {
 
       {/* End-to-end workflow */}
       <Section kicker="The workflow" title="One record, end to end">
-        <ol className="flex flex-wrap items-center gap-y-3">
-          {content.flow.map((step, i) => (
-            <li key={step} className="flex items-center">
-              <span className="rounded-full border border-deep-violet px-4 py-2 text-[14px] font-medium text-deep-violet">
-                {step}
-              </span>
-              {i < content.flow.length - 1 && (
-                <span aria-hidden className="px-2 text-[14px] text-faint">
-                  →
-                </span>
-              )}
-            </li>
-          ))}
-        </ol>
+        <WorkflowDiagram content={content.diagram} />
       </Section>
 
       {/* Outcomes */}

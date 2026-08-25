@@ -3,6 +3,7 @@ import Link from "next/link";
 import { HeroVisual } from "./hero-visual";
 import { PilotForm } from "./pilot-form";
 import { ctaGhost, ctaOutline, DemoCta, Kicker, Section, StatusCard } from "./ui";
+import { WorkflowDiagram, type WorkflowDiagramContent } from "./workflow-diagram";
 
 export const metadata: Metadata = {
   title: "Flowgrid OS — Turn what your organisation knows into work you can trust",
@@ -43,6 +44,36 @@ const STEPS = [
     body: "Draft from evidence, check every citation against its source, and export a deliverable your client or funder can actually use.",
   },
 ];
+
+const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
+  ariaLabel:
+    "Documents from the vault and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and every output cites its source for you to review before anything leaves.",
+  vault: {
+    caption: "policies · minutes · reports",
+    arrowLabel: "cited by page",
+  },
+  facts: {
+    caption: "reviewed once",
+    arrowLabel: "reused in every draft",
+  },
+  record: {
+    title: "One structured workspace",
+    gatesDone: 3,
+    gatesTotal: 5,
+    spineLabel: "projects, plans & registers",
+    chips: ["projects", "claims", "registers"],
+    footnote: "the workspace remembers",
+  },
+  outputs: [
+    { label: "Cited answer", violet: true },
+    { label: "Client report" },
+    { label: "Funding bid" },
+    { label: "Branded PDF / slides" },
+  ],
+  outLabel: "produced and reviewed",
+  returnLabel:
+    "every output cites its source — you review before anything leaves",
+};
 
 const PROOF = [
   {
@@ -121,6 +152,9 @@ export default function HomePage() {
             </li>
           ))}
         </ol>
+        <div className="mt-12">
+          <WorkflowDiagram content={WORKSPACE_DIAGRAM} />
+        </div>
       </Section>
 
       {/* Product proof */}

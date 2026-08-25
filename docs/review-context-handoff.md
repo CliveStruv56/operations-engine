@@ -1,7 +1,7 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-16 (**§6k–§6q are the latest state**; §1–6j are
+**Handoff date:** 2026-08-25 (**§6k–§6r are the latest state**; §1–6j are
 history, oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
@@ -1569,6 +1569,41 @@ sub-threshold notes, deliberately not fixed: the honeypot answers **202 vs
 200** for a real success (a bot can detect it was flagged — accepted), and
 validation errors reveal field names (standard). The full-email lead log is
 the documented decision above, not a finding.
+
+---
+
+## 6r. Marketing-site design pass — the workflow, actually drawn (25 August 2026)
+
+A live design review of the marketing site (screenshots of the Vercel
+production deployment) concluded: typography/copy/colour discipline strong,
+but nothing on the site is *drawn* — after the hero mock every section is
+text in identically-bordered cards, and the "workflow diagram" was a chain
+of pills. Full review with drawn demonstrations published as a private
+artifact (claude.ai/code/artifact/7876e216-d416-407e-ac65-040775303401).
+The agreed plan, in order: (1) real workflow diagrams, (2) spot-illustration
+set, (3) section-rhythm pass + fill the dead CTA/footer columns, (4) more UI
+vignettes, (5) one CSS-only scroll reveal, (6) real screenshots (blocked on
+founder, PRD §13).
+
+**Item 1 is built.** `app/(marketing)/workflow-diagram.tsx` — a static-SVG
+server component (zero JS): evidence flows in from the vault + confirmed
+facts, one amber-washed live record holds it (stage-gate spine + register
+chips), deliverables fan out right, and a dashed deep-violet line loops back
+("every figure cites its source"). Colour rules: amber holds the record,
+violet marks trust surfaces, ink for what the customer already has. Content
+is a typed `WorkflowDiagramContent` per page (same reviewable-claims pattern
+as `SolutionContent`, whose `flow: string[]` pill chain it **replaces**).
+Three configs: Groundwork, Grantwork, and a core-platform variant under the
+homepage How-it-works cards. `role="img"` + full-sentence `aria-label` each.
+
+Notes for future passes: the amber wash `#f2e9dc` is deliberately a
+component-local constant, NOT a globals.css token (the pastel stamps must
+not gain a decorative sibling); the violet wash reuses `--accent-tint`;
+labels are position-tuned — captions must fit ~150 viewBox px and the
+grantwork arrow label was shortened to "reused in every bid" after a live
+collision check. Verified: lint, typecheck, 103 unit tests, build (all
+pages still static), 5/5 Playwright e2e, and screenshots of all three
+diagrams from a local `next start`. Not yet deployed to Vercel.
 
 ---
 

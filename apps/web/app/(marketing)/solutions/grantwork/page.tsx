@@ -13,12 +13,35 @@ const content: SolutionContent = {
   headline: "Carry evidence from application to monitoring return.",
   workaround:
     "The facts a funder asks for at application time are the same ones they ask for at monitoring time — but most teams reconstruct them twice, in different Word documents, months apart. Grantwork keeps funders, conditions and evidence in one record so nothing is written from scratch twice.",
-  flow: [
-    "Funder / application",
-    "Stages & conditions",
-    "Impact measures & outcomes",
-    "Application or monitoring draft",
-  ],
+  diagram: {
+    ariaLabel:
+      "Documents from the vault and confirmed organisational facts flow into one record per grant, carrying its stages, conditions, deadlines and impact evidence. Application drafts, monitoring returns, paste-ready funder-form answers and editable PowerPoint are assembled out of that record, and every answer cites its evidence — you verify and paste; Flowgrid never submits to a funder.",
+    vault: {
+      caption: "past bids · policies · accounts",
+      arrowLabel: "cited by page",
+    },
+    facts: {
+      caption: "charity no. · safeguarding",
+      arrowLabel: "reused in every bid",
+    },
+    record: {
+      title: "One record per grant",
+      gatesDone: 2,
+      gatesTotal: 5,
+      spineLabel: "stages & conditions",
+      chips: ["conditions", "deadlines", "impact"],
+      footnote: "evidence accumulates all year",
+    },
+    outputs: [
+      { label: "Application draft" },
+      { label: "Monitoring return" },
+      { label: "Editable PowerPoint" },
+      { label: "Funder-form answers", violet: true },
+    ],
+    outLabel: "assembled from the record",
+    returnLabel:
+      "every answer cites its evidence — you verify and paste; Flowgrid never submits",
+  },
   outcomes: [
     {
       title: "Applications answered from confirmed facts",

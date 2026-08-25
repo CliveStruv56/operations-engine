@@ -13,13 +13,35 @@ const content: SolutionContent = {
   headline: "Keep the project record current. Let the client report follow.",
   workaround:
     "Most development consultants rebuild the same picture every month: trawling emails for the latest budget, re-keying risks into Word, and writing funder updates from memory. Groundwork keeps one live record per project, so reporting becomes an export, not an evening.",
-  flow: [
-    "Portfolio",
-    "Five stage gates",
-    "Budget · funding · risks",
-    "Monthly report / feasibility / bid",
-    "Health card",
-  ],
+  diagram: {
+    ariaLabel:
+      "Documents from the vault and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every figure cites its source for you to review before anything is sent.",
+    vault: {
+      caption: "surveys · minutes · studies",
+      arrowLabel: "cited by page",
+    },
+    facts: {
+      caption: "charity no. · policies",
+      arrowLabel: "reused in every draft",
+    },
+    record: {
+      title: "One live project record",
+      gatesDone: 3,
+      gatesTotal: 5,
+      spineLabel: "five stage gates",
+      chips: ["budget", "funding", "risks"],
+      footnote: "recorded once, cited everywhere",
+    },
+    outputs: [
+      { label: "Monthly client report" },
+      { label: "Funding bid" },
+      { label: "Feasibility study" },
+      { label: "Health card (PDF)", violet: true },
+    ],
+    outLabel: "drafted from live records",
+    returnLabel:
+      "every figure cites its source — you review before anything is sent",
+  },
   outcomes: [
     {
       title: "Projects move through visible stage gates",
