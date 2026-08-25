@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { HeroVisual } from "./hero-visual";
 import { PilotForm } from "./pilot-form";
+import { Spot, type SpotName } from "./spot-icons";
 import { ctaGhost, ctaOutline, DemoCta, Kicker, Section, StatusCard } from "./ui";
 import { WorkflowDiagram, type WorkflowDiagramContent } from "./workflow-diagram";
 
@@ -27,21 +28,24 @@ const BEFORE_AFTER = [
   },
 ];
 
-const STEPS = [
+const STEPS: { label: string; title: string; body: string; spot: SpotName }[] = [
   {
     label: "Step 1 · The evidence",
     title: "Bring the evidence together",
     body: "Add documents and connect the facts your organisation relies on. Everything stays inside your own workspace, ready to be found again.",
+    spot: "evidence",
   },
   {
     label: "Step 2 · The structure",
     title: "Keep work structured",
     body: "Use projects, plans and specialist registers instead of rebuilding context in every chat. The workspace remembers, so your team doesn't have to.",
+    spot: "structure",
   },
   {
     label: "Step 3 · The output",
     title: "Produce and review",
     body: "Draft from evidence, check every citation against its source, and export a deliverable your client or funder can actually use.",
+    spot: "output",
   },
 ];
 
@@ -75,22 +79,26 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
     "every output cites its source — you review before anything leaves",
 };
 
-const PROOF = [
+const PROOF: { title: string; body: string; spot: SpotName }[] = [
   {
     title: "Ask the vault; open the cited page",
     body: "Answers link back to the exact document and page they came from — and say plainly when the vault has nothing.",
+    spot: "citation",
   },
   {
     title: "Confirm a claim once; reuse it everywhere",
     body: "Charity numbers, policies, insurance dates: review a fact once and every draft draws on the confirmed version.",
+    spot: "claim",
   },
   {
     title: "Turn a project into a plan with owned tasks",
     body: "Projects carry stages, budgets and risks, so plans come from live records rather than a blank page.",
+    spot: "plan",
   },
   {
     title: "Export finished, branded outputs",
     body: "A conversation becomes a PDF; a funder response becomes editable PowerPoint — in your organisation's own branding.",
+    spot: "export",
   },
 ];
 
@@ -142,6 +150,7 @@ export default function HomePage() {
         <ol className="grid gap-6 md:grid-cols-3">
           {STEPS.map((step) => (
             <li key={step.label} className="rounded-lg border border-bone p-6">
+              <Spot name={step.spot} className="mb-4 h-auto w-full max-w-[220px]" />
               <Kicker>{step.label}</Kicker>
               <h3 className="mt-3 text-[22px] font-medium leading-[1.32] tracking-[-0.22px] text-ink">
                 {step.title}
@@ -162,6 +171,7 @@ export default function HomePage() {
         <div className="grid gap-6 md:grid-cols-2">
           {PROOF.map((item) => (
             <div key={item.title} className="rounded-lg border border-bone p-6">
+              <Spot name={item.spot} className="mb-4 h-auto w-full max-w-[220px]" />
               <h3 className="text-[22px] font-medium leading-[1.32] tracking-[-0.22px] text-ink">
                 {item.title}
               </h3>

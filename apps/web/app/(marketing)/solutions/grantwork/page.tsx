@@ -48,18 +48,21 @@ const content: SolutionContent = {
       body: "Charity numbers, policies, safeguarding statements and track record come from your reviewed claims register — consistent in every application.",
       evidence:
         "Funder-form transcription and drafting that pulls from claims and the vault, with citations to check.",
+      spot: "claim",
     },
     {
       title: "Award conditions stop being surprises",
       body: "Conditions and reporting deadlines are recorded against each award the day it lands, not rediscovered in a panic before a return is due.",
       evidence:
         "Per-grant stages and conditions visible across the whole portfolio.",
+      spot: "calendar",
     },
     {
       title: "Monitoring returns from live impact evidence",
       body: "Outcomes and impact measures accumulate against the grant through the year, so the return is assembled from records rather than memory.",
       evidence:
         "Impact measures per grant, drawn into monitoring drafts you review before anything leaves the building.",
+      spot: "impact",
     },
   ],
   workspace: [

@@ -1605,6 +1605,21 @@ collision check. Verified: lint, typecheck, 103 unit tests, build (all
 pages still static), 5/5 Playwright e2e, and screenshots of all three
 diagrams from a local `next start`. Not yet deployed to Vercel.
 
+**Item 2 is built** (same day). `app/(marketing)/spot-icons.tsx` — eleven
+named spot illustrations on a 200×120 viewBox, one vocabulary (1.5px ink
+line, `--faint` back layers, pill corners, the same amber/violet meaning as
+the diagram), rendered `aria-hidden` because each sits beside copy that says
+the same thing (PRD §8). Wired via a `spot` field on the homepage STEPS
+(evidence/structure/output) and PROOF arrays (citation/claim/plan/export)
+and on `SolutionContent.outcomes` — Groundwork gates/registers/output,
+Grantwork claim/calendar/impact. All checks green again (lint, typecheck,
+103 unit tests, static build) and every spot screenshot-verified on a local
+`next start`. Remaining from the plan: (3) section-rhythm pass + dead
+columns, (4) more UI vignettes, (5) scroll reveal, (6) screenshots
+(founder). Chrome-tools note: repeated CDP screenshots against localhost
+intermittently return blank/timeout — a small scroll nudge forces a repaint;
+it is a capture artifact, not a page bug.
+
 ---
 
 ## 7. Read first in a new session

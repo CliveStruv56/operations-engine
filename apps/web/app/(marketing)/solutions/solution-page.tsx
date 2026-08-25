@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Spot, type SpotName } from "../spot-icons";
 import { ctaGhost, DemoCta, Kicker, Section, TagPill } from "../ui";
 import { WorkflowDiagram, type WorkflowDiagramContent } from "../workflow-diagram";
 
@@ -10,7 +11,7 @@ export interface SolutionContent {
   headline: string;
   workaround: string;
   diagram: WorkflowDiagramContent;
-  outcomes: { title: string; body: string; evidence: string }[];
+  outcomes: { title: string; body: string; evidence: string; spot: SpotName }[];
   workspace: string[];
   deliverables: string[];
   trust: string;
@@ -49,6 +50,7 @@ export function SolutionPage({ content }: { content: SolutionContent }) {
         <div className="grid gap-6 lg:grid-cols-3">
           {content.outcomes.map((o, i) => (
             <div key={o.title} className="rounded-lg border border-bone p-6">
+              <Spot name={o.spot} className="mb-4 h-auto w-full max-w-[220px]" />
               <Kicker>{`Outcome ${i + 1}`}</Kicker>
               <h3 className="mt-3 text-[22px] font-medium leading-[1.32] tracking-[-0.22px] text-ink">
                 {o.title}

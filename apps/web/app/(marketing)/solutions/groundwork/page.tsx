@@ -48,18 +48,21 @@ const content: SolutionContent = {
       body: "Every project sits at a named stage with what's needed to progress, so a portfolio review takes minutes and nothing stalls quietly.",
       evidence:
         "A project page with stage tracking, and a portfolio view across every engagement.",
+      spot: "gates",
     },
     {
       title: "Budget, funding and risks live with the project",
       body: "Figures and risks are recorded once, against the project — not scattered across spreadsheets that disagree with each other.",
       evidence:
         "Budget, funding and risk tabs on each project, drawn on by every draft.",
+      spot: "registers",
     },
     {
       title: "Reports draw from the live record",
       body: "Monthly reports, feasibility studies and funding bids are drafted from the current project data, with citations back to your source documents.",
       evidence:
         "Drafts assembled from project records and the vault, exported in your branding.",
+      spot: "output",
     },
   ],
   workspace: [
