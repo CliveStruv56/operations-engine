@@ -1632,6 +1632,19 @@ shared template. The footer's empty ground got a quiet stage-gate motif
 static build, 5/5 e2e — the pilot form moved inside a grid and the specs
 still pass) and every changed section screenshot-verified locally.
 
+**Item 4 is built** (same day). `vignettes.tsx` — three composed
+representative product views extending the hero-visual technique (shared
+`Frame`: 24px stone-bordered card, the "example data" label, sr-only
+figcaption; never customer data). `ClaimsRegisterVignette` fills the
+Platform hero's right column (now a 7/6 grid like the homepage hero);
+`HealthCardVignette` and `ReportingCalendarVignette` render in the solution
+pages' deliverables column via a required `vignette` key on
+`SolutionContent`. Status colours stay honest: grounded green = Confirmed,
+`--ok` = the RAG dot, pastel stamps in their fixed taxonomy (lavender
+Drafting, sage Upcoming, rose Sent), violet = Proposed. Funder names in the
+calendar are deliberately generic ("County foundation"), not real funders.
+All checks green; all three vignettes screenshot-verified locally.
+
 ---
 
 ## 7. Read first in a new session

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PilotShapePanel } from "../cta-panels";
 import { Spot, type SpotName } from "../spot-icons";
 import { ctaGhost, DemoCta, Kicker, Section, TagPill } from "../ui";
+import { HealthCardVignette, ReportingCalendarVignette } from "../vignettes";
 import { WorkflowDiagram, type WorkflowDiagramContent } from "../workflow-diagram";
 
 /* Shared decision-path template for solution pages (PRD §6). Content is a
@@ -15,6 +16,8 @@ export interface SolutionContent {
   outcomes: { title: string; body: string; evidence: string; spot: SpotName }[];
   workspace: string[];
   deliverables: string[];
+  /** Representative product view shown with the deliverables. */
+  vignette: "health-card" | "reporting-calendar";
   trust: string;
   fit: string[];
   notFit: string[];
@@ -92,6 +95,13 @@ export function SolutionPage({ content }: { content: SolutionContent }) {
               {content.deliverables.map((d) => (
                 <TagPill key={d}>{d}</TagPill>
               ))}
+            </div>
+            <div className="mt-8">
+              {content.vignette === "health-card" ? (
+                <HealthCardVignette />
+              ) : (
+                <ReportingCalendarVignette />
+              )}
             </div>
             <p className="mt-8 rounded-lg border border-bone bg-canvas p-5 text-[15px] leading-[1.5] text-slate">
               {content.trust}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ctaGhost, DemoCta, Kicker, Section, TagPill } from "../ui";
+import { ClaimsRegisterVignette } from "../vignettes";
 
 export const metadata: Metadata = {
   title: "Platform — vault, claims, projects and outputs",
@@ -46,23 +47,26 @@ const GOVERNANCE = [
 export default function PlatformPage() {
   return (
     <>
-      <section className="mx-auto w-full max-w-[1200px] px-6 pb-4 pt-14 lg:pt-20">
-        <Kicker>Platform</Kicker>
-        <h1 className="mt-4 max-w-4xl text-[40px] font-light leading-[1.15] tracking-[-0.92px] text-ink md:text-[56px]">
-          A workspace built on evidence, not vibes.
-        </h1>
-        <p className="mt-6 max-w-2xl text-[18px] leading-[1.42] tracking-[-0.14px] text-slate">
-          Four pieces work together: a vault of cited knowledge, a register of
-          confirmed facts, structured projects and finished outputs. Each one
-          makes the others more useful — that&rsquo;s the point of a platform
-          rather than a pile of tools.
-        </p>
-        <div className="mt-8 flex flex-wrap items-center gap-5">
-          <DemoCta />
-          <Link href="/security-and-data" className={ctaGhost}>
-            Security &amp; data detail
-          </Link>
+      <section className="mx-auto grid w-full max-w-[1200px] gap-12 px-6 pb-4 pt-14 lg:grid-cols-[7fr_6fr] lg:items-center lg:pt-20">
+        <div>
+          <Kicker>Platform</Kicker>
+          <h1 className="mt-4 max-w-4xl text-[40px] font-light leading-[1.15] tracking-[-0.92px] text-ink md:text-[56px]">
+            A workspace built on evidence, not vibes.
+          </h1>
+          <p className="mt-6 max-w-2xl text-[18px] leading-[1.42] tracking-[-0.14px] text-slate">
+            Four pieces work together: a vault of cited knowledge, a register of
+            confirmed facts, structured projects and finished outputs. Each one
+            makes the others more useful — that&rsquo;s the point of a platform
+            rather than a pile of tools.
+          </p>
+          <div className="mt-8 flex flex-wrap items-center gap-5">
+            <DemoCta />
+            <Link href="/security-and-data" className={ctaGhost}>
+              Security &amp; data detail
+            </Link>
+          </div>
         </div>
+        <ClaimsRegisterVignette />
       </section>
 
       <Section>

@@ -79,6 +79,7 @@ const content: SolutionContent = {
     "Editable PowerPoint",
     "PDF report",
   ],
+  vignette: "reporting-calendar",
   trust:
     "Drafting is transcribe, verify, draft, paste: Flowgrid drafts from cited evidence, you verify and paste into the funder's own portal. Flowgrid never submits to a funder, and your data is isolated from every other customer's at the database level.",
   fit: [

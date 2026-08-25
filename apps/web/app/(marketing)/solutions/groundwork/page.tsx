@@ -79,6 +79,7 @@ const content: SolutionContent = {
     "Project health card (PDF)",
     "Presentation slides",
   ],
+  vignette: "health-card",
   trust:
     "Every draft cites the document and page it drew from, and your workspace is isolated from every other customer's at the database level. You review and send everything — Flowgrid never submits anything to a funder on your behalf.",
   fit: [
