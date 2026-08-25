@@ -1656,9 +1656,16 @@ the label) — zero JS, double-gated behind
 `@supports (animation-timeline: view())`, so unsupporting browsers and
 reduced-motion users get the static diagram. Verified in Chrome: mid-scroll
 the line is partially drawn and the label absent; fully in view, complete.
-The five marketing commits (2ae261a, 5562702, 76318a9, 24fd265, + this one)
-are local-only — deploy with `pnpm dlx vercel@latest --prod` from the repo
-root (user-run).
+**All five commits deployed to Vercel production 25 Aug 2026**
+(`dpl_EmCw4bepRmiob2xnV41ajG2XiWJB`, user-run
+`pnpm dlx vercel@latest --prod` after a `vercel login` refresh — the CLI
+token had expired). The deployment aliased to
+**https://www.flowgridos.co.uk**: the domain cutover has happened, so the
+canonical/sitemap/og:image URLs (always absolute against flowgridos.co.uk)
+now resolve for real. New-design elements verified live on `/` and
+`/solutions/groundwork`. Still to do post-deploy: re-run Lighthouse + axe
+against production (last run predates the design pass), and `git push` —
+the five commits are on local `main` only.
 
 ---
 
