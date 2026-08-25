@@ -1678,7 +1678,20 @@ Windows exits 1 *after* the JSON is written. Axe has no repo install: fetch
 axe.min.js to the scratchpad and inject it via the repo's Playwright with
 `createRequire` anchored at `apps/web/package.json`.
 
-Still to do: `git push` — the design-pass commits are on local `main` only.
+All design-pass commits pushed to origin 25 Aug.
+
+**Domain go-live "Part B" is now half done** (25 Aug, prompted by a
+failed-to-fetch on `/admin` from the new domain): the Railway api's
+`CORS_ORIGINS` now lists the old Vercel origin **plus**
+`https://www.flowgridos.co.uk` and `https://flowgridos.co.uk` (set via the
+Railway MCP; values are name-redacted over that connection, so the previous
+list was reconstructed by probing OPTIONS preflights — it was exactly the
+one Vercel origin). Verified: all three origins preflight 200, api healthy
+after the auto-redeploy. **Still owed by the founder:** the Supabase auth
+redirect allow-list (dashboard → Authentication → URL Configuration) and
+the R2 bucket CORS rules both still lack the flowgridos.co.uk origins —
+login/invite flows and browser-direct uploads from the new domain may fail
+until they're added.
 
 ---
 
