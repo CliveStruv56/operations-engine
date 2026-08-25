@@ -1645,6 +1645,21 @@ Drafting, sage Upcoming, rose Sent), violet = Proposed. Funder names in the
 calendar are deliberately generic ("County foundation"), not real funders.
 All checks green; all three vignettes screenshot-verified locally.
 
+**Item 5 is built** (same day) — the review plan's last code item, so the
+whole marketing design pass (items 1–5) is complete; only item 6 (real
+screenshots) remains, owed by the founder. The workflow diagram's citation
+loop now draws in as the diagram scrolls into view: a `<style>` block in
+`workflow-diagram.tsx` uses **CSS scroll-driven animation** (named
+`view-timeline` on the svg, `clip-path` reveal on the path, opacity fade on
+the label) — zero JS, double-gated behind
+`@media (prefers-reduced-motion: no-preference)` and
+`@supports (animation-timeline: view())`, so unsupporting browsers and
+reduced-motion users get the static diagram. Verified in Chrome: mid-scroll
+the line is partially drawn and the label absent; fully in view, complete.
+The five marketing commits (2ae261a, 5562702, 76318a9, 24fd265, + this one)
+are local-only — deploy with `pnpm dlx vercel@latest --prod` from the repo
+root (user-run).
+
 ---
 
 ## 7. Read first in a new session

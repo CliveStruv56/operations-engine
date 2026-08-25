@@ -79,11 +79,40 @@ export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }
 
   return (
     <div className="overflow-x-auto">
+      {/* PRD §9: motion is functional and optional. The citation loop — the
+          one mark carrying the trust claim — draws in as the diagram scrolls
+          into view. Pure CSS scroll-driven animation: no JS, static in
+          browsers without animation-timeline, static under reduced motion. */}
+      <style>{`
+        @keyframes wfd-draw {
+          from { clip-path: inset(-12% -3% -12% 101%); }
+          to { clip-path: inset(-12% -3% -12% -3%); }
+        }
+        @keyframes wfd-fade {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @media (prefers-reduced-motion: no-preference) {
+          @supports (animation-timeline: view()) {
+            svg.wfd { view-timeline-name: --wfd; }
+            .wfd-draw {
+              animation: wfd-draw 1s ease-out both;
+              animation-timeline: --wfd;
+              animation-range: entry 30% contain 45%;
+            }
+            .wfd-fade {
+              animation: wfd-fade 1s ease-out both;
+              animation-timeline: --wfd;
+              animation-range: entry 60% contain 60%;
+            }
+          }
+        }
+      `}</style>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         role="img"
         aria-label={content.ariaLabel}
-        className="h-auto w-full min-w-[760px]"
+        className="wfd h-auto w-full min-w-[760px]"
       >
         <defs>
           <marker
@@ -248,6 +277,7 @@ export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }
 
         {/* Citations resolve back to source — the trust loop */}
         <path
+          className="wfd-draw"
           d={`M 745 ${ys[ys.length - 1] + OUT_H + 12} C 500 330, 220 306, 121 240`}
           fill="none"
           stroke={VIOLET}
@@ -255,7 +285,14 @@ export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }
           strokeDasharray="4 4"
           markerEnd="url(#wfd-arrow-violet)"
         />
-        <text x="430" y="328" textAnchor="middle" fontSize="11" fill={VIOLET}>
+        <text
+          className="wfd-fade"
+          x="430"
+          y="328"
+          textAnchor="middle"
+          fontSize="11"
+          fill={VIOLET}
+        >
           {content.returnLabel}
         </text>
       </svg>
