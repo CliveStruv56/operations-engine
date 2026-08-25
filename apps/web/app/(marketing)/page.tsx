@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { DemoAgendaPanel } from "./cta-panels";
 import { HeroVisual } from "./hero-visual";
 import { PilotForm } from "./pilot-form";
 import { Spot, type SpotName } from "./spot-icons";
@@ -166,22 +167,58 @@ export default function HomePage() {
         </div>
       </Section>
 
-      {/* Product proof */}
-      <Section kicker="Proof" title="What that looks like on a normal working day">
-        <div className="grid gap-6 md:grid-cols-2">
-          {PROOF.map((item) => (
-            <div key={item.title} className="rounded-lg border border-bone p-6">
-              <Spot name={item.spot} className="mb-4 h-auto w-full max-w-[220px]" />
-              <h3 className="text-[22px] font-medium leading-[1.32] tracking-[-0.22px] text-ink">
-                {item.title}
-              </h3>
-              <p className="mt-3 text-[16px] leading-[1.45] text-slate">
-                {item.body}
-              </p>
+      {/* Product proof — the page's one warm band (amber wash, marketing-only:
+          see workflow-diagram.tsx for why it isn't a globals.css token) */}
+      <section className="border-y border-bone bg-[#f2e9dc]">
+        <div className="mx-auto w-full max-w-[1200px] px-6 py-16">
+          <Kicker>Proof</Kicker>
+          <h2 className="mt-3 max-w-3xl text-[29px] font-normal leading-[1.3] tracking-[-0.32px] text-ink md:text-[40px] md:leading-[1.22] md:tracking-[-0.48px]">
+            What that looks like on a normal working day
+          </h2>
+          <div className="mt-10 grid gap-6 md:grid-cols-2">
+            {PROOF.map((item) => (
+              <div key={item.title} className="rounded-lg border border-bone bg-canvas p-6">
+                <Spot name={item.spot} className="mb-4 h-auto w-full max-w-[220px]" />
+                <h3 className="text-[22px] font-medium leading-[1.32] tracking-[-0.22px] text-ink">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-[16px] leading-[1.45] text-slate">
+                  {item.body}
+                </p>
+              </div>
+            ))}
+          </div>
+          <dl className="mt-12 grid gap-8 border-t border-bone pt-10 sm:grid-cols-3">
+            <div>
+              <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
+                ≈24
+              </dd>
+              <dt className="mt-2 max-w-[36ch] text-[14px] leading-[1.5] text-slate">
+                facts imported from one charity number, each with its public
+                source
+              </dt>
             </div>
-          ))}
+            <div>
+              <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
+                5
+              </dd>
+              <dt className="mt-2 max-w-[36ch] text-[14px] leading-[1.5] text-slate">
+                stage gates carrying every development project from idea to
+                delivery
+              </dt>
+            </div>
+            <div>
+              <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
+                0
+              </dd>
+              <dt className="mt-2 max-w-[36ch] text-[14px] leading-[1.5] text-slate">
+                documents Flowgrid sends on your behalf — you review and send
+                everything
+              </dt>
+            </div>
+          </dl>
         </div>
-      </Section>
+      </section>
 
       {/* Solutions */}
       <Section kicker="Solutions" title="Start from your workflow, not a blank tool">
@@ -262,17 +299,22 @@ export default function HomePage() {
 
       {/* Final CTA */}
       <Section kicker="Next step" title="Bring one repeated workflow. We'll show you how it fits.">
-        <div className="max-w-2xl">
-          <p className="text-[18px] leading-[1.42] text-slate">
-            A 20-minute demo around a report, bid or return you already
-            produce — or join the pilot list and we&rsquo;ll be in touch when
-            a place opens.
-          </p>
-          <div className="mt-8">
-            <DemoCta label="Book a 20-minute demo" />
+        <div className="grid gap-12 lg:grid-cols-[7fr_5fr]">
+          <div>
+            <p className="max-w-2xl text-[18px] leading-[1.42] text-slate">
+              A 20-minute demo around a report, bid or return you already
+              produce — or join the pilot list and we&rsquo;ll be in touch when
+              a place opens.
+            </p>
+            <div className="mt-8">
+              <DemoCta label="Book a 20-minute demo" />
+            </div>
+            <div className="mt-10 border-t border-bone pt-8">
+              <PilotForm />
+            </div>
           </div>
-          <div className="mt-10 border-t border-bone pt-8">
-            <PilotForm />
+          <div>
+            <DemoAgendaPanel />
           </div>
         </div>
       </Section>

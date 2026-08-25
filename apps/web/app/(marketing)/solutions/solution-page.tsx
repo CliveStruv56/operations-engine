@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PilotShapePanel } from "../cta-panels";
 import { Spot, type SpotName } from "../spot-icons";
 import { ctaGhost, DemoCta, Kicker, Section, TagPill } from "../ui";
 import { WorkflowDiagram, type WorkflowDiagramContent } from "../workflow-diagram";
@@ -131,11 +132,16 @@ export function SolutionPage({ content }: { content: SolutionContent }) {
 
       {/* Pilot CTA */}
       <Section kicker="Next step" title={content.ctaHeading}>
-        <div className="flex flex-wrap items-center gap-5">
-          <DemoCta label="Discuss a pilot" />
-          <Link href="/contact" className={ctaGhost}>
-            Ask a question first
-          </Link>
+        <div className="grid gap-12 lg:grid-cols-[7fr_5fr]">
+          <div className="flex flex-wrap items-center gap-5 self-start">
+            <DemoCta label="Discuss a pilot" />
+            <Link href="/contact" className={ctaGhost}>
+              Ask a question first
+            </Link>
+          </div>
+          <div>
+            <PilotShapePanel />
+          </div>
         </div>
       </Section>
     </>

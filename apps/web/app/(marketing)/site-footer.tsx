@@ -39,6 +39,15 @@ export function SiteFooter() {
             Turn what your organisation knows into work you can trust. Built
             for UK small organisations and specialist teams.
           </p>
+          {/* Quiet stage-gate motif — fills the footer's empty ground */}
+          <svg viewBox="0 0 160 20" aria-hidden className="mt-8 h-5 w-40 text-faint">
+            <line x1="8" y1="10" x2="152" y2="10" stroke="currentColor" />
+            <circle cx="8" cy="10" r="5" fill="currentColor" />
+            <circle cx="44" cy="10" r="5" fill="currentColor" />
+            <circle cx="80" cy="10" r="5" fill="currentColor" />
+            <circle cx="116" cy="10" r="5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="152" cy="10" r="5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+          </svg>
         </div>
         <div className="grid grid-cols-2 gap-10 sm:grid-cols-3">
           {GROUPS.map((group) => (

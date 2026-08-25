@@ -1620,6 +1620,18 @@ columns, (4) more UI vignettes, (5) scroll reveal, (6) screenshots
 intermittently return blank/timeout — a small scroll nudge forces a repaint;
 it is a capture artifact, not a page bug.
 
+**Item 3 is built** (same day). The homepage Proof section became the page's
+one warm band (`bg-[#f2e9dc]`, cards on `bg-canvas`) and gained a stat strip
+of three *true* numbers — ≈24 facts from one charity number (§6k), 5 stage
+gates, 0 documents Flowgrid sends on your behalf; don't add stats that
+aren't backed by shipped behaviour. `cta-panels.tsx` fills the dead CTA
+right columns: `DemoAgendaPanel` (the 20-minute agenda) on the homepage,
+`PilotShapePanel` (numbered pilot steps) on both solution pages via the
+shared template. The footer's empty ground got a quiet stage-gate motif
+(faint SVG under the tagline). All checks green (lint, typecheck, 103 unit,
+static build, 5/5 e2e — the pilot form moved inside a grid and the specs
+still pass) and every changed section screenshot-verified locally.
+
 ---
 
 ## 7. Read first in a new session
