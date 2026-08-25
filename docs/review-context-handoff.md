@@ -1663,9 +1663,22 @@ token had expired). The deployment aliased to
 **https://www.flowgridos.co.uk**: the domain cutover has happened, so the
 canonical/sitemap/og:image URLs (always absolute against flowgridos.co.uk)
 now resolve for real. New-design elements verified live on `/` and
-`/solutions/groundwork`. Still to do post-deploy: re-run Lighthouse + axe
-against production (last run predates the design pass), and `git push` —
-the five commits are on local `main` only.
+`/solutions/groundwork`.
+
+**Post-deploy quality checks re-run 25 Aug against www.flowgridos.co.uk —
+the design pass cost nothing.** Lighthouse mobile: `/` 95/100/100/100
+(LCP 2.5s), `/solutions/groundwork` 99/100/100/100 (LCP 2.1s),
+`/solutions/grantwork` 99/100/100/100 (LCP 2.1s); CLS 0 on all three.
+Axe WCAG 2.2 AA: **0 violations across all 10 public pages** (the 7 content
+pages + the 3 legal drafts). Tooling notes for next time: run Lighthouse
+from **bash**, not PowerShell (PowerShell splits the comma list in
+`--only-categories` into separate args and the run dies with "unrecognized
+category"), and `|| true` each run — the chrome-launcher temp-dir EPERM on
+Windows exits 1 *after* the JSON is written. Axe has no repo install: fetch
+axe.min.js to the scratchpad and inject it via the repo's Playwright with
+`createRequire` anchored at `apps/web/package.json`.
+
+Still to do: `git push` — the design-pass commits are on local `main` only.
 
 ---
 
