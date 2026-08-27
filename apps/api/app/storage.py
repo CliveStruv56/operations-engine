@@ -64,11 +64,19 @@ class Storage:
             ExpiresIn=PRESIGNED_PUT_TTL_S,
         )
 
-    def presign_get(self, key: str) -> str:
+    def presign_get(self, key: str, *, filename: str | None = None) -> str:
+        """Signed GET; `filename` makes it download as an attachment under
+        that name rather than the raw object key (a uuid means nothing in a
+        Downloads folder). Quotes are stripped rather than escaped — a name
+        we build never carries them, and a header injection must not."""
         self._require()
+        params: dict[str, str] = {"Bucket": get_settings().storage_bucket, "Key": key}
+        if filename:
+            safe = filename.replace('"', "").replace("\r", "").replace("\n", "")
+            params["ResponseContentDisposition"] = f'attachment; filename="{safe}"'
         return _s3().generate_presigned_url(
             "get_object",
-            Params={"Bucket": get_settings().storage_bucket, "Key": key},
+            Params=params,
             ExpiresIn=PRESIGNED_GET_TTL_S,
         )
 

@@ -7,6 +7,7 @@ import { deriveBrandVars } from "@/lib/brand";
 import { Claim, listClaims } from "@/lib/claims";
 import { Spinner } from "@/components/activity";
 import { useWorkspace, type Tenant } from "../workspace";
+import ExportSection from "./export-section";
 import Members from "./members";
 
 import { btnPrimary as btn, cardPadded as card, input } from "@/components/ui/styles";
@@ -361,6 +362,7 @@ export default function SettingsPage() {
         <WorkspaceSection tenant={tenant} />
         <OrganisationSection />
         <BrandSection tenant={tenant} />
+        <ExportSection />
         <Members tenant={tenant} />
       </div>
     </main>

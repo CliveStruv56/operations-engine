@@ -1038,3 +1038,22 @@ and every divergence is recorded here.
     suite (they hold regardless of flags); the direct-object-reference
     attacks run in `test_community.py` with the flag enabled on both
     tenants, where a pass means RLS and not the gate.
+
+62. **The workspace export excludes other members' private chats — the
+    exporter's role does not widen what the app would show them** (27 Aug
+    2026). Conversation visibility is app code, not RLS, so the worker's
+    gather filters explicitly (`visibility = 'tenant' or user_id = exporter`)
+    and the generated-artefact sweep drops answer PDFs whose conversation is
+    not in the included set. A backup argument for "include everything" was
+    considered and rejected by the user: an admin must not gain through the
+    export button what `_get_owned_conversation` refuses them in the app.
+
+63. **`workspace_export_jobs` is core and unflagged** (0027), like the
+    claims register: every tenant deserves a way out, whatever modules they
+    bought. Listed in `CORE_TENANT_TABLES`.
+
+64. **An unfetchable object never fails the archive and is never silently
+    dropped.** It is recorded in `manifest.json` and the README's "files
+    that could not be fetched" list, and the rest of the archive completes.
+    Old archives accumulate under `{tenant}/exports/` and are removed only
+    by workspace purge — revisit if storage size becomes real.

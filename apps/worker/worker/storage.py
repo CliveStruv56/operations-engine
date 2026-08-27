@@ -38,3 +38,27 @@ def upload_bytes(storage_key: str, data: bytes, content_type: str) -> None:
         Body=data,
         ContentType=content_type,
     )
+
+
+def upload_file(storage_key: str, path: str, content_type: str) -> None:
+    """Large artefacts (workspace archives) — boto3 streams from disk and
+    switches to multipart automatically, so a multi-GB file never has to fit
+    in memory the way `upload_bytes` requires."""
+    s3_client().upload_file(
+        path,
+        get_settings().storage_bucket,
+        storage_key,
+        ExtraArgs={"ContentType": content_type},
+    )
+
+
+def list_keys(prefix: str) -> list[str]:
+    """Every object key under a prefix, paginated (1000/page)."""
+    keys: list[str] = []
+    for page in (
+        s3_client()
+        .get_paginator("list_objects_v2")
+        .paginate(Bucket=get_settings().storage_bucket, Prefix=prefix)
+    ):
+        keys.extend(obj["Key"] for obj in page.get("Contents", []))
+    return keys

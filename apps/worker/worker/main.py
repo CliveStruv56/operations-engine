@@ -46,6 +46,7 @@ from worker.secrets import decrypt_llm_key
 from worker.settings import get_settings
 from worker.storage import download_file
 from worker.summarize import summarize_document
+from worker.workspace_export import build_workspace_export
 
 PARSE_TIMEOUT_S = 600
 
@@ -349,6 +350,7 @@ class WorkerSettings:
         harvest_claims_from_application,
         render_answer_pdf,
         render_community_pdf,
+        build_workspace_export,
     ]
     # The register's dates change at midnight with nobody touching anything —
     # these are the only jobs that run on a clock rather than an enqueue.

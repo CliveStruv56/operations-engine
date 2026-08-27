@@ -110,6 +110,17 @@ class IngestQueue:
             _job_id=f"answerpdf:{job_id}",
         )
 
+    async def enqueue_workspace_export(self, tenant_id: UUID, job_id: UUID, user_id: UUID) -> None:
+        """Assemble the whole-workspace archive in the worker."""
+        pool = await self._conn()
+        await pool.enqueue_job(
+            "build_workspace_export",
+            str(tenant_id),
+            str(job_id),
+            str(user_id),
+            _job_id=f"wsexport:{job_id}",
+        )
+
     async def enqueue_community_pdf(self, tenant_id: UUID, job_id: UUID, user_id: UUID) -> None:
         """Render the community profile to a one-page branded PDF."""
         pool = await self._conn()

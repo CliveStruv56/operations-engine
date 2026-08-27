@@ -35,6 +35,7 @@ from app.routers import (
     slides,
     tenants,
     usage,
+    workspace_export,
 )
 
 
@@ -105,6 +106,7 @@ def create_app() -> FastAPI:
 
     for router in (
         admin.router,
+        workspace_export.router,  # literal /tenants/me/export before tenants matchers
         tenants.router,
         members.router,
         invites.router,

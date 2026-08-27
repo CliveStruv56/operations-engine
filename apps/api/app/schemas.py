@@ -347,6 +347,20 @@ class ConversationExportJobOut(BaseModel):
     updated_at: datetime
 
 
+class WorkspaceExportJobOut(BaseModel):
+    """A queued whole-workspace archive export — polled until the worker
+    lands the zip."""
+
+    id: UUID
+    kind: str
+    status: str
+    error: str | None = None
+    #: Present once status is succeeded; downloads under a readable filename.
+    download_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class PlanTaskSeed(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     details: str | None = Field(default=None, max_length=2_000)
