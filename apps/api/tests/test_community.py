@@ -349,6 +349,30 @@ async def test_chat_matches_a_category_question(client, capture_llm):
     assert "post office: yes" in system
 
 
+async def test_chat_matches_the_profile_description(client, capture_llm):
+    """Prose in the profile answers before anything is typed in as a facility.
+
+    A trust writes "we have a school, two shops and a pub" into the
+    description on day one; a question about the pub must surface that
+    sentence rather than silence, even though no facility row matches."""
+    t = await _chat_ready_tenant(client, f"commchatdesc-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    resp = await client.put(
+        "/api/v1/community/profile",
+        json={
+            "place_name": "Sanday",
+            "description": "We have a school, two shops, a pub and a Heritage Centre.",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    await _say(client, t, "Is there a pub on the island?")
+    system = capture_llm[-1]
+    assert "<community-profile>" in system
+    assert "a pub and a Heritage Centre" in system
+
+
 async def test_chat_lookup_respects_feature_flag(client, capture_llm):
     t = await _chat_ready_tenant(client, f"commchatoff-{uuid4().hex[:6]}", community=False)
     # The seeded stat ("Usual residents") would match, but the flag is off.

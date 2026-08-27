@@ -75,6 +75,13 @@ async def match_community(
     the place it describes reads as the organisation's own — and also when
     the place itself is named, so "tell me about Sanday" gets the profile
     even with no figure or facility in the question.
+
+    The profile's own prose (description, geography note) is matched too:
+    a trust writes "we have a school, two shops and a pub" into the
+    description long before anybody types those in as facilities, and a
+    question about the school should surface that sentence rather than
+    silence. Structured rows still answer better — the prose is the
+    fallback, not the plan.
     """
     tokens = _tokens(message)
     if not tokens:
@@ -113,12 +120,22 @@ async def match_community(
         """
     )
 
-    place_named = False
+    profile_matched = False
     if profile is not None:
-        haystack = " ".join([profile["place_name"], *profile["settlements"]])
-        place_named = _py_pattern(tokens).search(haystack) is not None
+        haystack = " ".join(
+            filter(
+                None,
+                [
+                    profile["place_name"],
+                    *profile["settlements"],
+                    profile["description"],
+                    profile["geography_note"],
+                ],
+            )
+        )
+        profile_matched = _py_pattern(tokens).search(haystack) is not None
 
-    if not stats and not assets and not place_named:
+    if not stats and not assets and not profile_matched:
         return None, [], []
     return profile, list(stats), list(assets)
 
