@@ -157,6 +157,17 @@ class StatPatch(BaseModel):
     notes: str | None = Field(default=None, max_length=5_000)
 
 
+class ExportJobOut(BaseModel):
+    id: UUID
+    kind: str
+    status: str
+    error: str | None
+    #: Presigned GET, present only once the worker has landed the file.
+    download_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class StatOut(BaseModel):
     id: UUID
     label: str

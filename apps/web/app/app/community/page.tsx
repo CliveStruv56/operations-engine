@@ -22,10 +22,13 @@ import {
   CommunityStat,
   deleteCommunityAsset,
   deleteCommunityStat,
+  getCommunityExport,
   getCommunityProfile,
   listCommunityAssets,
   listCommunityStats,
+  submitProfilePdf,
 } from "@/lib/community";
+import { openPresigned } from "@/lib/groundwork";
 import { COMMUNITY_DISABLED, ModuleDisabled, useModuleEnabled } from "../module-gate";
 import { AssetEditor } from "./asset-editor";
 import { ProfileEditor } from "./profile-editor";
@@ -96,6 +99,7 @@ export default function CommunityPage() {
   const [stats, setStats] = useState<CommunityStat[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
+  const [pdfBusy, setPdfBusy] = useState(false);
   // null = closed; "new" = adding; otherwise the row being edited.
   const [assetEdit, setAssetEdit] = useState<CommunityAsset | "new" | null>(null);
   const [statEdit, setStatEdit] = useState<CommunityStat | "new" | null>(null);
@@ -119,6 +123,28 @@ export default function CommunityPage() {
   const headline = (stats ?? []).filter((s) => s.claim_kind !== null);
   const otherStats = (stats ?? []).filter((s) => s.claim_kind === null);
   const empty = !loading && !profile && (assets ?? []).length === 0 && (stats ?? []).length === 0;
+
+  async function downloadPdf() {
+    setPdfBusy(true);
+    setError(null);
+    try {
+      const job = await submitProfilePdf();
+      // Same 2s poll as the chat answer export — the render takes seconds.
+      for (;;) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const next = await getCommunityExport(job.id);
+        if (next.status === "succeeded" && next.download_url) {
+          openPresigned(next.download_url);
+          break;
+        }
+        if (next.status === "failed") throw new Error(next.error ?? "PDF export failed");
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   async function removeAsset(asset: CommunityAsset) {
     const sure = await ask.confirm({
@@ -179,6 +205,11 @@ export default function CommunityPage() {
           </div>
           {!editingProfile && !assetEdit && !statEdit && (
             <div className="flex items-center gap-3">
+              {profile && (
+                <button onClick={() => void downloadPdf()} disabled={pdfBusy} className={btnGhost}>
+                  {pdfBusy ? <Spinner /> : "Download as PDF"}
+                </button>
+              )}
               <button onClick={() => setEditingProfile(true)} className={btnGhost}>
                 {profile ? "Edit the profile" : "Describe the place"}
               </button>

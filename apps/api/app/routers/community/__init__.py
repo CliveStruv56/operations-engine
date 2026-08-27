@@ -6,9 +6,10 @@ include order relative to other routers does not matter.
 
 from fastapi import APIRouter
 
-from app.routers.community import assets, profile, stats
+from app.routers.community import assets, export, profile, stats
 
 router = APIRouter(tags=["community"])
+router.include_router(export.router)  # literal /community/profile/pdf before matchers
 router.include_router(profile.router)
 router.include_router(assets.router)
 router.include_router(stats.router)

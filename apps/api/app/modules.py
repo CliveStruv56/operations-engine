@@ -91,6 +91,7 @@ MODULES: tuple[Module, ...] = (
             "community_profile",
             "community_assets",
             "community_statistics",
+            "community_export_jobs",
         ),
         feed_prefix="community",
     ),

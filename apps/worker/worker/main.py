@@ -33,6 +33,7 @@ from worker.claims.sweep import (
     record_review_due,
     render_digest,
 )
+from worker.community_pdf import render_community_pdf
 from worker.db import tenant_tx
 from worker.drafts.job import draft_document
 from worker.email import send_email, unsubscribe_token
@@ -347,6 +348,7 @@ class WorkerSettings:
         generate_impact_card,
         harvest_claims_from_application,
         render_answer_pdf,
+        render_community_pdf,
     ]
     # The register's dates change at midnight with nobody touching anything —
     # these are the only jobs that run on a clock rather than an enqueue.

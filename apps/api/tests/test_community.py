@@ -7,12 +7,14 @@ SQL-level RLS for the community_* tables is covered by test_isolation.py
 (TENANT_TABLES); this file exercises the API surface.
 """
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 
 from app.db import db
 from app.litellm import StreamResult, litellm_client
+from app.queue import ingest_queue
+from app.storage import Storage, storage
 from tests.conftest import Tenant, auth, seed_tenant
 from tests.test_chat import parse_sse
 
@@ -407,3 +409,74 @@ async def test_records_answer_does_not_offer_vault_recovery(client, capture_llm)
     )
     done = dict(parse_sse(resp.text))["done"]
     assert done["coverage"] == "none"
+
+
+# -- profile PDF export -------------------------------------------------------
+
+
+def _fake_pdf_infra(monkeypatch):
+    enqueued = []
+
+    async def enqueue(tenant_id, job_id, user_id):
+        enqueued.append((tenant_id, job_id, user_id))
+
+    monkeypatch.setattr(ingest_queue, "enqueue_community_pdf", enqueue)
+    monkeypatch.setattr(Storage, "enabled", property(lambda self: True))
+    monkeypatch.setattr(storage, "presign_get", lambda key: f"https://signed.example/{key}")
+    return enqueued
+
+
+async def test_profile_pdf_submit_and_poll(client, monkeypatch):
+    t = await seed_tenant(client, f"commpdf-{uuid4().hex[:6]}")
+    await enable_community(t)
+    headers = auth(t.owner_id, t.id)
+    enqueued = _fake_pdf_infra(monkeypatch)
+
+    resp = await client.post("/api/v1/community/profile/pdf", headers=headers)
+    assert resp.status_code == 202, resp.text
+    job = resp.json()
+    assert job["status"] == "queued"
+    assert job["kind"] == "profile_pdf"
+    assert job["download_url"] is None
+    assert [str(j[1]) for j in enqueued] == [job["id"]]
+
+    # A second click while the first is in flight reuses the job.
+    resp = await client.post("/api/v1/community/profile/pdf", headers=headers)
+    assert resp.status_code == 202
+    assert resp.json()["id"] == job["id"]
+    assert len(enqueued) == 1
+
+    # The worker lands the file; the poll then carries the signed URL.
+    file_key = f"{t.id}/community/exports/{job['id']}.pdf"
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            "update community_export_jobs set status = 'succeeded', file_key = $2 where id = $1",
+            UUID(job["id"]),
+            file_key,
+        )
+    resp = await client.get(f"/api/v1/community/exports/{job['id']}", headers=headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "succeeded"
+    assert body["download_url"] == f"https://signed.example/{file_key}"
+
+    resp = await client.get(f"/api/v1/community/exports/{uuid4()}", headers=headers)
+    assert resp.status_code == 404
+
+
+async def test_profile_pdf_requires_a_profile(client, monkeypatch):
+    t = await seed_tenant(client, f"commpdfnp-{uuid4().hex[:6]}")
+    await enable_community(t)
+    _fake_pdf_infra(monkeypatch)
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute("delete from community_profile")
+    resp = await client.post("/api/v1/community/profile/pdf", headers=auth(t.owner_id, t.id))
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "no_profile"
+
+
+async def test_profile_pdf_respects_feature_flag(client, monkeypatch):
+    t = await seed_tenant(client, f"commpdfoff-{uuid4().hex[:6]}")
+    _fake_pdf_infra(monkeypatch)
+    resp = await client.post("/api/v1/community/profile/pdf", headers=auth(t.owner_id, t.id))
+    assert resp.status_code == 404

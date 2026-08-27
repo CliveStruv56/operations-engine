@@ -67,7 +67,7 @@ def _pack(**overrides) -> GrantPack:
 
 
 def test_render_statement_writes_dates_in_words():
-    """"due 15 September 2026", never "due 2026-09-15" — matching the API and
+    """ "due 15 September 2026", never "due 2026-09-15" — matching the API and
     web renderers, per this module's drift warning."""
     tmpl = "The organisation's next confirmation statement is due {value}."
     label = "Confirmation statement due"

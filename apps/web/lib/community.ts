@@ -137,6 +137,23 @@ export const updateCommunityStat = (id: string, body: Partial<StatBody>) =>
 export const deleteCommunityStat = (id: string) =>
   cm<void>(`/community/statistics/${id}`, { method: "DELETE" });
 
+export type CommunityExportJob = {
+  id: string;
+  kind: string;
+  status: "queued" | "running" | "succeeded" | "failed";
+  error: string | null;
+  /** Presigned GET, present only once the worker has landed the file. */
+  download_url: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const submitProfilePdf = () =>
+  cm<CommunityExportJob>("/community/profile/pdf", { method: "POST" });
+
+export const getCommunityExport = (id: string) =>
+  cm<CommunityExportJob>(`/community/exports/${id}`);
+
 /** Display order for the profile page — the shape of a place, roughly in the
  *  order a funder or an incomer asks about it. */
 export const ASSET_CATEGORY_ORDER: AssetCategory[] = [
