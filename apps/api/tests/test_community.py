@@ -9,7 +9,10 @@ SQL-level RLS for the community_* tables is covered by test_isolation.py
 
 from uuid import uuid4
 
+import pytest
+
 from app.db import db
+from app.litellm import StreamResult, litellm_client
 from tests.conftest import Tenant, auth, seed_tenant
 
 
@@ -248,3 +251,100 @@ async def test_direct_object_reference_attacks(client, two_tenants):
     # A's profile GET must return A's place, never B's.
     profile = (await client.get("/api/v1/community/profile", headers=headers)).json()
     assert profile["place_name"].startswith("alpha")
+
+
+# -- chat lookup -------------------------------------------------------------
+
+
+@pytest.fixture
+def capture_llm(monkeypatch):
+    """Stub stream_chat, recording the system prompt of each call."""
+    prompts: list[str] = []
+
+    async def _fake(virtual_key, alias, messages, result: StreamResult):
+        prompts.append(messages[0]["content"])
+        result.text_parts.append("ok")
+        yield "ok"
+        result.tokens_in = 10
+        result.tokens_out = 5
+
+    monkeypatch.setattr(litellm_client, "stream_chat", _fake)
+    return prompts
+
+
+async def _chat_ready_tenant(client, name: str, community: bool = True) -> Tenant:
+    t = await seed_tenant(client, name)
+    if community:
+        await enable_community(t)
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            "update tenants set litellm_key_encrypted = 'sk-test-virtual' where id = $1", t.id
+        )
+    return t
+
+
+async def _say(client, tenant: Tenant, content: str) -> None:
+    headers = auth(tenant.owner_id, tenant.id)
+    conv = (await client.post("/api/v1/conversations", json={"title": "t"}, headers=headers)).json()
+    resp = await client.post(
+        f"/api/v1/conversations/{conv['id']}/messages",
+        json={"content": content, "use_vault": False},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+
+async def test_chat_injects_matching_figure(client, capture_llm):
+    t = await _chat_ready_tenant(client, f"commchat-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    resp = await client.post(
+        "/api/v1/community/statistics",
+        json={
+            "label": "Households",
+            "value": 240,
+            "unit": "households",
+            "period": "2022",
+            "claim_kind": "community_households",
+            "source": "Scotland's Census 2022",
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+
+    await _say(client, t, "How many households are there on the island?")
+    system = capture_llm[-1]
+    assert "<community-profile>" in system
+    assert "Households: 240 households (2022 — Scotland's Census 2022)" in system
+
+    # An unrelated question must not carry the place along.
+    await _say(client, t, "Summarise our leave policy")
+    assert "<community-profile>" not in capture_llm[-1]
+
+
+async def test_chat_matches_a_category_question(client, capture_llm):
+    """ "Is there a shop?" asks about a kind of thing, not a named one."""
+    t = await _chat_ready_tenant(client, f"commchatcat-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+    resp = await client.post(
+        "/api/v1/community/assets",
+        json={
+            "category": "retail_services",
+            "subcategory": "general store",
+            "name": "Sinclair General Stores",
+            "attributes": {"post_office": True, "fuel": True},
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+
+    await _say(client, t, "Is there a shop where I can buy groceries?")
+    system = capture_llm[-1]
+    assert "Sinclair General Stores" in system
+    assert "post office: yes" in system
+
+
+async def test_chat_lookup_respects_feature_flag(client, capture_llm):
+    t = await _chat_ready_tenant(client, f"commchatoff-{uuid4().hex[:6]}", community=False)
+    # The seeded stat ("Usual residents") would match, but the flag is off.
+    await _say(client, t, "How many usual residents are there?")
+    assert "<community-profile>" not in capture_llm[-1]

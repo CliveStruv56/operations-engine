@@ -21,11 +21,13 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from app.audit import write_audit
+from app.community.lookup import community_block, match_community
 from app.crm.lookup import contacts_block, match_contacts
 from app.db import db
 from app.errors import ApiError
 from app.litellm import StreamResult, estimate_cost_usd, litellm_client
 from app.prompts import (
+    COMMUNITY_PROMPT,
     CONTACTS_PROMPT,
     NO_COVERAGE_PROMPT,
     SYSTEM_PROMPT,
@@ -422,6 +424,14 @@ async def post_message(
         matched_companies: list = []
         if features.get("contacts") is True:
             matched_contacts, matched_companies = await match_contacts(conn, body.content)
+        # Community profile lookup (community module): mentions of the place,
+        # its figures or its facilities pull the stored records into the
+        # prompt so "how many households are there?" answers from data.
+        matched_place = None
+        matched_stats: list = []
+        matched_assets: list = []
+        if features.get("community") is True:
+            matched_place, matched_stats, matched_assets = await match_community(conn, body.content)
         month_spend = await conn.fetchval(
             """
             select coalesce(sum(cost_usd), 0) from usage_events
@@ -511,6 +521,10 @@ async def post_message(
     if matched_contacts or matched_companies:
         system += "\n\n" + CONTACTS_PROMPT.format(
             records=contacts_block(matched_contacts, matched_companies)
+        )
+    if matched_place is not None or matched_stats or matched_assets:
+        system += "\n\n" + COMMUNITY_PROMPT.format(
+            records=community_block(matched_place, matched_stats, matched_assets)
         )
     llm_messages = [{"role": "system", "content": system}]
     llm_messages += [{"role": r["role"], "content": r["content"]} for r in history]
