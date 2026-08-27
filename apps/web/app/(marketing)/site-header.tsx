@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { ctaPrimary } from "./ui";
 
 const NAV = [
@@ -15,11 +16,26 @@ const NAV = [
 
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
+  // A signed-in visitor shown "Sign in" reads it as "you were logged out",
+  // so the header checks the session (a local cookie read, no network) and
+  // offers the way back into the workspace instead. Starts false — the
+  // static page renders "Sign in" and swaps after hydration.
+  const [authed, setAuthed] = useState(false);
   const pathname = usePathname();
   const panelRef = useRef<HTMLDivElement>(null);
   const toggleRef = useRef<HTMLButtonElement>(null);
 
   const closeMenu = () => setOpen(false);
+
+  useEffect(() => {
+    createClient()
+      .auth.getSession()
+      .then(({ data }) => setAuthed(data.session !== null))
+      .catch(() => setAuthed(false));
+  }, []);
+
+  const accountHref = authed ? "/app" : "/login";
+  const accountLabel = authed ? "Open app" : "Sign in";
 
   // Escape close + focus trap while the mobile menu is open.
   useEffect(() => {
@@ -76,10 +92,10 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-4 lg:flex">
           <Link
-            href="/login"
+            href={accountHref}
             className="px-2 py-2.5 text-[14px] text-slate underline-offset-4 hover:underline"
           >
-            Sign in
+            {accountLabel}
           </Link>
           <Link
             href="/contact"
@@ -120,11 +136,11 @@ export function SiteHeader() {
               </Link>
             ))}
             <Link
-              href="/login"
+              href={accountHref}
               onClick={closeMenu}
               className="rounded-lg px-3 py-3 text-[16px] text-slate hover:bg-bone"
             >
-              Sign in
+              {accountLabel}
             </Link>
           </nav>
           <Link

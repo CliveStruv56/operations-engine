@@ -34,14 +34,22 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user && request.nextUrl.pathname.startsWith("/app")) {
+  const path = request.nextUrl.pathname;
+  if (!user && path.startsWith("/app")) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+  // The mirror rule: a signed-in visitor shown the login form reads it as
+  // "you were logged out" and retypes credentials that were never lost.
+  if (user && (path.startsWith("/login") || path.startsWith("/signup"))) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/app";
     return NextResponse.redirect(url);
   }
   return response;
 }
 
 export const config = {
-  matcher: ["/app/:path*"],
+  matcher: ["/app/:path*", "/login", "/signup"],
 };
