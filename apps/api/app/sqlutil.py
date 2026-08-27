@@ -213,6 +213,33 @@ PATCHABLE_COLUMNS: dict[str, frozenset[str]] = {
             "notes",
         }
     ),
+    "community_assets": frozenset(
+        {
+            "category",
+            "subcategory",
+            "name",
+            "description",
+            "attributes",
+            "status",
+            "settlement",
+            "contact",
+            "url",
+            "notes",
+        }
+    ),
+    "community_statistics": frozenset(
+        {
+            "label",
+            "value",
+            "unit",
+            "period",
+            "as_of",
+            "claim_kind",
+            "source",
+            "source_url",
+            "notes",
+        }
+    ),
     "crm_contacts": frozenset(
         {
             "name",

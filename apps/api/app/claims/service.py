@@ -364,6 +364,60 @@ async def create_claim(
     return _row_out(row, kinds, today)
 
 
+async def assert_module_claim(
+    conn: asyncpg.Connection,
+    tenant_id: UUID,
+    user_id: UUID,
+    kind_key: str,
+    value: Any,
+    *,
+    period: str | None,
+    as_of: date | None,
+    source_ref: str | None,
+    today: date,
+) -> ClaimOut | None:
+    """Write one claim maintained by a module register.
+
+    The community module (and any register module after it) keeps its own
+    structured rows and feeds the headline figure here on save. Confirmed on
+    arrival for the same reason typed claims are: a person just saved the
+    figure, and asking them to confirm it again in another screen would be
+    theatre. `source_ref` carries the stat's public source URL, which is why
+    the source is 'module' and not 'typed' — the provenance survives.
+
+    Returns None for a kind the catalogue no longer carries: the module row
+    still saves, it just stops feeding the register, which is how a retired
+    kind degrades everywhere else too.
+    """
+    kinds = await load_kinds(conn)
+    kind = kinds.get(kind_key)
+    if kind is None:
+        return None
+
+    await _supersede_existing(conn, kind_key, None, period)
+    row = await conn.fetchrow(
+        f"""
+        insert into claims (tenant_id, kind, period, statement, value, unit, as_of,
+            status, source, source_ref, last_verified, next_review, created_by)
+        values ($1, $2, $3, $4, $5, $6, $7, 'confirmed', 'module', $8, $9, $10, $11)
+        returning {_RETURNING}
+        """,
+        tenant_id,
+        kind_key,
+        period,
+        render_statement(kind, None, value),
+        _dumps(value),
+        kind.unit,
+        as_of,
+        source_ref,
+        today,
+        next_review_for(kind, today, None),
+        user_id,
+    )
+    await _write_revision(conn, tenant_id, row, user_id, "updated from module register")
+    return _row_out(row, kinds, today)
+
+
 async def update_claim(
     conn: asyncpg.Connection,
     tenant_id: UUID,

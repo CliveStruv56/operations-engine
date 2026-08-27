@@ -84,6 +84,16 @@ MODULES: tuple[Module, ...] = (
         label="Contacts (CRM)",
         tables=("crm_companies", "crm_contacts", "crm_contact_projects"),
     ),
+    Module(
+        flag="community",
+        label="Community profile",
+        tables=(
+            "community_profile",
+            "community_assets",
+            "community_statistics",
+        ),
+        feed_prefix="community",
+    ),
     # Cross-cutting enrichment rather than a module of its own: `web_search`
     # gates research mode inside the shared chat endpoint (400 `feature_disabled`,
     # not a 404 router), so it owns no tables. It belongs here because it is

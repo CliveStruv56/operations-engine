@@ -412,6 +412,62 @@
       "question_hints": ["outcomes", "impact", "results", "what difference", "evidence of impact"],
       "register": null,
       "notes": null
+    },
+    {
+      "key": "community_population",
+      "label": "Community population",
+      "category": "community",
+      "value_kind": "number",
+      "unit": "people",
+      "cardinality": "single",
+      "periodic": true,
+      "review_days": 365,
+      "statement_template": "The community has a usual resident population of {value}.",
+      "question_hints": ["population", "residents", "usual residents", "how many people", "community size"],
+      "register": null,
+      "notes": "Fed by the community module from its statistics register (source 'module'); the period names the census or estimate year. Not something the organisation asserts about itself, which is why it lives in the community category."
+    },
+    {
+      "key": "community_households",
+      "label": "Households",
+      "category": "community",
+      "value_kind": "number",
+      "unit": "households",
+      "cardinality": "single",
+      "periodic": true,
+      "review_days": 365,
+      "statement_template": "The community has {value} households.",
+      "question_hints": ["households", "how many households", "occupied dwellings"],
+      "register": null,
+      "notes": "Fed by the community module."
+    },
+    {
+      "key": "community_housing_stock",
+      "label": "Housing stock",
+      "category": "community",
+      "value_kind": "number",
+      "unit": "dwellings",
+      "cardinality": "single",
+      "periodic": true,
+      "review_days": 365,
+      "statement_template": "The community has a housing stock of {value} dwellings.",
+      "question_hints": ["housing stock", "dwellings", "number of homes", "houses in the area"],
+      "register": null,
+      "notes": "Fed by the community module. Dwellings, not households — second homes and empty properties are the gap between the two, and on an island that gap is often the story."
+    },
+    {
+      "key": "community_school_pupils",
+      "label": "School roll",
+      "category": "community",
+      "value_kind": "number",
+      "unit": "pupils",
+      "cardinality": "single",
+      "periodic": true,
+      "review_days": 365,
+      "statement_template": "The local school has {value} pupils.",
+      "question_hints": ["pupils", "school roll", "school pupils", "children at the school"],
+      "register": null,
+      "notes": "Fed by the community module. The headline number for the community's one school; per-school detail lives on the school's asset record."
     }
   ]
 }

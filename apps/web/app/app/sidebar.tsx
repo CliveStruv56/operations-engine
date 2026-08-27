@@ -6,6 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ChatIcon,
   FormIcon,
+  GlobeIcon,
   GrantIcon,
   HomeIcon,
   PeopleIcon,
@@ -174,6 +175,18 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             >
               <PeopleIcon />
               Contacts
+            </Link>
+          )}
+
+          {tenant.features?.community === true && (
+            <Link
+              href="/app/community"
+              className={`${item} mt-0.5 ${
+                pathname.startsWith("/app/community") ? itemActive : itemRest
+              }`}
+            >
+              <GlobeIcon />
+              Community
             </Link>
           )}
 

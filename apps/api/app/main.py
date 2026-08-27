@@ -16,6 +16,7 @@ from app.routers import (
     activity,
     admin,
     claims,
+    community,
     conversation_exports,
     conversations,
     crm,
@@ -114,6 +115,7 @@ def create_app() -> FastAPI:
         groundwork_room.router,
         grants.router,
         crm.router,
+        community.router,
         question_sets.router,
         claims.router,
         conversation_exports.router,  # literal /conversations/exports path before {id} matchers

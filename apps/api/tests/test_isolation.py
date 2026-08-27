@@ -43,6 +43,9 @@ TENANT_TABLES = [
     "claims",
     "claim_revisions",
     "project_tasks",
+    "community_profile",
+    "community_assets",
+    "community_statistics",
 ]
 
 
@@ -115,6 +118,17 @@ async def test_cross_tenant_header_rejected(client, two_tenants):
         ("DELETE", f"/api/v1/projects/{b.project_id}/plan-tasks/{b.plan_task_id}"),
         ("POST", f"/api/v1/conversations/{b.conversation_id}/messages/{uuid4()}/pdf"),
         ("GET", f"/api/v1/conversations/exports/{uuid4()}"),
+        ("GET", "/api/v1/community/profile"),
+        ("PUT", "/api/v1/community/profile"),
+        ("GET", "/api/v1/community/assets"),
+        ("POST", "/api/v1/community/assets"),
+        ("GET", f"/api/v1/community/assets/{b.community_asset_id}"),
+        ("PATCH", f"/api/v1/community/assets/{b.community_asset_id}"),
+        ("DELETE", f"/api/v1/community/assets/{b.community_asset_id}"),
+        ("GET", "/api/v1/community/statistics"),
+        ("POST", "/api/v1/community/statistics"),
+        ("PATCH", f"/api/v1/community/statistics/{b.community_stat_id}"),
+        ("DELETE", f"/api/v1/community/statistics/{b.community_stat_id}"),
     ]
     for method, path in attacks:
         resp = await client.request(method, path, headers=auth(a.owner_id, b.id), json={})

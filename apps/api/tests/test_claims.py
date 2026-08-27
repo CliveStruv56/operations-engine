@@ -978,7 +978,7 @@ async def test_statement_templates_render_for_every_seeded_kind(client, two_tena
 
 
 def test_statement_writes_dates_in_words():
-    """"due 15 September 2026", never "due 2026-09-15".
+    """ "due 15 September 2026", never "due 2026-09-15".
 
     The web and worker renderers must produce the same sentence — a drift test
     of the same kind as the money branch (see the worker copy's docstring).

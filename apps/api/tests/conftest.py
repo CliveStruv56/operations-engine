@@ -127,6 +127,8 @@ class Tenant:
     application_id: UUID
     claim_id: UUID
     plan_task_id: UUID
+    community_asset_id: UUID
+    community_stat_id: UUID
 
 
 async def _seed_grantwork(conn, tenant_id: UUID, owner_id: UUID, project_id: UUID, name: str):
@@ -369,6 +371,33 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
             json.dumps(f"{name} Ltd"),
             owner_id,
         )
+        await conn.execute(
+            """
+            insert into community_profile (tenant_id, place_name, created_by)
+            values ($1, $2, $3)
+            """,
+            tenant_id,
+            f"{name} island",
+            owner_id,
+        )
+        community_asset_id = await conn.fetchval(
+            """
+            insert into community_assets (tenant_id, category, name, attributes, created_by)
+            values ($1, 'education', $2, $3, $4) returning id
+            """,
+            tenant_id,
+            f"{name} community school",
+            json.dumps({"pupils": 68}),
+            owner_id,
+        )
+        community_stat_id = await conn.fetchval(
+            """
+            insert into community_statistics (tenant_id, label, value, unit, created_by)
+            values ($1, 'Usual residents', 494, 'people', $2) returning id
+            """,
+            tenant_id,
+            owner_id,
+        )
         await conn.execute("update projects set has_plan = true where id = $1", project_id)
         plan_task_id = await conn.fetchval(
             """
@@ -394,6 +423,8 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
         application_id=application_id,
         claim_id=claim_id,
         plan_task_id=plan_task_id,
+        community_asset_id=community_asset_id,
+        community_stat_id=community_stat_id,
     )
 
 

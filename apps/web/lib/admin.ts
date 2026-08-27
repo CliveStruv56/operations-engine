@@ -93,6 +93,7 @@ export const FEATURE_FLAGS = [
   { key: "projects", label: "Development projects" },
   { key: "grants", label: "Grant funding" },
   { key: "contacts", label: "Contacts (CRM)" },
+  { key: "community", label: "Community profile" },
   { key: "web_search", label: "Web search" },
 ] as const;
 

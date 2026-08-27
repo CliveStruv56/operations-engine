@@ -68,8 +68,7 @@ async def test_submit_and_poll(client, monkeypatch):
     file_key = f"{tenant.id}/conversations/{tenant.conversation_id}/answers/{message_id}.pdf"
     async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
         await conn.execute(
-            "update conversation_export_jobs set status = 'succeeded', file_key = $2"
-            " where id = $1",
+            "update conversation_export_jobs set status = 'succeeded', file_key = $2 where id = $1",
             UUID(job["id"]),
             file_key,
         )

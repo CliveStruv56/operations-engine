@@ -53,3 +53,9 @@ export const PROJECTS_DISABLED = {
   blurb:
     "This workspace doesn't have the development projects module. Ask whoever provides your workspace to enable it.",
 } as const;
+
+export const COMMUNITY_DISABLED = {
+  title: "The community profile isn't switched on",
+  blurb:
+    "This workspace doesn't have the community profile module. Ask whoever provides your workspace to enable it.",
+} as const;

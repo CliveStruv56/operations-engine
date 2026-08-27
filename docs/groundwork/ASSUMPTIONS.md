@@ -993,3 +993,48 @@ and every divergence is recorded here.
     Consequence: the purge flow now gates client-side on the exact workspace
     name *and* still sends it for the API to check. The API remains the real
     gate.
+
+57. **The community profile is a module, not claims-register kinds alone**
+    (27 Aug 2026). Facts about the place a tenant covers — the ferry, the
+    school roll, households — are not "what the tenant asserts about itself"
+    (claims brief §10), and a school with a roll, an age range and a nursery
+    is one entity with several attributes, which the register's flat rows
+    cannot hold. So: `community` flag, tables `community_profile` /
+    `community_assets` / `community_statistics` (migration 0025), one asset
+    table for every facility category with scalar `attributes` jsonb rather
+    than per-domain tables, and one profile row per tenant with settlements
+    as tags rather than a places table.
+
+58. **`ref_claim_kinds.category` gains `'community'`; `claims.source` gains
+    `'module'`** (both CHECK widenings in 0025). A `'module'` claim is a fact
+    maintained in a module's own register and asserted on save; `source_ref`
+    carries the stat's public source URL. `'typed'` would lose that
+    provenance and `'register'` would claim a public-register lookup that
+    never happened. The drafting worker needs no change: a non-register
+    source with no chunk already renders as "recorded by the organisation —
+    do not cite".
+
+59. **Community-fed claims are confirmed on save, not proposed.** The same
+    reasoning as typed claims (`create_claim`): the person saving the figure
+    is the assertion, and a second confirm screen would be theatre.
+    `assert_module_claim` (`app/claims/service.py`) supersedes the previous
+    confirmed row and writes a revision, exactly as a typed edit would. The
+    claim is *not* retracted when the stat is deleted or re-pointed at a
+    different kind — a claim is what the workspace asserts until superseded
+    or managed in the register; the module feeding it does not own it.
+
+60. **Operator initial data entry happens inside the tenant workspace.**
+    `admin_create_tenant` deliberately gives the operator no membership, so
+    at setup the operator is either invited as a member for the data-entry
+    session, or creates the workspace as owner, enters the data, and then
+    reissues the owner invite to the client. No admin-side duplicate editor
+    is built; `/admin` stays a console, not a second app.
+
+61. **The community DOR isolation checks live in `test_community.py`, not
+    `test_isolation.py`.** The isolation suite's community routes sit behind
+    the feature gate, so under a tenant that has not bought the module a
+    cross-tenant id 404s at the gate and the check proves nothing. The
+    header-attack list and SQL-level per-table checks stay in the isolation
+    suite (they hold regardless of flags); the direct-object-reference
+    attacks run in `test_community.py` with the flag enabled on both
+    tenants, where a pass means RLS and not the gate.

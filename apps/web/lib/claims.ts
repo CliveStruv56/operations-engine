@@ -12,7 +12,7 @@ const cl = <T,>(path: string, init: RequestInit = {}) =>
 export type ClaimKind = {
   key: string;
   label: string;
-  category: "identity" | "governance" | "finance" | "people" | "assurance" | "delivery";
+  category: "identity" | "governance" | "finance" | "people" | "assurance" | "delivery" | "community";
   value_kind: "text" | "number" | "money" | "date" | "list" | "boolean";
   unit: string | null;
   cardinality: "single" | "multi";
@@ -41,7 +41,7 @@ export type Claim = {
   as_of: string | null;
   expires_on: string | null;
   status: ClaimStatus;
-  source: "register" | "document" | "draft" | "typed";
+  source: "register" | "document" | "draft" | "typed" | "module";
   /** Public register page, for a register-sourced claim. */
   source_ref: string | null;
   source_document_id: string | null;
@@ -200,6 +200,8 @@ export function sourceLabel(claim: Claim): string {
         : "read from a document";
     case "draft":
       return "found in a document you produced";
+    case "module":
+      return "kept up to date in the community profile";
     default:
       return "entered here";
   }
@@ -213,6 +215,7 @@ export const CATEGORY_ORDER: ClaimKind["category"][] = [
   "people",
   "assurance",
   "delivery",
+  "community",
 ];
 
 export const CATEGORY_LABELS: Record<ClaimKind["category"], string> = {
@@ -222,6 +225,7 @@ export const CATEGORY_LABELS: Record<ClaimKind["category"], string> = {
   people: "People",
   assurance: "Policies and cover",
   delivery: "What you do",
+  community: "Your community",
 };
 
 /** Turn a typed field into the value the API stores. */
