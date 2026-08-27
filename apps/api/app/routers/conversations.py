@@ -650,11 +650,27 @@ async def post_message(
             vault_cited = {
                 UUID(c["document_id"]) for c in citations if c.get("source_type") != "web"
             }
-            coverage = "ok" if vault_cited else "none"
             if vault_cited:
+                coverage = "ok"
                 scope_used = (
                     "project" if project_docs and vault_cited & set(project_docs) else "vault"
                 )
+            elif (
+                matched_place is not None
+                or matched_stats
+                or matched_assets
+                or matched_contacts
+                or matched_companies
+            ):
+                # Structured records (community profile, contact book) were in
+                # front of the model, so the likely backing lives in a register
+                # rather than the vault — and "add a document" recovery over a
+                # correctly answered "how many households?" would mislead. The
+                # client's recovery strip keys on exactly "none", so any other
+                # value keeps it hidden without a client change.
+                coverage = "records"
+            else:
+                coverage = "none"
         yield _sse(
             "done",
             {

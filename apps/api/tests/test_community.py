@@ -14,6 +14,7 @@ import pytest
 from app.db import db
 from app.litellm import StreamResult, litellm_client
 from tests.conftest import Tenant, auth, seed_tenant
+from tests.test_chat import parse_sse
 
 
 async def enable_community(tenant: Tenant) -> None:
@@ -269,6 +270,11 @@ def capture_llm(monkeypatch):
         result.tokens_out = 5
 
     monkeypatch.setattr(litellm_client, "stream_chat", _fake)
+
+    async def _fake_embed(virtual_key, text):
+        return [0.0] * 2048, 7
+
+    monkeypatch.setattr(litellm_client, "embed_query", _fake_embed)
     return prompts
 
 
@@ -348,3 +354,32 @@ async def test_chat_lookup_respects_feature_flag(client, capture_llm):
     # The seeded stat ("Usual residents") would match, but the flag is off.
     await _say(client, t, "How many usual residents are there?")
     assert "<community-profile>" not in capture_llm[-1]
+
+
+async def test_records_answer_does_not_offer_vault_recovery(client, capture_llm):
+    """A vault-on question answered from the community profile must not tell
+    the user their vault "could not back" the answer — the backing lives in a
+    register, and "add a document" recovery over a correct figure misleads."""
+    t = await _chat_ready_tenant(client, f"commchatcov-{uuid4().hex[:6]}")
+    headers = auth(t.owner_id, t.id)
+
+    conv = (await client.post("/api/v1/conversations", json={"title": "t"}, headers=headers)).json()
+    # The seeded stat "Usual residents" matches; the empty vault cites nothing.
+    resp = await client.post(
+        f"/api/v1/conversations/{conv['id']}/messages",
+        json={"content": "How many usual residents are there?"},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    done = dict(parse_sse(resp.text))["done"]
+    assert done["coverage"] == "records"
+    assert done["scope_used"] is None
+
+    # No records matched either: the ordinary vault-recovery signal stands.
+    resp = await client.post(
+        f"/api/v1/conversations/{conv['id']}/messages",
+        json={"content": "Summarise our leave policy"},
+        headers=headers,
+    )
+    done = dict(parse_sse(resp.text))["done"]
+    assert done["coverage"] == "none"
