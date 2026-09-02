@@ -164,6 +164,28 @@ enough.
    code changes. Smoke-test from a laptop before deploying (put/get/delete a
    test object with the token via the API's `Storage` client or `aws s3api`).
 
+## 1b. Supabase Auth — URL configuration (every new web origin)
+
+Confirmation and invite emails carry a link back to the web app. Supabase
+only honours the origin the app asks for if it is on the project's redirect
+allow-list; otherwise it silently falls back to the **Site URL**, which was
+`http://localhost:3000` from development. Symptom (seen 2 Sep 2026): a new
+signup's email link opens `localhost:3000/?error=access_denied…`.
+
+Dashboard → Authentication → URL Configuration:
+
+- **Site URL**: `https://www.flowgridos.co.uk`
+- **Redirect URLs**: one `https://<origin>/**` entry per web origin —
+  `https://www.flowgridos.co.uk/**`, `https://flowgridos.co.uk/**`,
+  `https://ops-engine-staging-web.vercel.app/**`, plus
+  `http://localhost:3000/**` for local dev.
+
+The app sends people to `/auth/callback?next=…` after the link is verified;
+that route exchanges the one-time code for a session and continues to
+`next` (an invite path, or `/app`). Adding a web origin therefore touches
+**three** places: api `CORS_ORIGINS`, the R2 bucket CORS policy (§1), and this
+allow-list.
+
 ## 2. Secrets to generate once
 
 - `LITELLM_KEY_ENCRYPTION_KEY` — **must be identical on API and worker**:

@@ -1,14 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { safeNext, withNext } from "@/lib/auth-redirect";
 import { Button, ErrorNote } from "@/components/ui";
 import { input as inputCls } from "@/components/ui/styles";
 
 export default function LoginPage() {
+  return (
+    // useSearchParams needs a Suspense boundary at the page level.
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const router = useRouter();
+  const params = useSearchParams();
+  const next = safeNext(params.get("next"));
+  // Set by the auth callback when an email link could not finish on its own.
+  const notice = params.get("notice");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -25,7 +39,7 @@ export default function LoginPage() {
       setError(error.message);
       return;
     }
-    router.push("/app");
+    router.push(next);
     router.refresh();
   }
 
@@ -40,6 +54,11 @@ export default function LoginPage() {
           <h1 className="font-display text-hearth-page leading-tight font-medium tracking-[-0.01em]">
             Sign in
           </h1>
+          {notice && (
+            <p className="rounded-lg border border-edge bg-sidebar px-3 py-2 text-sm text-subtle">
+              {notice}
+            </p>
+          )}
           <label className="block text-sm font-semibold">
             Email
             <input
@@ -73,7 +92,7 @@ export default function LoginPage() {
           </Button>
           <p className="text-sm text-subtle">
             No account?{" "}
-            <Link href="/signup" className="underline hover:text-ink">
+            <Link href={withNext("/signup", next)} className="underline hover:text-ink">
               Sign up
             </Link>
           </p>

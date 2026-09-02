@@ -1696,6 +1696,17 @@ preflights with `Origin` + `Access-Control-Request-Method: PUT` +
 origins, allowing `PUT` / `content-type` / max-age 3600 — exactly what the
 browser-direct vault and bid-pack uploads send.
 
+**Supabase URL configuration set by the founder 2 Sep 2026** after a new
+signup's confirmation email bounced to `localhost:3000` (checklist §1b).
+Same day the joining path was reworked: `/auth/callback` exchanges the
+email-link code server-side and honours a same-site `next`; signup shows a
+"check your email" state and threads `next` into the confirmation link;
+login and proxy.ts carry `next` too, so an invite survives signup or
+sign-in; and invite acceptance refuses a signed-in account that isn't the
+invited address (migration 0028, 403 `invite_email_mismatch`) with a
+sign-out-and-continue page. Cause: the founder opened a client's owner
+invite while signed in as the operator and took the owner seat.
+
 ---
 
 ## 7. Read first in a new session

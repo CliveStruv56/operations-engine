@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { safeNext } from "@/lib/auth-redirect";
 
 export async function proxy(request: NextRequest) {
   // Playwright-only escape hatch: the e2e suite mocks every API and auth
@@ -36,15 +37,22 @@ export async function proxy(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   if (!user && path.startsWith("/app")) {
+    // Remember where they were heading so signing in lands them back there.
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    const wanted = request.nextUrl.pathname + request.nextUrl.search;
+    if (wanted !== "/app") url.searchParams.set("next", wanted);
     return NextResponse.redirect(url);
   }
   // The mirror rule: a signed-in visitor shown the login form reads it as
   // "you were logged out" and retypes credentials that were never lost.
+  // An invite sends newcomers to signup with `next` set — a visitor who is
+  // already signed in goes straight on to it instead of losing the invite.
   if (user && (path.startsWith("/login") || path.startsWith("/signup"))) {
     const url = request.nextUrl.clone();
-    url.pathname = "/app";
+    url.search = "";
+    url.pathname = safeNext(request.nextUrl.searchParams.get("next"));
     return NextResponse.redirect(url);
   }
   return response;
