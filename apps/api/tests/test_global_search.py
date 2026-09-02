@@ -61,7 +61,9 @@ async def test_search_finds_shared_but_not_private_peer_chats(client):
     ).json()
     peer_id = uuid4()
     resp = await client.post(
-        "/api/v1/invites/accept", json={"token": invite["token"]}, headers=auth(peer_id)
+        "/api/v1/invites/accept",
+        json={"token": invite["token"]},
+        headers=auth(peer_id, email="peer@example.com"),
     )
     assert resp.status_code == 200
     peer_headers = auth(peer_id, tenant.id)

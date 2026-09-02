@@ -66,7 +66,7 @@ async def test_admin_creates_tenant_and_hands_over_ownership(client, two_tenants
     resp = await client.post(
         "/api/v1/invites/accept",
         json={"token": created["invite"]["token"]},
-        headers=auth(client_user),
+        headers=auth(client_user, email="willow@example.com"),
     )
     assert resp.status_code == 200, resp.text
     assert resp.json() == {"tenant_id": created["id"], "role": "owner"}

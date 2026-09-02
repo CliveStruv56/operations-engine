@@ -104,8 +104,10 @@ def make_token(user_id: UUID, email: str = "user@example.com", **overrides) -> s
     return pyjwt.encode(claims, JWT_SECRET, algorithm="HS256")
 
 
-def auth(user_id: UUID, tenant_id: UUID | None = None) -> dict[str, str]:
-    headers = {"Authorization": f"Bearer {make_token(user_id)}"}
+def auth(
+    user_id: UUID, tenant_id: UUID | None = None, *, email: str = "user@example.com"
+) -> dict[str, str]:
+    headers = {"Authorization": f"Bearer {make_token(user_id, email=email)}"}
     if tenant_id is not None:
         headers["X-Tenant-Id"] = str(tenant_id)
     return headers
@@ -246,9 +248,12 @@ async def seed_tenant(client: AsyncClient, name: str) -> Tenant:
     assert resp.status_code == 201, resp.text
     tenant_id = UUID(resp.json()["id"])
 
+    # Addressed to the default token email so any `auth(uuid4())` test user
+    # can accept it — acceptance refuses a signed-in email that differs from
+    # the invite's (migration 0028).
     resp = await client.post(
         "/api/v1/invites",
-        json={"email": f"invitee-{name}@example.com", "role": "member"},
+        json={"email": "user@example.com", "role": "member"},
         headers=auth(owner_id, tenant_id),
     )
     assert resp.status_code == 201, resp.text

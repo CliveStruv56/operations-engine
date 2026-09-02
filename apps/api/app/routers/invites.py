@@ -16,6 +16,7 @@ from app.tenant import TenantContext, require_role
 router = APIRouter(tags=["invites"])
 
 INVITE_TTL_DAYS = 7
+_MISMATCH_PREFIX = "invite_email_mismatch:"
 
 
 async def send_invite_email(workspace: str, email: str, role: str, token: str) -> bool:
@@ -88,6 +89,19 @@ async def accept_invite(body: InviteAccept, user: AuthUser = Depends(get_current
                 "select * from accept_invite($1, $2, $3)", body.token, user.id, user.email
             )
         except asyncpg.RaiseError as exc:
+            # The function raises `invite_email_mismatch:<invited email>` when
+            # the signed-in account is not the one the invite was sent to — a
+            # token is not a bearer credential for whoever opens the link.
+            if exc.message.startswith(_MISMATCH_PREFIX):
+                invited = exc.message[len(_MISMATCH_PREFIX) :]
+                raise ApiError(
+                    403,
+                    "invite_email_mismatch",
+                    f"This invite was sent to {invited}, but you are signed in as "
+                    f"{user.email or 'an account with no email'}.",
+                    invited_email=invited,
+                    signed_in_email=user.email,
+                ) from exc
             raise ApiError(400, "invalid_invite", "Invite is invalid or expired") from exc
     tenant_id, role = row["out_tenant_id"], row["out_role"]
     async with db.tenant_tx(user.id, tenant_id) as conn:

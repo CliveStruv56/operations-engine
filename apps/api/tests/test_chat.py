@@ -330,7 +330,9 @@ async def test_member_cannot_read_other_users_conversation(client, fake_llm):
     ).json()
     peer_id = uuid4()
     resp = await client.post(
-        "/api/v1/invites/accept", json={"token": invite["token"]}, headers=auth(peer_id)
+        "/api/v1/invites/accept",
+        json={"token": invite["token"]},
+        headers=auth(peer_id, email="peer@example.com"),
     )
     assert resp.status_code == 200
 

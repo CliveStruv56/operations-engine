@@ -10,9 +10,10 @@ from tests.conftest import auth, seed_tenant
 
 async def _join(client, tenant, role="member"):
     """Invite + accept a new user into the tenant; returns their user id."""
+    peer_email = f"peer-{uuid4().hex[:6]}@example.com"
     resp = await client.post(
         "/api/v1/invites",
-        json={"email": f"peer-{uuid4().hex[:6]}@example.com", "role": role},
+        json={"email": peer_email, "role": role},
         headers=auth(tenant.owner_id, tenant.id),
     )
     assert resp.status_code == 201, resp.text
@@ -20,7 +21,7 @@ async def _join(client, tenant, role="member"):
     resp = await client.post(
         "/api/v1/invites/accept",
         json={"token": resp.json()["token"]},
-        headers=auth(user_id),
+        headers=auth(user_id, email=peer_email),
     )
     assert resp.status_code == 200, resp.text
     return user_id

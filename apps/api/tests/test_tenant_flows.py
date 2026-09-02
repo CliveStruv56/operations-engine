@@ -175,6 +175,44 @@ async def test_last_owner_cannot_be_removed(client):
     assert resp.json()["error"]["code"] == "last_owner"
 
 
+async def test_invite_refuses_a_different_signed_in_account(client):
+    """A token is not a bearer credential: the operator opening a client's
+    owner invite while signed in as themselves must not take the seat."""
+    tenant = await seed_tenant(client, f"mismatch-{uuid4().hex[:6]}")
+    owner_headers = auth(tenant.owner_id, tenant.id)
+    resp = await client.post(
+        "/api/v1/invites",
+        json={"email": "founder@client.example", "role": "admin"},
+        headers=owner_headers,
+    )
+    assert resp.status_code == 201, resp.text
+    token = resp.json()["token"]
+
+    stranger = uuid4()
+    resp = await client.post(
+        "/api/v1/invites/accept",
+        json={"token": token},
+        headers=auth(stranger, email="operator@platform.example"),
+    )
+    assert resp.status_code == 403, resp.text
+    err = resp.json()["error"]
+    assert err["code"] == "invite_email_mismatch"
+    assert err["invited_email"] == "founder@client.example"
+    assert err["signed_in_email"] == "operator@platform.example"
+    assert "founder@client.example" in err["message"]
+
+    # Nothing was granted, and the invite is still live for the right person.
+    resp = await client.get("/api/v1/tenants/me", headers=auth(stranger, tenant.id))
+    assert resp.status_code in (403, 404)
+    resp = await client.post(
+        "/api/v1/invites/accept",
+        json={"token": token},
+        headers=auth(uuid4(), email="Founder@Client.example"),
+    )
+    assert resp.status_code == 200, resp.text
+    assert resp.json()["role"] == "admin"
+
+
 async def test_invalid_invite_token_rejected(client):
     resp = await client.post(
         "/api/v1/invites/accept", json={"token": "nonsense"}, headers=auth(uuid4())
@@ -191,18 +229,17 @@ async def test_membership_emails_recorded_and_healed(client):
     members = (await client.get("/api/v1/members", headers=headers)).json()
     assert members[0]["email"] == "user@example.com"
 
-    # Invite acceptance records the acceptor's own claim, not the invite email.
+    # Invite acceptance records the acceptor's own claim as typed — the match
+    # against the invite address is case-insensitive.
     invitee = uuid4()
-    invitee_headers = {
-        "Authorization": f"Bearer {make_token(invitee, email='new.member@example.com')}"
-    }
+    invitee_headers = {"Authorization": f"Bearer {make_token(invitee, email='User@Example.COM')}"}
     resp = await client.post(
         "/api/v1/invites/accept", json={"token": tenant.invite_token}, headers=invitee_headers
     )
     assert resp.status_code == 200
     members = (await client.get("/api/v1/members", headers=headers)).json()
     by_user = {m["user_id"]: m for m in members}
-    assert by_user[str(invitee)]["email"] == "new.member@example.com"
+    assert by_user[str(invitee)]["email"] == "User@Example.COM"
 
     # Pre-migration rows (email null) self-heal on tenant resolution.
     from app.db import db
