@@ -1688,10 +1688,13 @@ Railway MCP; values are name-redacted over that connection, so the previous
 list was reconstructed by probing OPTIONS preflights — it was exactly the
 one Vercel origin). Verified: all three origins preflight 200, api healthy
 after the auto-redeploy. **Still owed by the founder:** the Supabase auth
-redirect allow-list (dashboard → Authentication → URL Configuration) and
-the R2 bucket CORS rules both still lack the flowgridos.co.uk origins —
-login/invite flows and browser-direct uploads from the new domain may fail
-until they're added.
+redirect allow-list (dashboard → Authentication → URL Configuration) still
+lacks the flowgridos.co.uk origins — login/invite flows from the new domain
+may fail until they're added. **R2 bucket CORS is done** (2 Sep 2026): OPTIONS
+preflights with `Origin` + `Access-Control-Request-Method: PUT` +
+`Access-Control-Request-Headers: content-type` return 204 for all three web
+origins, allowing `PUT` / `content-type` / max-age 3600 — exactly what the
+browser-direct vault and bid-pack uploads send.
 
 ---
 
