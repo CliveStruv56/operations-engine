@@ -131,9 +131,9 @@ function ClaimsPageInner() {
         <div>
           <h1 className="text-xl font-medium">Your organisation</h1>
           <p className="mt-1 text-sm text-ink-muted">
-            The facts you assert about yourselves — registered details, trustees, finances,
-            policies and cover. Drafts read from here, so a figure corrected once is corrected
-            everywhere.
+            Confirmed organisational facts — registered details, trustees, finances,
+            policies and cover — live here in Flowgrid&rsquo;s claims register. Drafts read
+            from here, so a figure corrected once is corrected everywhere.
           </p>
         </div>
         {!importing && !adding && live.length > 0 && (

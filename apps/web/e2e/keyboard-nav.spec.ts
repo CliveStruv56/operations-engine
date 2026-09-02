@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 // Keyboard reachability of the workspace shell: repeated Tab presses must
 // advance focus through the sidebar — past the "Your organisation" link and
@@ -33,7 +34,7 @@ test.beforeEach(async ({ page }) => {
 
 test("Tab advances through the sidebar into the main content", async ({ page }) => {
   await page.goto("/app");
-  await expect(page.getByRole("link", { name: /your organisation/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /your organisation —/i })).toBeVisible();
 
   const seen: string[] = [];
   let sawOrganisation = false;
@@ -66,4 +67,13 @@ test("Tab advances through the sidebar into the main content", async ({ page }) 
     reachedMain,
     `focus never progressed past the sidebar into main content; saw: ${seen.join(" → ")}`
   ).toBe(true);
+});
+
+test("the authenticated shell has no serious automated accessibility defects", async ({ page }) => {
+  await page.goto("/app");
+  await expect(page.getByRole("link", { name: /your organisation —/i })).toBeVisible();
+  const { violations } = await new AxeBuilder({ page }).analyze();
+  expect(
+    violations.filter((v) => v.impact === "serious" || v.impact === "critical"),
+  ).toEqual([]);
 });

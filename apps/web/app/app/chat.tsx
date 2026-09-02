@@ -325,6 +325,7 @@ export default function ChatPanel({
   const mode = modes[modeKey] ?? "chat";
   const webSearchEnabled = ws.tenant!.features?.web_search === true;
   const devProjectsEnabled = ws.tenant!.features?.projects === true;
+  const grantsEnabled = ws.tenant!.features?.grants === true;
   const [docs, setDocs] = useState<DocMeta[] | null>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -780,11 +781,18 @@ export default function ChatPanel({
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col">
           {empty ? (
-            <EmptyHero
-              activeProject={activeProject}
-              docs={docs}
-              devProjectsEnabled={devProjectsEnabled}
-              onPick={pickSuggestion}
+              <EmptyHero
+                activeProject={activeProject}
+                docs={docs}
+                devProjectsEnabled={devProjectsEnabled}
+                grantsEnabled={grantsEnabled}
+                firstUse={
+                  docs !== null &&
+                  docs.length === 0 &&
+                  ws.projects.length === 0 &&
+                  ws.conversations.length === 0
+                }
+                onPick={pickSuggestion}
             />
           ) : (
             <div className="space-y-4">

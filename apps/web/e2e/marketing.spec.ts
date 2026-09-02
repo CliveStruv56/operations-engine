@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import AxeBuilder from "@axe-core/playwright";
 
 // The public marketing pages: they must work with no auth and no backend,
 // the mobile menu must be a full keyboard citizen (PRD §5), and both lead
@@ -22,18 +23,62 @@ function captureLeads(page: Page, status = 200): CapturedLead[] {
   return captured;
 }
 
+async function expectNoSeriousAccessibilityViolations(page: Page) {
+  const { violations } = await new AxeBuilder({ page }).analyze();
+  expect(
+    violations.filter((v) => v.impact === "serious" || v.impact === "critical"),
+  ).toEqual([]);
+}
+
 test("the homepage is public and the skip link is the first tab stop", async ({ page }) => {
   await page.goto("/");
   // No redirect to /login — the marketing h1 renders.
   await expect(
     page.getByRole("heading", { level: 1, name: /turn what your organisation knows/i }),
   ).toBeVisible();
+  await expect(page.getByRole("link", { name: "See how Flowgrid works" })).toHaveAttribute(
+    "href",
+    "/platform",
+  );
+  await expect(page.getByText("Available in pilot")).toHaveCount(2);
 
   await page.keyboard.press("Tab");
   const first = page.getByRole("link", { name: "Skip to content" });
   await expect(first).toBeFocused();
   // sr-only until focused; focusing must make it visible.
   await expect(first).toBeVisible();
+});
+
+test("account creation is invite-led", async ({ page }) => {
+  await page.goto("/signup");
+  await expect(
+    page.getByRole("heading", { name: /account creation is by invitation/i }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Email")).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /book a demo/i })).toHaveAttribute(
+    "href",
+    "/contact",
+  );
+
+  await page.goto("/signup?next=%2Finvite%2Fexample-token");
+  await expect(page.getByRole("heading", { name: /create account/i })).toBeVisible();
+  await expect(page.getByLabel("Email")).toBeVisible();
+
+  await page.goto("/login");
+  await expect(page.getByText(/workspaces are invitation-only/i)).toBeVisible();
+  await expect(page.getByRole("link", { name: /book a demo/i })).toHaveAttribute(
+    "href",
+    "/contact",
+  );
+});
+
+test("key public and authentication pages have no serious automated accessibility defects", async ({
+  page,
+}) => {
+  for (const path of ["/", "/contact", "/login", "/signup"]) {
+    await page.goto(path);
+    await expectNoSeriousAccessibilityViolations(page);
+  }
 });
 
 test("the mobile menu opens by keyboard, traps focus and Escape returns it", async ({ page }) => {

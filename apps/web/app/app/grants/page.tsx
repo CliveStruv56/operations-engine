@@ -18,6 +18,7 @@ import {
 import { tenantId } from "@/lib/groundwork";
 import { GRANTS_DISABLED, ModuleDisabled, useModuleEnabled } from "../module-gate";
 import { card, th } from "./ui";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 
 const LIVE: string[] = ["pipeline", "drafting", "submitted"];
 
@@ -137,7 +138,7 @@ export default function GrantsPage() {
       <div className="mx-auto max-w-6xl p-6">
         <header className="mb-6 flex items-baseline justify-between">
           <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">
-            Grant funding
+            {PRODUCT_LANGUAGE.grantwork.combined}
           </h1>
           <Link
             href="/app/grants/new"

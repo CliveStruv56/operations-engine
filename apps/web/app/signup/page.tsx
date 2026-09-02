@@ -20,6 +20,7 @@ export default function SignupPage() {
 function SignupForm() {
   const router = useRouter();
   const next = safeNext(useSearchParams().get("next"));
+  const acceptingInvite = next.startsWith("/invite/");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -60,8 +61,33 @@ function SignupForm() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <p className="data mb-2 text-electric-blue uppercase">Flowgrid</p>
-        {sentTo ? (
+        <p className="data mb-2 text-electric-blue uppercase">Flowgrid OS</p>
+        {!acceptingInvite ? (
+          <section className="space-y-4 rounded-card border border-edge bg-card p-6 shadow-card">
+            <h1 className="font-display text-hearth-page leading-tight font-medium tracking-[-0.01em]">
+              Account creation is by invitation
+            </h1>
+            <p className="text-sm leading-relaxed text-subtle">
+              Flowgrid sets up each workspace with the organisation taking part
+              in a pilot. If you received an invitation, open the link in that
+              email to create your account.
+            </p>
+            <Link
+              href="/contact"
+              className="inline-flex rounded-btn bg-accent px-5 py-2.5 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+            >
+              Book a demo
+            </Link>
+            <div>
+              <Link href="/login" className="text-sm text-subtle underline hover:text-ink">
+                Already have an account? Sign in
+              </Link>
+            </div>
+            <Link href="/" className="inline-block text-sm text-subtle underline hover:text-ink">
+              Back to the Flowgrid website
+            </Link>
+          </section>
+        ) : sentTo ? (
           <div className="space-y-4 rounded-card border border-edge bg-card p-6 shadow-card">
             <h1 className="font-display text-hearth-page leading-tight font-medium tracking-[-0.01em]">
               Check your email

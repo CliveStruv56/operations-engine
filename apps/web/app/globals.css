@@ -13,7 +13,9 @@
   --graphite: #23241f;
   --slate-gray: #3a4444;
   --stone: #333333;
-  --mist-gray: #808080;
+  /* Passing muted text on both white and the #f2f2ef sidebar. This token is
+     also an input edge, so darkening it improves field boundaries as well. */
+  --mist-gray: #666d6d;
   --bone: #e5e6e1;
   --pale-sage: #d3e5e9;
   --lavender-mist: #bbb2ce;

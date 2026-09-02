@@ -10,7 +10,7 @@ export function HeroVisual() {
           Representative product view — example data
         </p>
 
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="mt-4 grid gap-4 sm:grid-cols-[3fr_2fr]">
           {/* Cited answer */}
           <div className="rounded-lg border border-bone p-4">
             <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-slate">
@@ -43,11 +43,10 @@ export function HeroVisual() {
             </p>
           </div>
 
-          {/* Confirmed claim */}
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-bone p-4">
-            <div>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-bone p-4 sm:col-span-2">
+            <div className="min-w-0 flex-1">
               <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-slate">
-                Claims register
+                Confirmed fact
               </p>
               <p className="mt-1 text-[14px] text-ink">
                 Registered charity · no. 1198765
@@ -56,13 +55,10 @@ export function HeroVisual() {
             <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-grounded-tint px-3 py-1 text-[12px] font-medium text-grounded">
               Confirmed
             </span>
-          </div>
-
-          {/* Output cue */}
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-bone p-4">
+            <span aria-hidden className="text-slate">→</span>
             <div>
               <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-slate">
-                Project output
+                Reviewed output
               </p>
               <p className="mt-1 text-[14px] text-ink">
                 August monthly report

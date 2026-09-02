@@ -6,6 +6,7 @@ import { PilotForm } from "./pilot-form";
 import { Spot, type SpotName } from "./spot-icons";
 import { ctaGhost, ctaOutline, DemoCta, Kicker, Section, StatusCard } from "./ui";
 import { WorkflowDiagram, type WorkflowDiagramContent } from "./workflow-diagram";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 
 export const metadata: Metadata = {
   title: "Flowgrid OS — Turn what your organisation knows into work you can trust",
@@ -113,18 +114,25 @@ export default function HomePage() {
             Turn what your organisation knows into work you can trust.
           </h1>
           <p className="mt-6 max-w-xl text-[18px] leading-[1.42] tracking-[-0.14px] text-slate">
-            Flowgrid connects your source documents, confirmed facts and live
-            projects in one workspace — so your team can find cited answers,
-            run repeatable workflows and produce finished, branded outputs.
+            Find cited answers, keep recurring work structured, and produce
+            outputs ready for review.
+            <span className="mt-2 block">
+              Flowgrid connects your source documents, confirmed facts and live
+              projects in one workspace.
+            </span>
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-5">
             <DemoCta />
             <Link href="/platform" className={ctaGhost}>
-              Explore the platform
+              See how Flowgrid works
             </Link>
           </div>
           <p className="mt-8 text-[13px] font-medium uppercase tracking-[0.08em] text-slate">
             Built for UK small organisations and specialist teams
+          </p>
+          <p className="mt-2 max-w-xl text-[14px] leading-[1.5] text-slate">
+            Best suited to small teams managing recurring bids, reporting,
+            development projects and evidence-heavy organisational work.
           </p>
         </div>
         <HeroVisual />
@@ -188,7 +196,10 @@ export default function HomePage() {
               </div>
             ))}
           </div>
-          <dl className="mt-12 grid gap-8 border-t border-bone pt-10 sm:grid-cols-3">
+          <h3 className="mt-12 border-t border-bone pt-10 text-[22px] font-medium leading-[1.32] text-ink">
+            How Flowgrid is structured
+          </h3>
+          <dl className="mt-6 grid gap-8 sm:grid-cols-3">
             <div>
               <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
                 ≈24
@@ -226,7 +237,7 @@ export default function HomePage() {
           <div className="flex flex-col">
             <StatusCard
               tone="active"
-              label="Active · Piloting now"
+              label={PRODUCT_LANGUAGE.groundwork.availability}
               title="Groundwork — community-led development"
               tags={["Stage gates", "Funding", "Client reporting"]}
             />
@@ -241,7 +252,7 @@ export default function HomePage() {
           <div className="flex flex-col">
             <StatusCard
               tone="active"
-              label="Active · Piloting now"
+              label={PRODUCT_LANGUAGE.grantwork.availability}
               title="Grantwork — applications to monitoring"
               tags={["Applications", "Conditions", "Impact evidence"]}
             />
@@ -280,7 +291,7 @@ export default function HomePage() {
           </h2>
           <ul className="mt-10 grid gap-x-10 gap-y-6 md:grid-cols-2">
             {[
-              "Every tenant-scoped data table is protected by database row-level security — isolation is enforced in the database, not just the app.",
+              "Customer workspaces are isolated at the database level using row-level security — not only by application code.",
               "Roles and per-module entitlements limit what each user can see and do.",
               "AI usage and cost are recorded on every call, so you always know what the assistant is spending.",
               "Grounded answers link back to the document and page they came from — and say so when they can't.",
@@ -310,6 +321,10 @@ export default function HomePage() {
               <DemoCta label="Book a 20-minute demo" />
             </div>
             <div className="mt-10 border-t border-bone pt-8">
+              <p className="mb-4 text-[15px] leading-[1.5] text-slate">
+                Not ready to book? Join the pilot list for occasional
+                availability updates.
+              </p>
               <PilotForm />
             </div>
           </div>

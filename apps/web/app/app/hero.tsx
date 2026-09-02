@@ -13,6 +13,7 @@ import ActivityCard from "./activity-card";
 import ProjectPlanPanel from "./project-plan";
 import { RagDots } from "./projects/page";
 import type { Project } from "./workspace";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 
 /** Slim view of DocumentOut — everything the hero needs from GET /documents. */
 export type DocMeta = {
@@ -149,11 +150,15 @@ export default function EmptyHero({
   activeProject,
   docs,
   devProjectsEnabled,
+  grantsEnabled,
+  firstUse,
   onPick,
 }: {
   activeProject: Project | null;
   docs: DocMeta[] | null;
   devProjectsEnabled: boolean;
+  grantsEnabled: boolean;
+  firstUse: boolean;
   onPick: (s: Suggestion) => void;
 }) {
   const projectDocs = docs?.filter((d) => !activeProject || d.project_id === activeProject.id) ?? [];
@@ -196,7 +201,50 @@ export default function EmptyHero({
         </div>
       )}
 
-      {emptyProject ? (
+      {firstUse && !activeProject && (
+        <section aria-labelledby="first-use-heading" className="mt-7 w-full max-w-[620px] rounded-card border border-edge bg-card p-5 text-left">
+          <h3 id="first-use-heading" className="text-[16px] font-bold text-ink">
+            Start with what your organisation already knows
+          </h3>
+          <p className="mt-1 text-[13px] leading-relaxed text-subtle">
+            Add evidence, confirm the facts you reuse, then begin a structured workflow.
+          </p>
+          <ol className="mt-4 grid gap-3 sm:grid-cols-3">
+            <li>
+              <Link href="/app?view=vault" className="block rounded-card border border-edge p-3 hover:border-electric-blue">
+                <span className="data text-faint uppercase">1 · Evidence</span>
+                <span className="mt-1 block text-[13px] font-semibold text-electric-blue">Add documents to the Vault →</span>
+              </Link>
+            </li>
+            <li>
+              <Link href="/app/claims" className="block rounded-card border border-edge p-3 hover:border-electric-blue">
+                <span className="data text-faint uppercase">2 · Confirm</span>
+                <span className="mt-1 block text-[13px] font-semibold text-electric-blue">Review facts in {PRODUCT_LANGUAGE.organisation.navigation} →</span>
+              </Link>
+            </li>
+            <li>
+              <Link
+                href={devProjectsEnabled ? PRODUCT_LANGUAGE.groundwork.appHref : grantsEnabled ? PRODUCT_LANGUAGE.grantwork.appHref : "/app/forms"}
+                className="block rounded-card border border-edge p-3 hover:border-electric-blue"
+              >
+                <span className="data text-faint uppercase">3 · Work</span>
+                <span className="mt-1 block text-[13px] font-semibold text-electric-blue">
+                  {devProjectsEnabled
+                    ? `Open ${PRODUCT_LANGUAGE.groundwork.brand}`
+                    : grantsEnabled
+                      ? `Open ${PRODUCT_LANGUAGE.grantwork.brand}`
+                      : "Open a funder form"} →
+                </span>
+              </Link>
+            </li>
+          </ol>
+          <p className="mt-4 text-[12px] leading-relaxed text-faint">
+            {PRODUCT_LANGUAGE.organisation.navigation} stores confirmed facts in Flowgrid&rsquo;s {PRODUCT_LANGUAGE.organisation.model}.
+          </p>
+        </section>
+      )}
+
+      {firstUse && !activeProject ? null : emptyProject ? (
         <Link
           href={`/app?view=vault&project=${activeProject!.id}`}
           className="mt-7 flex w-full max-w-[420px] items-center justify-center gap-3 rounded-[14px] border border-edge bg-card px-4 py-3.5 text-[13.5px] font-semibold text-electric-blue shadow-card hover:border-edge-strong"

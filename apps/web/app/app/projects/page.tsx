@@ -15,6 +15,7 @@ import {
   tenantId,
 } from "@/lib/groundwork";
 import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../module-gate";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 
 const RAG_HINT: Record<string, string> = {
   programme: "Programme: red = a milestone is more than 30 days overdue",
@@ -83,7 +84,9 @@ export default function PortfolioPage() {
       <div className="mx-auto max-w-6xl p-6">
       <header className="mb-6 flex items-baseline justify-between">
         <div>
-          <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">Development projects</h1>
+          <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">
+            {PRODUCT_LANGUAGE.groundwork.combined}
+          </h1>
         </div>
         <Link
           href="/app/projects/new"

@@ -21,7 +21,7 @@ describe("development projects portfolio", () => {
   it("shows the disabled panel instead of a raw error when the module is off", async () => {
     render(withWorkspace(<PortfolioPage />, withFlag(false)));
     expect(
-      await screen.findByText(/development projects aren't switched on/i)
+      await screen.findByText(/groundwork · development projects isn't switched on/i)
     ).toBeInTheDocument();
   });
 

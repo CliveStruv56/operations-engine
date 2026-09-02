@@ -17,6 +17,7 @@ import {
   VaultIcon,
 } from "@/components/icons";
 import { claimsWaiting, claimsWaitingLabel } from "@/lib/claims";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 import SidebarChats, { href, item, itemActive, itemRest, navLabel } from "./sidebar-chats";
 import NewProjectForm from "./new-project-form";
 import { useWorkspace } from "./workspace";
@@ -143,13 +144,13 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               any one of them would hide a workspace's own facts from the rest. */}
           <Link
             href="/app/claims"
-            aria-label={claimsNote ? `Your organisation — ${claimsNote}` : undefined}
+            aria-label={claimsNote ? `${PRODUCT_LANGUAGE.organisation.navigation} — ${claimsNote}` : undefined}
             className={`${item} mt-0.5 ${
               pathname.startsWith("/app/claims") ? itemActive : itemRest
             }`}
           >
             <SealIcon />
-            Your organisation
+            {PRODUCT_LANGUAGE.organisation.navigation}
             {claimsCount > 0 && (
               // Warn colours only when something has actually gone off. A pile
               // of proposals is an opportunity, not a fault, and colouring the
@@ -198,21 +199,24 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               }`}
             >
               <GrantIcon />
-              Grant funding
+              {PRODUCT_LANGUAGE.grantwork.brand}
+              <span className="ml-auto text-[10.5px] font-semibold text-faint">
+                {PRODUCT_LANGUAGE.grantwork.function}
+              </span>
             </Link>
           )}
 
           {tenant.features?.projects === true && (
             <>
               <div className={navLabel}>
-                Development projects
+                {PRODUCT_LANGUAGE.groundwork.brand}
                 <Link
                   href="/app/projects"
                   className={`ml-auto text-[10.5px] font-bold ${
                     onDevPages ? "text-electric-blue" : "text-faint hover:text-electric-blue"
                   }`}
                 >
-                  All ↗
+                  {PRODUCT_LANGUAGE.groundwork.function} ↗
                 </Link>
               </div>
               {devProjects.length === 0 && (

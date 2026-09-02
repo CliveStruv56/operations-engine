@@ -15,7 +15,6 @@ const BASE: WorkspaceState = {
   error: null,
   setError: () => {},
   selectTenant: async () => {},
-  createTenant: async () => {},
   createProject: async () => null,
   refreshProjects: async () => {},
   refreshConversations: async () => {},

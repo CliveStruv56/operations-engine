@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Suspense, useState } from "react";
 import CommandPalette from "./command-palette";
 import Sidebar from "./sidebar";
@@ -7,14 +8,13 @@ import { ToastProvider } from "@/components/toast";
 import { DialogProvider } from "@/components/ui";
 import { useWorkspace, WorkspaceProvider } from "./workspace";
 
-function Onboarding() {
+export function Onboarding() {
   const ws = useWorkspace();
-  const [newName, setNewName] = useState("");
 
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-md">
-        <p className="data mb-2 text-ink-faint uppercase">Flowgrid</p>
+        <p className="data mb-2 text-ink-faint uppercase">Flowgrid OS</p>
         {ws.error && (
           <p className="mb-4 rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">
             {ws.error}
@@ -39,31 +39,30 @@ function Onboarding() {
           </section>
         ) : (
           <section className="rounded-card border border-edge bg-surface p-6 shadow-card">
-            <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Set up your workspace</h1>
-            <p className="mt-1 text-sm text-ink-muted">
-              Your team&apos;s documents and conversations live here.
+            <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">
+              No workspace yet
+            </h1>
+            <p className="mt-2 text-sm leading-relaxed text-ink-muted">
+              Flowgrid workspaces are set up by invitation. Open the invitation
+              email sent to you, or contact us if you expected to have access.
             </p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                ws.createTenant(newName);
-              }}
-              className="mt-5 space-y-3"
-            >
-              <input
-                required
-                placeholder="Company name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="w-full rounded-card border border-line bg-surface px-3 py-2 text-sm"
-              />
-              <button
-                type="submit"
-                className="w-full rounded-btn bg-accent px-4 py-2 text-sm font-medium text-accent-ink hover:bg-accent-deep"
+            <div className="mt-5 flex flex-wrap items-center gap-4">
+              <Link
+                href="/contact"
+                className="rounded-btn bg-accent px-5 py-2.5 text-sm font-medium text-accent-ink hover:bg-accent-deep"
               >
-                Create workspace
+                Contact Flowgrid
+              </Link>
+              <Link href="/" className="text-sm text-ink-muted underline hover:text-ink">
+                Back to the website
+              </Link>
+              <button
+                onClick={() => ws.logout()}
+                className="text-sm text-ink-muted underline hover:text-ink"
+              >
+                Sign out
               </button>
-            </form>
+            </div>
           </section>
         )}
       </div>

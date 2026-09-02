@@ -69,7 +69,6 @@ export type WorkspaceState = {
   error: string | null;
   setError: (e: string | null) => void;
   selectTenant: (tenantId?: string) => Promise<void>;
-  createTenant: (name: string) => Promise<void>;
   createProject: (
     name: string,
     opts?: {
@@ -187,21 +186,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     selectTenant(localStorage.getItem("tenantId") ?? undefined);
   }, [selectTenant]);
 
-  const createTenant = useCallback(
-    async (name: string) => {
-      try {
-        const created = await api<{ id: string }>("/tenants", {
-          method: "POST",
-          body: JSON.stringify({ name }),
-        });
-        await selectTenant(created.id);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      }
-    },
-    [selectTenant]
-  );
-
   const createProject = useCallback(
     async (
       name: string,
@@ -291,7 +275,6 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         error,
         setError,
         selectTenant,
-        createTenant,
         createProject,
         refreshProjects,
         refreshConversations,

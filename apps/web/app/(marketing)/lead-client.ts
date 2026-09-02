@@ -1,12 +1,7 @@
 /* Client helper shared by the demo and pilot forms. Collects the source
  * page and UTM values (stored server-side, never sent to analytics). */
 
-export const WORKFLOW_OPTIONS = [
-  { value: "core", label: "Core platform" },
-  { value: "development-projects", label: "Development projects" },
-  { value: "grants", label: "Grants" },
-  { value: "not-sure", label: "Not sure yet" },
-] as const;
+export { WORKFLOW_OPTIONS } from "@/lib/product-language";
 
 export interface LeadInput {
   kind: "demo" | "pilot";

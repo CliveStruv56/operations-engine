@@ -21,6 +21,7 @@ function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const next = safeNext(params.get("next"));
+  const acceptingInvite = next.startsWith("/invite/");
   // Set by the auth callback when an email link could not finish on its own.
   const notice = params.get("notice");
   const [email, setEmail] = useState("");
@@ -46,7 +47,7 @@ function LoginForm() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="w-full max-w-sm">
-        <p className="data mb-2 text-electric-blue uppercase">Flowgrid</p>
+        <p className="data mb-2 text-electric-blue uppercase">Flowgrid OS</p>
         <form
           onSubmit={onSubmit}
           className="space-y-4 rounded-card border border-edge bg-card p-6 shadow-card"
@@ -90,12 +91,26 @@ function LoginForm() {
           >
             Sign in
           </Button>
-          <p className="text-sm text-subtle">
-            No account?{" "}
-            <Link href={withNext("/signup", next)} className="underline hover:text-ink">
-              Sign up
-            </Link>
-          </p>
+          {acceptingInvite ? (
+            <p className="text-sm text-subtle">
+              New to Flowgrid?{" "}
+              <Link href={withNext("/signup", next)} className="underline hover:text-ink">
+                Create the account for your invited email
+              </Link>
+              .
+            </p>
+          ) : (
+            <p className="text-sm text-subtle">
+              Need access? Flowgrid workspaces are invitation-only.{" "}
+              <Link href="/contact" className="underline hover:text-ink">
+                Book a demo
+              </Link>
+              .
+            </p>
+          )}
+          <Link href="/" className="inline-block text-sm text-subtle underline hover:text-ink">
+            Back to the Flowgrid website
+          </Link>
         </form>
       </div>
     </main>
