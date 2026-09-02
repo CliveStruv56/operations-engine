@@ -298,6 +298,9 @@ class MessageCreate(BaseModel):
         default=None, pattern="^(chat|analyse|report|financial|slides|research)$"
     )
     use_vault: bool = True
+    #: The composer's "Include company data" switch: gates the claims register
+    #: plus the (feature-flagged) community-profile and contact-book lookups.
+    use_company: bool = True
 
 
 class Citation(BaseModel):

@@ -21,12 +21,14 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from app.audit import write_audit
+from app.claims.lookup import claims_chat_block, match_claims
 from app.community.lookup import community_block, match_community
 from app.crm.lookup import contacts_block, match_contacts
 from app.db import db
 from app.errors import ApiError
 from app.litellm import StreamResult, estimate_cost_usd, litellm_client
 from app.prompts import (
+    CLAIMS_PROMPT,
     COMMUNITY_PROMPT,
     CONTACTS_PROMPT,
     NO_COVERAGE_PROMPT,
@@ -417,12 +419,16 @@ async def post_message(
                 raise ApiError(
                     400, "feature_disabled", "Web search is not enabled for this workspace"
                 )
+        # Record lookups, all behind the composer's "Include company data"
+        # switch (`use_company`): the modules stay feature-flagged per tenant,
+        # and the claims register is core so it gates on the switch alone.
+        #
         # Contact book lookup (CRM module): name/company mentions in the
         # message pull matching records into the prompt so "what's Sarah's
         # number?" answers from stored data instead of guessing.
         matched_contacts: list = []
         matched_companies: list = []
-        if features.get("contacts") is True:
+        if body.use_company and features.get("contacts") is True:
             matched_contacts, matched_companies = await match_contacts(conn, body.content)
         # Community profile lookup (community module): mentions of the place,
         # its figures or its facilities pull the stored records into the
@@ -430,8 +436,14 @@ async def post_message(
         matched_place = None
         matched_stats: list = []
         matched_assets: list = []
-        if features.get("community") is True:
+        if body.use_company and features.get("community") is True:
             matched_place, matched_stats, matched_assets = await match_community(conn, body.content)
+        # Claims register lookup (unflagged core): what the organisation has
+        # confirmed about itself, so "are we VAT registered?" answers from the
+        # register rather than a guess.
+        matched_claims: list = []
+        if body.use_company:
+            matched_claims = await match_claims(conn, body.content)
         month_spend = await conn.fetchval(
             """
             select coalesce(sum(cost_usd), 0) from usage_events
@@ -526,6 +538,8 @@ async def post_message(
         system += "\n\n" + COMMUNITY_PROMPT.format(
             records=community_block(matched_place, matched_stats, matched_assets)
         )
+    if matched_claims:
+        system += "\n\n" + CLAIMS_PROMPT.format(facts=claims_chat_block(matched_claims))
     llm_messages = [{"role": "system", "content": system}]
     llm_messages += [{"role": r["role"], "content": r["content"]} for r in history]
     llm_messages.append({"role": "user", "content": body.content})
@@ -661,10 +675,12 @@ async def post_message(
                 or matched_assets
                 or matched_contacts
                 or matched_companies
+                or matched_claims
             ):
-                # Structured records (community profile, contact book) were in
-                # front of the model, so the likely backing lives in a register
-                # rather than the vault — and "add a document" recovery over a
+                # Structured records (community profile, contact book, claims
+                # register) were in front of the model, so the likely backing
+                # lives in a register rather than the vault — and "add a
+                # document" recovery over a
                 # correctly answered "how many households?" would mislead. The
                 # client's recovery strip keys on exactly "none", so any other
                 # value keeps it hidden without a client change.

@@ -21,7 +21,9 @@ from app.claims.ccni import load_snapshot, parse_snapshot_csv
 from app.claims.service import load_kinds, render_statement
 from app.config import get_settings
 from app.db import db
-from tests.conftest import OWNER_URL, auth
+from app.litellm import StreamResult, litellm_client
+from tests.conftest import OWNER_URL, Tenant, auth, seed_tenant
+from tests.test_chat import parse_sse
 
 # Worker CI has no Postgres, so the worker's DB-touching claims modules
 # (asyncpg + pydantic only) are imported across the monorepo and exercised
@@ -1411,3 +1413,150 @@ async def test_ccni_unknown_number_names_the_snapshot(client, two_tenants):
     )
     assert resp.status_code == 404
     assert "snapshot" in resp.json()["error"]["message"]
+
+
+# -- chat lookup ("Include company data") -------------------------------------
+
+
+@pytest.fixture
+def capture_llm(monkeypatch):
+    """Stub stream_chat, recording the system prompt of each call."""
+    prompts: list[str] = []
+
+    async def _fake(virtual_key, alias, messages, result: StreamResult):
+        prompts.append(messages[0]["content"])
+        result.text_parts.append("ok")
+        yield "ok"
+        result.tokens_in = 10
+        result.tokens_out = 5
+
+    monkeypatch.setattr(litellm_client, "stream_chat", _fake)
+
+    async def _fake_embed(virtual_key, text):
+        return [0.0] * 2048, 7
+
+    monkeypatch.setattr(litellm_client, "embed_query", _fake_embed)
+    return prompts
+
+
+async def _chat_tenant(client) -> Tenant:
+    t = await seed_tenant(client, f"claimschat-{uuid4().hex[:6]}")
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            "update tenants set litellm_key_encrypted = 'sk-test-virtual' where id = $1", t.id
+        )
+    return t
+
+
+async def _say(client, tenant: Tenant, content: str, **fields) -> httpx.Response:
+    headers = auth(tenant.owner_id, tenant.id)
+    conv = (await client.post("/api/v1/conversations", json={"title": "t"}, headers=headers)).json()
+    resp = await client.post(
+        f"/api/v1/conversations/{conv['id']}/messages",
+        json={"content": content, "use_vault": False, **fields},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    return resp
+
+
+async def test_chat_injects_matching_claims_but_never_proposals(client, capture_llm):
+    t = await _chat_tenant(client)
+    headers = auth(t.owner_id, t.id)
+    resp = await client.post(
+        "/api/v1/claims",
+        json={
+            "kind": "volunteers",
+            "statement": "The organisation works with 40 volunteers.",
+            "value": 40,
+        },
+        headers=headers,
+    )
+    assert resp.status_code == 201, resp.text
+    # A proposal is not something the workspace asserts — it must stay out
+    # of the prompt however well it matches.
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            """
+            insert into claims (tenant_id, kind, statement, status, source, created_by)
+            values ($1, 'volunteers', 'We might have 99 volunteers.', 'proposed', 'typed', $2)
+            """,
+            t.id,
+            t.owner_id,
+        )
+
+    await _say(client, t, "How many volunteers do we work with?")
+    system = capture_llm[-1]
+    assert "<company-facts>" in system
+    assert "The organisation works with 40 volunteers." in system
+    assert "99" not in system
+
+    # An unrelated question must not drag the register along.
+    await _say(client, t, "Draft a short welcome email")
+    assert "<company-facts>" not in capture_llm[-1]
+
+
+async def test_chat_marks_an_expired_claim(client, capture_llm):
+    """A lapsed fact still answers, but never as current."""
+    t = await _chat_tenant(client)
+    headers = auth(t.owner_id, t.id)
+    created = (
+        await client.post(
+            "/api/v1/claims",
+            json={
+                "kind": "volunteers",
+                "statement": "The organisation works with 40 volunteers.",
+                "value": 40,
+            },
+            headers=headers,
+        )
+    ).json()
+    async with db.tenant_tx(t.owner_id, t.id) as conn:
+        await conn.execute(
+            "update claims set expires_on = $2 where id = $1",
+            created["id"],
+            date.today() - timedelta(days=30),
+        )
+
+    await _say(client, t, "How many volunteers do we work with?")
+    assert "EXPIRED" in capture_llm[-1]
+
+
+async def test_company_data_toggle_off_skips_the_register(client, capture_llm):
+    t = await _chat_tenant(client)
+    resp = await client.post(
+        "/api/v1/claims",
+        json={
+            "kind": "volunteers",
+            "statement": "The organisation works with 40 volunteers.",
+            "value": 40,
+        },
+        headers=auth(t.owner_id, t.id),
+    )
+    assert resp.status_code == 201, resp.text
+
+    await _say(client, t, "How many volunteers do we work with?", use_company=False)
+    assert "<company-facts>" not in capture_llm[-1]
+
+
+async def test_claims_answer_reports_records_coverage(client, capture_llm):
+    """A vault-on question answered from the register must not tell the user
+    their vault "could not back" the answer — same rule as the community
+    profile: the backing lives in a register, and "add a document" recovery
+    over a correct figure misleads."""
+    t = await _chat_tenant(client)
+    resp = await client.post(
+        "/api/v1/claims",
+        json={
+            "kind": "volunteers",
+            "statement": "The organisation works with 40 volunteers.",
+            "value": 40,
+        },
+        headers=auth(t.owner_id, t.id),
+    )
+    assert resp.status_code == 201, resp.text
+
+    resp = await _say(client, t, "How many volunteers do we work with?", use_vault=True)
+    done = dict(parse_sse(resp.text))["done"]
+    assert done["coverage"] == "records"
+    assert done["scope_used"] is None

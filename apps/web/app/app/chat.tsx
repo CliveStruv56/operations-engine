@@ -316,6 +316,9 @@ export default function ChatPanel({
   const [streamText, setStreamText] = useState<string | null>(null);
   const [softCap, setSoftCap] = useState(false);
   const [useVault, setUseVault] = useState(true);
+  // "Include company data": the claims register plus the community-profile
+  // and contact-book lookups (where those modules are on for the tenant).
+  const [useCompany, setUseCompany] = useState(true);
   // Task mode is sticky per conversation ("new" = the not-yet-created one).
   const [modes, setModes] = useState<Record<string, string>>({});
   const modeKey = activeConversationId ?? "new";
@@ -707,7 +710,7 @@ export default function ChatPanel({
 
     await apiStream(
       `/conversations/${convId}/messages`,
-      { content, use_vault: useVault, task_kind: mode },
+      { content, use_vault: useVault, use_company: useCompany, task_kind: mode },
       tenantId,
       {
         onDelta: pushDelta,
@@ -981,21 +984,36 @@ export default function ChatPanel({
               </button>
             )}
           </div>
-          <div className="mt-2.5 flex items-center gap-2.5 border-t border-edge px-1 pt-[11px]">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={useVault}
-              aria-label="Vault"
-              onClick={() => setUseVault((v) => !v)}
-              className={`relative h-[18px] w-8 flex-none rounded-full transition after:absolute after:top-0.5 after:left-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition after:content-[''] ${
-                useVault ? "bg-grounded after:translate-x-[14px]" : "bg-edge-strong"
-              }`}
-            />
-            <span className="text-xs font-semibold text-subtle">
-              {useVault
-                ? "Vault on — answers cite your documents"
-                : "Vault off — answers come from the model alone"}
+          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-edge px-1 pt-[11px]">
+            {/* The two retrieval sources: the shared document vault, and the
+                workspace's own records (claims register, community profile,
+                contact book). Both default on; both cover the whole
+                workspace, not just this user's uploads. */}
+            <span className="flex items-center gap-2.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={useVault}
+                aria-label="Include workspace documents"
+                onClick={() => setUseVault((v) => !v)}
+                className={`relative h-[18px] w-8 flex-none rounded-full transition after:absolute after:top-0.5 after:left-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition after:content-[''] ${
+                  useVault ? "bg-grounded after:translate-x-[14px]" : "bg-edge-strong"
+                }`}
+              />
+              <span className="text-xs font-semibold text-subtle">Include workspace documents</span>
+            </span>
+            <span className="flex items-center gap-2.5">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={useCompany}
+                aria-label="Include company data"
+                onClick={() => setUseCompany((v) => !v)}
+                className={`relative h-[18px] w-8 flex-none rounded-full transition after:absolute after:top-0.5 after:left-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition after:content-[''] ${
+                  useCompany ? "bg-grounded after:translate-x-[14px]" : "bg-edge-strong"
+                }`}
+              />
+              <span className="text-xs font-semibold text-subtle">Include company data</span>
             </span>
             <span className="ml-auto hidden text-[11.5px] font-semibold text-faint sm:block">
               <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold">
