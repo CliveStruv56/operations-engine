@@ -56,6 +56,12 @@ dashboard actions still to do. Record the date beside each as it is done.
   Done: ______
 - [ ] **Offsite dump (optional hardening)** — a scheduled `pg_dump` to R2
   from a cron if Railway's retention proves thin.
+- [ ] **Backup failure alert** — the R2 cron (`infra/backup/backup.sh`) now
+  refuses to upload a dump under `BACKUP_MIN_BYTES` (default 20 KB) and exits
+  non-zero, but a cron container that exits non-zero just disappears from the
+  Railway dashboard. Set `BACKUP_ALERT_EMAIL` (and `RESEND_API_KEY`, plus
+  optionally `BACKUP_ALERT_FROM`) on the `backup` service so a failed night
+  sends mail instead of only writing to logs nobody reads. Done: ______
 
 ## What to tell a client
 
