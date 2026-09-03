@@ -1,12 +1,12 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-08-25 (**§6k–§6r are the latest state**; §1–6j are
-history, oldest first)
+**Handoff date:** 2026-09-03 (**§6s is the latest state**; §1–6r are history,
+oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
-claims-register build, the 14 Aug evaluation-gap and project-plan work, and
-the 16 Aug public marketing-site build
+claims-register build, the 14 Aug evaluation-gap and project-plan work, the
+16 Aug public marketing-site build, and the 3 Sep code-review remediation
 **Purpose:** Resume in a new context window without re-deriving this work.
 **Start at §7** — it names the active task and the order to read things in.
 
@@ -1709,33 +1709,175 @@ invite while signed in as the operator and took the owner seat.
 
 ---
 
+## 6s. Sep code review — §1 items 1–6 remediated (3 September 2026)
+
+`docs/code-review-sep-2026.md` is the full security/health review from 2–3 Sep
+(eight parallel reviewers, ~50k lines, 28 migrations, CI and the live Railway
+config). **Read its §1 first — it is the ranked action list, and rows 1–6 are
+now struck through.** §4 holds the two checks only the operator can run; both
+were run on 3 Sep and their results are in the status banner.
+
+The headline stands: tenant isolation is sound. The serious findings were the
+things standing *next to* it — an env var that silently switched RLS off, a
+migration password published in the source tree, content rendered with
+remote-fetching images, a dead auth test, and a backup that overwrote itself
+with nothing.
+
+### What landed, in order
+
+| Commit | Item | What |
+|---|---|---|
+| `111bde0` | 1 | `0001` requires `OPS_APP_PASSWORD` outside dev instead of inventing a default; `0029` refuses to migrate a database whose roles still carry a password published in this repo (`migrations/rolecheck.py`) |
+| `dab5f40` | 2 | `APP_DATABASE_URL` is now required; the api **and the worker** refuse to boot on a connection that is superuser, `BYPASSRLS`, or owns tables in `public` |
+| `5b4a1ed` | 4 (worker) | All four PDF renderers go through `worker/pdf.py`, which refuses every non-`data:` URL; `answer_pdf` disables the markdown image rule |
+| `e7cde7d`, `c16fce3` | — | The review document itself, and the deploy steps it changed |
+| `91e4eae` | 3 | The auth-coverage test walks the included routers |
+| `d2f5875` | 5 | The JWKS lookup moves off the event loop |
+| `30e2716` | 4 (browser) | `disallowedElements={["img"]}` in `AnswerMarkdown` |
+| `f331d93` | 6 | `backup.sh` cannot overwrite the day's slot with an empty dump |
+
+Staging's two database passwords were rotated and verified on 3 Sep, and
+`litellm-postgres` was checked too.
+
+### The four fixed on 3 Sep, and the trap in each
+
+- **Item 3 — the test that checked nothing.** `test_every_endpoint_requires_token`
+  iterated `app.routes` for `APIRoute` instances. Since FastAPI 0.140 /
+  Starlette 1.3, `include_router()` no longer flattens onto the app: entries are
+  `_IncludedRouter` wrappers holding `original_router`, and the prefix lives on
+  `route.include_context.prefix` — **not** on `original_router.prefix`, which is
+  the empty string. The scan found 2 routes, both public, and asserted nothing
+  while passing, from the FastAPI upgrade onwards. The walk now recurses and
+  checks **186 of 190 routes**; the 4 skipped are the two health routes and the
+  two HMAC digest routes, in their own `HMAC_PATHS` set.
+  `test_route_walk_sees_the_whole_app` fails if the walk ever returns fewer than
+  `MIN_PROTECTED_ROUTES` (150). **The trap:** this walk uses FastAPI internals
+  and will break again on an upgrade. When it does, the count floor is what
+  turns that from silent into red — do not delete it, and do not "fix" a low
+  count by lowering the floor. There was no live hole: all 186 return 401.
+- **Item 5 — a caller-triggered blocking fetch.** `get_signing_key_from_jwt` is
+  synchronous `urllib` with a 30s default timeout and ran on the event loop
+  inside async `get_current_user`, *before any signature is checked*. PyJWT
+  memoises successes only, so random `kid` values forced one blocking round trip
+  each. Now `anyio.to_thread.run_sync`, a 5s `PyJWKClient` timeout, and a
+  bounded 60s negative cache of missed `kid`s. **`PyJWKClientConnectionError` is
+  deliberately excluded from that cache** — an unreachable key set says nothing
+  about the key, and caching a network blip would lock out a legitimate `kid`.
+  `decode_token` is now a **coroutine**. `tests/test_auth_jwks.py` is the only
+  cover the JWKS branch has (conftest pins the HS256 secret); its off-loop test
+  counts event-loop heartbeat ticks during a 0.3s fetch.
+- **Item 4, browser half.** `AnswerMarkdown` had no `img` override, no
+  `disallowedElements`, no `urlTransform`. react-markdown neuters `javascript:`
+  and `data:` hrefs but permits `https://attacker/?d=…` on an `<img>` — and
+  retrieved third-party material (vault excerpts, Exa results, claim statements
+  any member can type) reaches the model in its *system* prompt. The element is
+  dropped outright. `markdown.test.ts` became `.tsx` to hold the render tests.
+- **Item 6 — the backup that erased itself.** `set -eu` without `pipefail` meant
+  `pg_dump | gzip` reported gzip's status. **Reproduced live before changing
+  anything:** with a wrong password the old script uploaded a 20-byte
+  `daily-Thu.sql.gz` and exited 0 with "backup complete". Now `pipefail`, a
+  20 KB floor (`BACKUP_MIN_BYTES`) checked before any upload, and an `EXIT` trap
+  that logs and — when `RESEND_API_KEY` + `BACKUP_ALERT_EMAIL` are set — emails.
+  Verified in `postgres:16-alpine` against a live Postgres with curl stubbed:
+  bad password exits 1 with nothing uploaded, an empty database is refused at
+  391 bytes, a good run uploads both.
+
+Every fix in this session was checked with a **negative control** — the change
+reverted, the test re-run, the failure observed. That is the standard worth
+keeping: three of these are tests whose whole value is failing at the right
+moment, and one of them had already been silently not doing that for months.
+
+### What is still open, in the review's own order
+
+Items **7–14 of §1**, none started:
+
+7. Default `OPEN_SIGNUP` to `False`; rate-limit `POST /tenants`.
+8. Reject `brand.logo_key` / `brand.slides_template_key` that are not this
+   tenant's own brand path (API-1 — RLS cannot see this; the object store has
+   no tenant concept).
+9. Catch `BaseException` in `ingest_document` plus a stale-status sweep (WK-3 —
+   documents strand at `parsing` forever on every deploy landing mid-parse).
+10. A `minimum` role on `make_feature_gate`; admin for module deletes.
+11. Cap concurrent draft jobs per tenant; `check_draft` / `check_transcribe`.
+12. Ownership check on `GET /conversations/exports/{job_id}`.
+13. Security headers in `next.config.ts`.
+14. Wrap `apiStream` in `send()`; make `api()` survive a non-JSON error body.
+
+Two carried notes that are **not** in the §1 list and are easy to lose:
+
+- **LLM-1 is only half closed.** Both renderers are fixed, but retrieved
+  material is still interpolated into the **system** message with unescaped
+  `<vault-excerpts>` tags, so content carrying the closing tag can break out
+  (`routers/conversations.py:526-545`). The remaining fix is to move it into a
+  dedicated data turn and strip the closing-tag strings. Recorded in §1 row 4.
+- **The backup alert needs the operator.** `BACKUP_ALERT_EMAIL` and
+  `RESEND_API_KEY` must be set on the Railway `backup` service or a failed
+  night is still only a log line in a container that has already disappeared.
+  Added to the Layer 2 checklist in `docs/backup-and-export.md`, which also
+  still carries BK-2's unfixed claim that the R2 cron is "optional hardening" —
+  it has in fact run nightly since at least 27 Aug.
+
+### Suites after this session
+
+| App | Count | Was |
+|---|---|---|
+| api | **433** | 426 |
+| worker | **215** | unchanged |
+| web (vitest) | **119** | 106 |
+
+Plus `pnpm build`, `ruff check` / `ruff format --check`, `mypy app`, and the CI
+line-endings guard (`.gitattributes` pins LF; a CRLF shebang in
+`infra/backup/backup.sh` would die as "bad interpreter" in the Linux image).
+The Playwright e2e specs (`apps/web/e2e/`) were not run this session.
+
+**Local test infra:** the api suite needs the dev compose stack up
+(`docker compose -f infra/docker-compose.dev.yml up -d`) — it drops and
+recreates `ops_engine_test` and runs all 29 migrations every session. The
+backup-script verification attaches a container to the compose network
+`ops-engine-dev_default` and reaches Postgres at `ops-engine-dev-postgres-1`.
+
+---
+
 ## 7. Read first in a new session
 
-**Active work: the marketing site (§6q) is pushed and LIVE in Vercel
-production** (https://ops-engine-staging-web.vercel.app, from `dc54cfd`) —
-its open items are next (lead destination, analytics/consent, legal
-sign-off, launch checks). The other open brief is `docs/claims-register-brief.md`
-**§14** — only §14.1 steps 2–3 (the arq cron sweep, then email) remain
-unbuilt, and both are blocked on infrastructure that does not exist.
+**Active work: remediating `docs/code-review-sep-2026.md` §1.** Rows **1–6 are
+done** (see §6s); **rows 7–14 are open and unstarted**, and §1 is already
+ordered by blast radius × likelihood — start at row 7 and work down. Nothing is
+blocked and nothing needs a decision first.
 
-**Suites as of 16 Aug 2026, all green:** api **390**, worker **196**, web
-**103** (+5 Playwright e2e).
+Everything else is background. The marketing site (§6q, §6r) is live in Vercel
+production; `docs/claims-register-brief.md` §14.1 steps 2–3 (the arq cron sweep,
+then email) remain unbuilt and are blocked on infrastructure that does not
+exist.
 
-0. **§6q** if touching the public site, `/` routing, or lead capture — it
-   also records why the marketing pages follow Huddle, not the PRD's "Hearth".
-1. This file — **§6k** first (the claims register: what was built, the five
-   rulings not to relitigate, the three traps not to reintroduce, and what the
-   user still owes), then **§6l** (the summary badge) and **§6m** (ownership, and
-   the two contract changes in it), then **§6n** (what the live Charity
-   Commission and OSCR payloads actually return) and **§6o** (plans on core
-   projects). Then **§6j** if touching latency, **§6g** for Grantwork.
-2. `docs/claims-register-brief.md` — **§13** for what shipped, **§14** for the
-   two proposed follow-ups with their recommended shapes and the decisions to
-   settle first.
-3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#45** are the claims-register
-   rulings, **#46–#50** the evaluation-gap and live-register findings, and
-   **#51** core project plans. #36, #37, #43, #44, #45, #49 and #50 each record
-   a specific failure and are easy to undo by accident.
+**Suites as of 3 Sep 2026, all green:** api **433**, worker **215**, web
+**119** vitest. Playwright e2e (`apps/web/e2e/`) not run since 16 Aug. The api
+suite needs the dev compose stack up.
+
+**Two things only the operator can do**, both recorded and neither done:
+`BACKUP_ALERT_EMAIL` + `RESEND_API_KEY` on the Railway `backup` service
+(§6s), and the Layer 2 checklist in `docs/backup-and-export.md`.
+
+0. **`docs/code-review-sep-2026.md`** — §1 for the action list, §2 for each
+   finding with its `file:line` and quoted code, §4 for the operator checks.
+   Its banner is not boilerplate: line numbers from the original reports drift
+   badly (grep for the symbol, never trust the number), findings marked
+   "reported" were not re-read by hand, and the recorded methodology error —
+   a password check over `localhost` inside the postgres container proves
+   nothing, because the image's `pg_hba.conf` trusts `127.0.0.1/32` — cost an
+   hour and will cost it again.
+1. **§6s of this file** — what rows 1–6 changed, and the trap carried by each.
+   Read it before touching `tests/test_auth.py`, `app/auth.py`,
+   `components/markdown.tsx` or `infra/backup/backup.sh`, all of which now
+   carry a guard that looks removable and is not.
+2. This file's **§6k** (claims register: what was built, the five rulings not to
+   relitigate, the three traps not to reintroduce), then **§6l**, **§6m**,
+   **§6n**, **§6o**. Then **§6j** if touching latency, **§6g** for Grantwork,
+   **§6q** if touching the public site or lead capture.
+3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#45** the claims-register rulings,
+   **#46–#50** the evaluation-gap and live-register findings, **#51** core
+   project plans. #36, #37, #43, #44, #45, #49 and #50 each record a specific
+   failure and are easy to undo by accident.
 4. `CLAUDE.md` (unchanged conventions: RLS with an isolation test per table,
    LiteLLM-only for models, cost telemetry on every LLM call, commit-on-green).
 5. `docs/vertical-module-roadmap.md` if the next move is a new module.
@@ -1745,4 +1887,3 @@ unbuilt, and both are blocked on infrastructure that does not exist.
    be claims (brief §12.5, settled).
 
 Grantwork (§6f, §6g) and the drafting engine (§6i) are background — done.
-
