@@ -90,7 +90,8 @@ relevant app's commands pass locally.
 | `docs/staging-deploy-checklist.md` | How staging actually deploys (Railway + Vercel, **not** the compose file) |
 | `docs/backup-and-export.md` | Workspace export (self-serve ZIP) + the operator backup checklist — supersedes the spec's stale "Supabase PITR" line |
 | `docs/review-context-handoff.md` | Session-resume context |
-| `docs/review-report.md` | Last full project review |
+| `docs/code-review-sep-2026.md` | Full security/health review, 2–3 Sep 2026 — read §1 for the ranked action list and §4 for the checks only the operator can run |
+| `docs/review-report.md` | Earlier full project review (Aug 2026) |
 
 ## Working conventions
 

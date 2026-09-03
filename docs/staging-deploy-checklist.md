@@ -196,6 +196,32 @@ allow-list.
   `ops_app` is created by migration 0001 in dev/CI; **create it manually in
   staging** with RLS-enforced (non-owner, no BYPASSRLS).
 
+  Since 3 Sep 2026 this is enforced rather than trusted, because trusting it
+  is how staging ended up running on the password printed in this repo:
+
+  - **Migration 0001 no longer invents a default outside dev.** If `ops_app`
+    is missing and `ENVIRONMENT` is not `dev`, it requires `OPS_APP_PASSWORD`
+    for that migration run and fails loudly otherwise. Running
+    `infra/staging-roles.sql` first, as this section says, keeps it a no-op.
+  - **Migration 0029 blocks the deploy** if `ops` or `ops_app` still carries
+    its published password. It runs in the pre-deploy hook, so a failure stops
+    the deploy while the previous deployment keeps serving.
+  - **The api and worker refuse to boot** on a connection RLS does not bind —
+    superuser, `BYPASSRLS`, or owning tables in `public`. `APP_DATABASE_URL`
+    is now required outright: there is no longer a silent fallback to
+    `DATABASE_URL`.
+
+  To check a role's password, connect over the **private network**, never
+  `localhost`: the postgres image trusts `127.0.0.1`, so a localhost check
+  accepts any password and tells you nothing.
+
+  ```sh
+  railway ssh --service postgres --environment production \
+    "PGPASSWORD=<candidate> psql -h postgres.railway.internal -U <role> -d postgres -l"
+  ```
+
+  `password authentication failed` is the result you want.
+
 ## 2b. Observability (optional, opt-in)
 
 **Langfuse traces.** The gateway config carries a commented
