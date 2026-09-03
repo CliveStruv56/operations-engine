@@ -10,6 +10,9 @@ Revises:
 Create Date: 2026-07-27
 """
 
+import os
+
+import sqlalchemy as sa
 from alembic import op
 
 revision = "0001"
@@ -301,17 +304,51 @@ def upgrade() -> None:
     op.execute("revoke execute on function accept_invite(text, uuid) from public")
 
     # --- Runtime role -------------------------------------------------------
-    # Dev/CI convenience; in production the role exists already with a real
-    # password and this block is a no-op.
-    op.execute(
-        """
-        do $$ begin
-            if not exists (select from pg_roles where rolname = 'ops_app') then
-                create role ops_app login password 'ops_app';
-            end if;
-        end $$
-        """
+    # On any database where the role already exists — staging, production,
+    # anything bootstrapped by infra/staging-roles.sql — this is a no-op and
+    # only the grants below apply.
+    #
+    # When it is missing, the password comes from OPS_APP_PASSWORD. It used to
+    # be the literal 'ops_app', on the assumption that production would always
+    # have run staging-roles.sql first. Railway runs `alembic upgrade head`
+    # automatically as a pre-deploy hook and that manual step is documented for
+    # the Compose path, so the assumption did not hold: a database first
+    # migrated on Railway got a credential published in this repo, with DML on
+    # every table and nothing anywhere saying so.
+    #
+    # Dev and CI keep the shared literal deliberately — tests/conftest.py
+    # connects as ops_app:ops_app — but only where ENVIRONMENT says dev.
+    # Anywhere else, a missing password is a hard stop rather than a default.
+    role_exists = (
+        op.get_bind().execute(sa.text("select 1 from pg_roles where rolname = 'ops_app'")).scalar()
     )
+    if not role_exists:
+        password = os.environ.get("OPS_APP_PASSWORD", "")
+        if not password:
+            if os.environ.get("ENVIRONMENT", "dev") != "dev":
+                raise RuntimeError(
+                    "Role 'ops_app' does not exist and OPS_APP_PASSWORD is not"
+                    " set. Create it with a generated password first (see"
+                    " infra/staging-roles.sql), or set OPS_APP_PASSWORD for"
+                    " this migration run. Refusing to invent a default: the"
+                    " previous one was published in this repository."
+                )
+            password = "ops_app"
+        # %L is Postgres's own literal quoting — DDL takes no bind parameters,
+        # so the alternative is escaping a password by hand. The cast is
+        # required: inside format() the server cannot infer the parameter's
+        # type and fails with "could not determine data type of parameter $1".
+        create_role = (
+            op.get_bind()
+            .execute(
+                sa.text(
+                    "select format('create role ops_app login password %L', cast(:pw as text))"
+                ),
+                {"pw": password},
+            )
+            .scalar()
+        )
+        op.execute(create_role)
     op.execute("grant usage on schema public to ops_app")
     op.execute("grant select, insert, update, delete on all tables in schema public to ops_app")
     op.execute(
