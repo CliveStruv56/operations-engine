@@ -21,6 +21,7 @@ from markdown_it import MarkdownIt
 
 from worker.db import tenant_tx
 from worker.drafting.assemble import CITATION_RE
+from worker.pdf import render_pdf
 from worker.storage import upload_bytes
 
 PDF_MIME = "application/pdf"
@@ -28,7 +29,15 @@ DEFAULT_ACCENT = "#b14e2e"  # Hearth terracotta; tenants.brand overrides
 
 #: commonmark + tables; html off, so any raw HTML the model produced is
 #: escaped rather than rendered (the commonmark preset would allow it).
-_MD = MarkdownIt("commonmark", {"html": False}).enable("table")
+#:
+#: Images are disabled outright. `html: False` does not cover them —
+#: `![](http://…)` is markdown, not HTML, and renders to an `<img>` that
+#: WeasyPrint would then fetch from inside the private network. The renderer
+#: refuses remote fetches too (worker/pdf.py); this is the belt to that
+#: braces, and it keeps an injected image out of the document entirely rather
+#: than failing the export. An answer has no legitimate images: every figure a
+#: tenant sees is text plus citations.
+_MD = MarkdownIt("commonmark", {"html": False}).enable("table").disable("image")
 
 _CSS = """
 @page { size: A4; margin: 16mm 18mm; }
@@ -111,12 +120,6 @@ def build_html(
         body=body,
         sources=sources,
     )
-
-
-def render_pdf(html_text: str) -> bytes:
-    from weasyprint import HTML  # lazy: needs system pango/cairo
-
-    return HTML(string=html_text).write_pdf()
 
 
 # -- arq job ------------------------------------------------------------------

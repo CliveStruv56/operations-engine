@@ -23,6 +23,7 @@ from uuid import UUID
 import asyncpg
 
 from worker.db import tenant_tx
+from worker.pdf import render_pdf
 from worker.storage import upload_bytes
 
 PDF_MIME = "application/pdf"
@@ -184,12 +185,6 @@ def build_html(
         facilities=_facilities_html(assets),
         foot=_esc(" · ".join(foot_parts)),
     )
-
-
-def render_pdf(html_text: str) -> bytes:
-    from weasyprint import HTML  # lazy: needs system pango/cairo
-
-    return HTML(string=html_text).write_pdf()
 
 
 # -- arq job ------------------------------------------------------------------

@@ -19,6 +19,7 @@ import asyncpg
 
 from worker.db import tenant_tx
 from worker.drafts.context import ContextPack, gather
+from worker.pdf import render_pdf
 from worker.storage import upload_bytes
 
 PDF_MIME = "application/pdf"
@@ -239,12 +240,6 @@ def build_html(pack: ContextPack, brand_accent: str, today: date) -> str:
         risks=risks,
         decisions=decisions,
     )
-
-
-def render_pdf(html_text: str) -> bytes:
-    from weasyprint import HTML  # lazy: needs system pango/cairo
-
-    return HTML(string=html_text).write_pdf()
 
 
 # -- arq job ------------------------------------------------------------------
