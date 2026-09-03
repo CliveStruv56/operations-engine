@@ -190,8 +190,8 @@ five overlapping deploys. And watch for psql echoing `ALTER ROLE` — a statemen
 pasted at a container's bash prompt instead of a psql prompt fails silently and
 looks identical from the outside.
 
-Still untested: `litellm-postgres` may carry the `litellm`/`litellm` default
-from the same compose file. It holds every tenant's virtual key.
+`litellm-postgres` was checked on 3 Sep for the `litellm`/`litellm` default
+from the same compose file — it does not carry it.
 
 The origin of the code defect — `0001_initial_schema.py:309-310`:
 ```sql
@@ -853,9 +853,9 @@ results are recorded in the status banner and in DB-1 / DB-2.
    hostname, never `localhost`:
    `railway ssh --service postgres "PGPASSWORD=<old> psql -h postgres.railway.internal -U <role> -d postgres -l"`
    `password authentication failed` is the passing result.
-3. **Does `litellm-postgres` carry the `litellm`/`litellm` compose default?**
-   Not yet tested. It holds every tenant's virtual key. Same command shape as
-   above, against that service.
+3. ~~Does `litellm-postgres` carry the `litellm`/`litellm` compose default?~~
+   **Done, 3 Sep — no.** Checked over the private network; the role rejects
+   that password. Nothing to rotate there.
 4. **Is `OPEN_SIGNUP` explicitly set to `false` on the staging api service?**
    The variable exists on the service but its value was redacted; the code
    default is `True`.
