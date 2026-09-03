@@ -8,8 +8,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     database_url: str = "postgresql://ops:ops@localhost:5432/ops_engine"
-    # Role the API connects as. Must NOT own the tables (RLS is FORCEd, but
-    # a non-owner app role is defence in depth). Migrations use database_url.
+    # Role the API connects as. Must NOT own the tables — Postgres exempts a
+    # table's owner from row-level security unless the table is FORCEd, and
+    # nothing here is FORCEd (platform_tx depends on that owner bypass). So
+    # this is not defence in depth on top of RLS; for the owner connection it
+    # is the only thing standing between tenants. Migrations use database_url;
+    # nothing else may.
     app_database_url: str = ""
 
     # Supabase auth: either a JWKS URL (asymmetric keys) or the legacy shared
@@ -119,7 +123,25 @@ class Settings(BaseSettings):
 
     @property
     def effective_app_database_url(self) -> str:
-        return self.app_database_url or self.database_url
+        """The runtime DSN, with no fallback to the owner.
+
+        This used to be `self.app_database_url or self.database_url`. One
+        unset variable therefore promoted the API to the table owner, which
+        every tenant_isolation policy silently stops applying to: no error, no
+        log line, /health green, and the isolation suite still passing because
+        conftest sets APP_DATABASE_URL itself and never observes what the
+        running app connects as. A missing value has to stop the process
+        instead — and `db.connect()` re-checks the role it actually got, since
+        a DSN naming the owner would satisfy this and still be wrong.
+        """
+        if not self.app_database_url:
+            raise RuntimeError(
+                "APP_DATABASE_URL is not set. The API must connect as the"
+                " non-owner runtime role (ops_app): DATABASE_URL is the table"
+                " owner and bypasses row-level security. See"
+                " docs/staging-deploy-checklist.md for the per-service matrix."
+            )
+        return self.app_database_url
 
 
 @lru_cache

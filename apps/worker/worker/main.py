@@ -34,7 +34,7 @@ from worker.claims.sweep import (
     render_digest,
 )
 from worker.community_pdf import render_community_pdf
-from worker.db import tenant_tx
+from worker.db import assert_rls_enforced, tenant_tx
 from worker.drafts.job import draft_document
 from worker.email import send_email, unsubscribe_token
 from worker.embed import embed_texts
@@ -332,6 +332,7 @@ async def startup(ctx: dict) -> None:
             dsn=settings.sentry_dsn, environment=settings.environment, send_default_pii=False
         )
     ctx["pool"] = await asyncpg.create_pool(settings.app_database_url, min_size=1, max_size=4)
+    await assert_rls_enforced(ctx["pool"])
 
 
 async def shutdown(ctx: dict) -> None:
