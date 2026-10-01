@@ -14,8 +14,8 @@ const PILLARS = [
   {
     kicker: "The vault",
     title: "Knowledge that shows its sources",
-    body: "Upload the documents your organisation runs on — policies, minutes, bids, accounts, surveys. Ask in plain English and get an answer with a citation that opens the exact page it came from. When the vault has nothing, Flowgrid says so instead of guessing.",
-    tags: ["Cited answers", "Page-level sources", "Honest 'not found'"],
+    body: "Upload the documents your organisation runs on — policies, minutes, bids, accounts, surveys. Ask in plain English and get an answer with a citation that opens the exact page it came from. When the vault has nothing, Flowgrid says so instead of guessing. Need something it doesn't hold? Research mode, switched on per workspace, is more than a Google search: it reads the pages behind the results and cites each passage it uses.",
+    tags: ["Cited answers", "Page-level sources", "Honest 'not found'", "Research mode (optional)"],
   },
   {
     kicker: "The claims register",
