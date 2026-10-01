@@ -1,12 +1,13 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-09-03 (**§6s is the latest state**; §1–6r are history,
+**Handoff date:** 2026-10-01 (**§6t is the latest state**; §1–6s are history,
 oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
 claims-register build, the 14 Aug evaluation-gap and project-plan work, the
-16 Aug public marketing-site build, and the 3 Sep code-review remediation
+16 Aug public marketing-site build, the 3 Sep code-review remediation, and a
+1 Oct catch-up written from the git history (§6t)
 **Purpose:** Resume in a new context window without re-deriving this work.
 **Start at §7** — it names the active task and the order to read things in.
 
@@ -453,9 +454,11 @@ the check that makes the previously-silent failure loud — do not weaken it.
 
 ### Open items (not blockers for Grantwork)
 
-1. **Hard delete of a workspace.** Suspension shipped; purge did not. Needs
+1. ~~**Hard delete of a workspace.** Suspension shipped; purge did not. Needs
    the R2 prefix, the LiteLLM virtual key, and an RLS delete policy on
-   `tenants` (deliberately absent since 0001).
+   `tenants` (deliberately absent since 0001).~~ **Built 15 Aug** (`b2869c5`,
+   migration 0023) — see §6t. The runtime role still has no delete policy on
+   `tenants`; the purge runs through the owner-run `purge_tenant()` function.
 2. Groundwork's schema split (ASSUMPTIONS #20) left as-is.
 3. Roadmap §1.6 hygiene: only the web flag guard was done.
 4. Two harmless ad-hoc SQL parse errors in the staging Postgres log (2 Aug,
@@ -1160,9 +1163,10 @@ of the three: OSCR's annual return carries a multi-year finance series (which is
 what the `period` discriminator is for) and staff numbers, which no other UK
 register publishes.
 
-**Northern Ireland (CCNI) is deliberately not built** — no per-charity API, only
+~~**Northern Ireland (CCNI) is deliberately not built** — no per-charity API, only
 a CSV export, so it needs an operator-refreshed snapshot rather than a live
-lookup. ~half a day. The UI says so rather than failing.
+lookup. ~half a day. The UI says so rather than failing.~~ **Built 14 Aug**
+(`10cbd4f`, migration 0021), snapshot-shaped exactly as described — see §6t.
 
 ### Outstanding, and owned by the user
 
@@ -1177,17 +1181,23 @@ lookup. ~half a day. The UI says so rather than failing.
    trustees as an optional block; do not promise Scottish trustee auto-fill
    until a live response is checked.
 
-### Next work: two follow-ups, planned but NOT built
+### Next work: two follow-ups — both now built
 
-Both are specified in **`docs/claims-register-brief.md` §14** — read it before
-starting either.
+> **Corrected 1 Oct 2026.** This heading read "planned but NOT built" on
+> 12 Aug. Everything under it has since shipped: §14.1 step 1 and §14.2 the
+> same day (§6l, §6m), and §14.1 steps 2–3 on 14 Aug (§6t).
+
+Both are specified in **`docs/claims-register-brief.md` §14**.
 
 - **§14.1 Surfacing overdue claims regularly. Step 1 is now built** — see §6l
-  below. Steps 2 and 3 are not: an arq `cron_jobs` sweep writing
+  below. ~~Steps 2 and 3 are not: an arq `cron_jobs` sweep writing
   `claims.review_due` to `audit_log` (note `FEED_PATTERNS` in `app/modules.py`
   must gain `claims.*` or the row is written and never shown), and email only if
   the first two are not enough. Re-verified 12 Aug 2026: still no scheduler and
-  no email transport anywhere in the codebase, so neither is a small change.
+  no email transport anywhere in the codebase, so neither is a small change.~~
+  **Steps 2 and 3 were built on 14 Aug** (`45b0445`, `50e6b9b`, `2b02cd8`):
+  Resend is the email transport, arq's own `cron_jobs` is the scheduler, and
+  `claims.%` did join `FEED_PATTERNS`. See §6t.
 - **§14.2 Telling people when a departing member's claims are released — now
   built.** See §6m below, and ASSUMPTIONS #45 for the owner question and how it
   was settled (no `owner_lost_at`).
@@ -1374,7 +1384,7 @@ test/UX report — every finding re-verified against the code first. Plan file:
 | `f92af99` | Citation regex hardening: uppercase `[C:`, escaped `\[c:…\]`, punctuation in bracket, dressed-up `[Ref c:…]` (prose-protected when nothing resolves). Three synced copies: api `conversations.py`, worker `assemble.py`, web `markdown.tsx` |
 | `1531705` | `.stamp` contrast (`text-accent` → `text-accent-deep` on the tint), project-tab empty states, zero-variance neutral, versions-0 dash, forms cards expandable read-only (`QuestionDisplay`), usage-page alias labels, "Drafted from your whole vault" footer, Re-index→Refresh, "register" reserved for *public* registers |
 | `17187ff` | Chat exports: Save to Vault (client-only, reuses the 3-call upload) + Download as PDF via **migration 0024 `conversation_export_jobs`** (RLS + isolation tests), `render_answer_pdf` worker task (markdown-it-py, MIT; WeasyPrint) |
-| `3416460` | `done` event `coverage: "ok"|"none"|null`; `scope_used` suppressed when nothing cited (was claiming "whole vault" on zero-chunk answers). Recovery actions on `coverage:none` (`/app?view=vault&upload=1`, `/app/claims?add=1&topic=…`); suggestion chips built from real indexed doc titles — chips stay vault-groundable only, **chat does not read claims** |
+| `3416460` | `done` event `coverage: "ok"|"none"|null`; `scope_used` suppressed when nothing cited (was claiming "whole vault" on zero-chunk answers). Recovery actions on `coverage:none` (`/app?view=vault&upload=1`, `/app/claims?add=1&topic=…`); suggestion chips built from real indexed doc titles — chips stay vault-groundable only, **chat does not read claims** (true on 15 Aug; changed on 2 Sep by `dfa3262` — §6t) |
 | `a474c92` | **Playwright greenfield**: config on port 3100, fully mocked backend, `E2E_AUTH_BYPASS=1` env check in `proxy.ts` (set only by playwright.config.ts, never a real deployment); keyboard-nav spec proves no sidebar focus trap; `web-e2e` CI job |
 
 **Findings that were already fixed / wrong:** chat already swaps stream text for
@@ -1838,21 +1848,122 @@ backup-script verification attaches a container to the compose network
 
 ---
 
+## 6t. Catch-up — what this log missed, 14 Aug to 1 Oct (written 1 October 2026)
+
+**How this section was made, because it changes how far to trust it.** Every
+other section was written by the session that did the work. This one was
+written afterwards, on 1 Oct, from commit messages and the code, to close gaps
+found while copying the docs into Notion. It records *what* landed and where to
+look; it does not carry the reasoning and traps the other sections do. For
+those, read the commit bodies named below — they are unusually complete.
+
+Three statements elsewhere in this file had gone stale and are now corrected in
+place, each with a pointer here: the claims follow-ups in §6k (sweep and email
+were "not built"), Northern Ireland in §6k ("deliberately not built"), and
+workspace purge in §6f ("purge did not" ship).
+
+### 14 Aug, after §6o — five things the same day
+
+| Commit | What |
+|---|---|
+| `45b0445` | **Email exists.** Resend over plain httpx in `app/email.py`; empty `RESEND_API_KEY` = disabled, sending best-effort by contract. Invites email their accept link and report `email_sent`. Migration **0020**: `memberships.digest_opt_out` and the owner-run `claims_sweep_tenants()`. Signed pause/resume link at `/email/digest` (GET confirms, POST acts — scanners prefetch). `claims.%` joins `FEED_PATTERNS` |
+| `50e6b9b` | **The worker's first clock-driven jobs.** `worker/claims/sweep.py`: daily 06:10 UTC sweep, per tenant under RLS, writing `claims.review_due` to the feed at most once per 7 days. Monday 07:00 UTC digest to admins/owners who have not opted out — worst-first, capped at ten lines. `worker/email.py` mirrors `app/email.py` on purpose, with a parity test in the API suite |
+| `2b02cd8` | Invite copy says "emailed" only when it was; the feed renders the sweep's row; brief §14.1 steps 2–3 marked built; five email env vars added to the staging checklist |
+| `bdf2960`, `2e3950d` | **ECCTA readiness.** Three claim kinds from Companies House — `director_idv`, `confirmation_statement_due`, `accounts_due` — and a strip on the register derived from loaded claims, never stored. ASSUMPTIONS **#52** |
+| `d4511c3` | **Form fetch**, built as the PRD specced: Exa contents-by-URL pre-fills the transcribe box and the source-URL field. Gated on `web_search`, rate-limited per tenant, metered per call |
+| `10cbd4f` | **Northern Ireland.** `python -m app.claims.ccni` loads CCNI's bulk CSV into `ref_ccni_charities` (migration **0021**), replacing it whole. `POST /claims/import/ccni` reads the snapshot locally, so it is the one import route with no rate limit |
+| `ce36a25` | **Vault: open the original, and attach files in chat.** `GET /documents/{id}/download`; migration **0022** gives documents a conversation edge, and an attached file is boosted in retrieval, not made exclusive |
+
+### 15 Aug, beside §6p — three commits outside that sweep
+
+| Commit | What |
+|---|---|
+| `577878e` | **Meeting transcripts.** `.vtt` ingests through `worker/transcript.py`: cues merged into speaker turns, filed under ten-minute headings |
+| `e0fe5ac` | **Langfuse, opt-in and off** — a commented block in the gateway config, metadata-only by default; turning it on is a hard-constraint-4 decision. **Prompt canaries** in `infra/promptfoo/`, run weekly by `prompt-checks.yml` against the staging gateway, skipping cleanly without their secrets |
+| `b2869c5` | **Workspace purge.** Only a suspended workspace can be purged, enforced by the route and by `purge_tenant()` (migration **0023**); the exact name must be typed; R2 prefix and LiteLLM key go first, rows last, so a failure leaves a re-runnable purge. Closes §6f open item 1 |
+
+### 16 Aug — the design system changed twice in a day
+
+`c91699d` (Clearbit-inspired) then `241e4cb` (**Huddle-inspired**, the one that
+stayed) retheme the token layer in `globals.css`. §6q's design ruling mentions
+this in passing; the ruling itself is now ASSUMPTIONS **#65**, which supersedes
+#53. `CLAUDE.md` describes the current system. Hearth survives only in legacy
+token names and in the sales collateral.
+
+### 27 Aug — a fourth module, and the way out
+
+| Commit | What |
+|---|---|
+| `422c80e` | **Community profile module**, flag `community`: a singleton place profile, one assets table for every facility category, a statistics register. A stat that names a claim kind asserts a confirmed claim on every save. Migration **0025**. ASSUMPTIONS **#57–#61** |
+| `840f81c`, `ed7930d` | Chat answers community questions from the profile — whole-word matching in SQL, no extra model call, injected as a `<community-profile>` block; the profile's own prose is the fallback |
+| `a71ee01` | A records-backed answer reports `coverage: "records"`, so it no longer offers vault recovery |
+| `7184251` | The profile as a one-page branded PDF (migration **0026**, worker `community_pdf.py`, no LLM) |
+| `bc9448e` | **Workspace export.** Settings → Your data → Export workspace; migration **0027**; ASSUMPTIONS **#62–#64**; `docs/backup-and-export.md` |
+| `3c86d3d` | A signed-in visitor is bounced off `/login` and `/signup` into `/app`; the marketing header now checks the session and offers "Open app" — **which supersedes §6q's "the header does no server auth check"**; and the retired `ops-engine-staging-web.vercel.app` host 308s to `www.flowgridos.co.uk` |
+
+### 2 Sep — beside the invite work already in §6r
+
+- `dfa3262` — **company data reaches chat.** The composer has two switches,
+  "Include workspace documents" and "Include company data". The second (on by
+  default) injects confirmed claims matching the message, with expired and
+  overdue ones marked, and gates the community-profile and contact-book lookups
+  that were previously invisible. **This reverses §6p's "chat does not read
+  claims".**
+- `06763f9` — "Align marketing and product customer journey". No commit body;
+  the diff touches the marketing home and hero, login and signup, the app
+  layout, hero and sidebar, and adds `apps/web/lib/product-language.ts` plus
+  e2e cases.
+
+### 1 Oct — four pull requests
+
+- **PR #5** (`a1a6580`) — audit failures cleared: pyjwt 2.15.1, urllib3 2.8.0,
+  weasyprint 70.0, next 16.3.8, plus transitive overrides. Two moderate web
+  advisories remain, below the CI threshold.
+- **PR #4** — sales collateral aligned with the website (pricing and Tenderhouse
+  dropped), and the hosting wording settled: `4784f83` added a UK-residency
+  claim to the security page and `12c9f63` removed it the same day, because
+  hosting is US-region and INF-3 in the code review is undecided. The wording
+  that stands is a UK GDPR DPA "that names where your data is hosted".
+- **PR #6** (`f9ce8c3`) — `POST /admin/tenants/{id}/join` gives the operator an
+  owner membership (idempotent, audited, **refused when `ENVIRONMENT` is
+  production**), behind an Open action in the console. Workspace names are
+  stored trimmed and the purge dialog compares with whitespace collapsed.
+  ASSUMPTIONS **#66**.
+- **PR #7** — open, not merged when this was written: one contact address
+  (`hello@flowgridos.co.uk`) across the collateral, the Tenderhouse one-pager
+  deleted, and the one-pagers' Google Fonts link fixed (it had always returned
+  400, so no PDF had ever used the design fonts).
+
+### Environment notes from 1 Oct
+
+- **The Supabase project is on the free tier and pauses after about a week
+  idle.** Symptom: login shows "Failed to fetch". Fix: Restore in the Supabase
+  dashboard; it takes two or three minutes.
+- **Hosting is US-region** (Railway). Nothing customer-facing may say data is
+  held in the UK until INF-3 is decided. Recorded as ASSUMPTIONS **#67**.
+- `a1a6580` records the API suite at **433 passed** on 1 Oct and the Playwright
+  suite green. `f9ce8c3` added API tests after that; the new total is not
+  recorded here because nobody re-ran it for this section.
+
+---
+
 ## 7. Read first in a new session
 
 **Active work: remediating `docs/code-review-sep-2026.md` §1.** Rows **1–6 are
 done** (see §6s); **rows 7–14 are open and unstarted**, and §1 is already
 ordered by blast radius × likelihood — start at row 7 and work down. Nothing is
-blocked and nothing needs a decision first.
+blocked and nothing needs a decision first. No commit between 3 Sep and 1 Oct
+touched rows 7–14.
 
-Everything else is background. The marketing site (§6q, §6r) is live in Vercel
-production; `docs/claims-register-brief.md` §14.1 steps 2–3 (the arq cron sweep,
-then email) remain unbuilt and are blocked on infrastructure that does not
-exist.
+Everything else is background. The marketing site (§6q, §6r) is live at
+`www.flowgridos.co.uk`. The claims-register follow-ups in
+`docs/claims-register-brief.md` §14 are all built, sweep and email included
+(§6t) — an earlier version of this paragraph said the opposite.
 
 **Suites as of 3 Sep 2026, all green:** api **433**, worker **215**, web
-**119** vitest. Playwright e2e (`apps/web/e2e/`) not run since 16 Aug. The api
-suite needs the dev compose stack up.
+**119** vitest. On 1 Oct the API suite was re-run at 433 and the Playwright e2e
+suite (`apps/web/e2e/`) ran green, both before the last API tests were added
+(§6t). The api suite needs the dev compose stack up.
 
 **Two things only the operator can do**, both recorded and neither done:
 `BACKUP_ALERT_EMAIL` + `RESEND_API_KEY` on the Railway `backup` service
@@ -1872,12 +1983,17 @@ suite needs the dev compose stack up.
    carry a guard that looks removable and is not.
 2. This file's **§6k** (claims register: what was built, the five rulings not to
    relitigate, the three traps not to reintroduce), then **§6l**, **§6m**,
-   **§6n**, **§6o**. Then **§6j** if touching latency, **§6g** for Grantwork,
-   **§6q** if touching the public site or lead capture.
+   **§6n**, **§6o**. Then **§6t** for everything built between 14 Aug and 1 Oct
+   that has no section of its own — email and the scheduled jobs, the community
+   profile, workspace export, purge, company data in chat, the operator join.
+   Then **§6j** if touching latency, **§6g** for Grantwork, **§6q** if touching
+   the public site or lead capture.
 3. `docs/groundwork/ASSUMPTIONS.md` — **#30–#45** the claims-register rulings,
    **#46–#50** the evaluation-gap and live-register findings, **#51** core
-   project plans. #36, #37, #43, #44, #45, #49 and #50 each record a specific
-   failure and are easy to undo by accident.
+   project plans, **#52** ECCTA, **#57–#64** the community profile and the
+   workspace export, **#65** the design system (it supersedes #53), **#66** the
+   operator join, **#67** hosting. #36, #37, #43, #44, #45, #49 and #50 each
+   record a specific failure and are easy to undo by accident.
 4. `CLAUDE.md` (unchanged conventions: RLS with an isolation test per table,
    LiteLLM-only for models, cost telemetry on every LLM call, commit-on-green).
 5. `docs/vertical-module-roadmap.md` if the next move is a new module.
