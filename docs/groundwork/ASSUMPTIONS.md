@@ -128,6 +128,10 @@ and every divergence is recorded here.
     inline source-passage cards in answers; chat pin/rename was
     deliberately not built.
 
+    *Superseded in part by #65 (16 Aug 2026): the fixed palette is no longer
+    Hearth. The ruling itself stands unchanged — the chrome is not
+    tenant-themed, and `brand.accent` applies to exports only.*
+
 ## Recorded during team-visibility work (2 Aug 2026)
 
 18. **Chat visibility model** (2 Aug 2026, founder decision; the Phase-1
@@ -776,9 +780,14 @@ and every divergence is recorded here.
     Postgres (`claims_review_idx`, `claims_tenant_status_idx`) rather than
     pulling every claim back, because it is read on every workspace load.
 
-    **Steps 2 and 3 of §14.1 are still unbuilt** — the arq `cron_jobs` sweep
+    ~~**Steps 2 and 3 of §14.1 are still unbuilt** — the arq `cron_jobs` sweep
     and email. Verified again on 12 Aug 2026: there is still no scheduler and
-    no email transport in the codebase, so neither is a small change.
+    no email transport in the codebase, so neither is a small change.~~
+    *Corrected 1 Oct 2026: both were built on 14 Aug (`45b0445`, `50e6b9b`) —
+    Resend is the email transport and arq's own `cron_jobs` is the scheduler.
+    The same two predicates now also live in `worker/claims/sweep.py` and in
+    `claims_sweep_tenants()` (migration 0020), so the trap above has more
+    places to stay in step.*
 
 45. **A claim does not learn when it lost its owner. Unowned stays a view
     somebody opts into, and the person who removed the member is told at the
@@ -943,6 +952,10 @@ and every divergence is recorded here.
     the `Section` component's serif heading and the `.figure` voice exist to
     spend that range on screens that already had it available.
 
+    *Superseded the same day by #65: the app moved to a Huddle-inspired system
+    in `241e4cb`. This entry is kept because its reasoning — fix under-use
+    before blaming the palette — is still the right first question.*
+
 54. **Control styling is centralised in `apps/web/components/ui`. The
     module-local style constants now re-export from it.**
 
@@ -975,6 +988,13 @@ and every divergence is recorded here.
       leaving it as an arbitrary value. `--radius-chip: 9px` and
       `--radius-inset: 11px` name Hearth's two intermediate radii for the same
       reason. The serif floor of 22px is unchanged.
+
+    *The specific values above belong to Hearth and changed with #65:
+    `--edge-input` is now `var(--mist-gray)` and both radii are 8px. What
+    carries over is the rule — access wins over the kit — and the disabled
+    button still uses `text-subtle` for the reason given here
+    (`components/ui/styles.ts`). The `--text-hearth-*` token names survive as
+    legacy names only.*
 
 56. **`window.prompt` / `window.confirm` are replaced by `useAsk()`. No new
     code may use the native ones.**
@@ -1030,6 +1050,9 @@ and every divergence is recorded here.
     reissues the owner invite to the client. No admin-side duplicate editor
     is built; `/admin` stays a console, not a second app.
 
+    *Extended by #66 (1 Oct 2026): outside production the operator has a
+    third way in, an explicit join from the console.*
+
 61. **The community DOR isolation checks live in `test_community.py`, not
     `test_isolation.py`.** The isolation suite's community routes sit behind
     the feature gate, so under a tenant that has not bought the module a
@@ -1057,3 +1080,88 @@ and every divergence is recorded here.
     that could not be fetched" list, and the rest of the archive completes.
     Old archives accumulate under `{tenant}/exports/` and are removed only
     by workspace purge — revisit if storage size becomes real.
+
+## Recorded late, from the git history (1 Oct 2026)
+
+Three rulings that were taken and built but never written down here. They are
+recorded after the fact, from commit messages, `CLAUDE.md` and the code, so
+they state what the repo does and why the commits say it does it — not the
+discussion behind them.
+
+65. **The app chrome is a Huddle-inspired editorial system, not Hearth**
+    (16 Aug 2026, `241e4cb`; a Clearbit-inspired pass, `c91699d`, came and
+    went the same day). This supersedes #53, written hours earlier, and the
+    palette half of #17.
+
+    **What the repo does now** is the paragraph in `CLAUDE.md` under "Working
+    conventions", which is authoritative: paper-white canvas, Ink Black text,
+    Inter, bone hairlines, flat 8px cards, pill buttons; Burnt Amber fills
+    primary actions and nothing else; Deep Violet owns links, focus and
+    selection; the pastel Stamp tones are a fixed status taxonomy; `grounded`
+    green stays scoped to trust states.
+
+    **Why:** the founder supplied the Huddle style reference and said to
+    follow it (handoff §6q). The public site was built on the same tokens the
+    same day, which is why its PRD's "Hearth palette" wording is stale rather
+    than an instruction.
+
+    **What did not change,** and should not be read as retired with Hearth:
+    the chrome is still not tenant-themed and `brand.accent` is still
+    exports-only (#17); control styling is still centralised in
+    `components/ui` (#54); access still wins over the kit (#55, with new
+    values); `useAsk()` still replaces the native dialogs (#56).
+
+    **Where Hearth survives:** in legacy token names (`--text-hearth-*`,
+    `--shadow-hearth`) that alias the current system, in the two HTML specs
+    under `docs/` (kept as history), and in the sales one-pagers and decks,
+    which were never restyled — `docs/generate-decks.py` still declares a
+    "Hearth palette". That last one is a visible mismatch with the product,
+    not a decision.
+
+66. **Outside production, the operator can join a client workspace as owner
+    from the console** (1 Oct 2026, `f9ce8c3`). This extends #60.
+
+    `admin_create_tenant` still grants no membership — #60's ruling holds at
+    creation. `POST /admin/tenants/{id}/join` is a separate, explicit act: it
+    gives the calling platform admin an owner membership, is idempotent, is
+    audited as `tenant.operator_join`, and is **refused when `ENVIRONMENT` is
+    production** (`operator_join_disabled`). The console's Open action calls
+    it and switches to `/app`.
+
+    **Why:** a workspace created in the console never appeared in the
+    operator's own chooser, because the console grants no membership by
+    design — so using one on staging meant inviting yourself.
+
+    **The production refusal.** The commit states the rule and not the
+    reason. The plain reading is the one #60 already implies: the operator
+    holding no seat in a client's workspace is part of what the client is
+    told, and an owner seat taken from the console would undo that without
+    the client seeing it happen. In production, #60's two routes — be
+    invited, or create as owner and hand over — remain the only ones.
+    Relaxing the environment check is therefore a decision about client
+    trust and belongs with the founder, not a flag to flip for a support
+    task.
+
+67. **Staging is Railway and Vercel in a US region, not the spec's Hetzner
+    and London** — and the region is an open decision, not a settled one.
+
+    Spec §2 pins Supabase Postgres in `eu-west-2` (London) on Hetzner with
+    Coolify, and §9.6 relies on Supabase PITR. The repo deploys the api,
+    worker, gateway, Postgres, Redis and the backup cron to Railway and the
+    web app to Vercel; Supabase supplies auth only; files and the nightly
+    database dump go to Cloudflare R2. The hosting choice has been recorded
+    since 31 Jul in the header of `docs/staging-deploy-checklist.md` ("no
+    server ops for the pilot"), and the backup position in
+    `docs/backup-and-export.md`, which supersedes the PITR line. It is
+    restated here because this log is where a divergence is supposed to be
+    findable.
+
+    **The part that is not settled:** every Railway service runs in a US
+    region, so UK tenant data is processed and stored in the US. That is
+    consistent with hard constraint 4 (Western zero-data-retention hosts) and
+    is still an international transfer under UK GDPR — finding INF-3 in
+    `docs/code-review-sep-2026.md`, marked "decision needed". Until it is
+    decided, **nothing customer-facing may say data is held in the UK.** A
+    sentence saying so was added to the security page on 1 Oct (`4784f83`)
+    and removed the same day (`12c9f63`); the wording that stands is a UK
+    GDPR Data Processing Agreement "that names where your data is hosted".
