@@ -19,8 +19,8 @@ export default function ContactPage() {
         </h1>
         <p className="mt-6 text-[18px] leading-[1.42] tracking-[-0.14px] text-slate">
           Bring one repeated workflow — a monthly report, a funding bid, a
-          monitoring return — and we&rsquo;ll show you how it fits. No slide
-          deck, just the product on something real.
+          monitoring return — and we&rsquo;ll show you how it fits. No slides, no
+          signup — just the product on something real.
         </p>
         <div className="mt-10 rounded-lg border border-bone p-5">
           <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-slate">

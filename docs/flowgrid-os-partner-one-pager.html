@@ -59,6 +59,8 @@
     .hero h1{font-size:1.4rem;line-height:1.12;margin:1.2mm 0 1.5mm;color:var(--terracotta-dark);}
     .hero p{font-size:0.85rem;color:var(--ink-soft);max-width:95%;}
 
+    .who{border-left:1.2mm solid var(--terracotta);background:var(--cream);border-radius:0 2.5mm 2.5mm 0;padding:2.8mm 4mm;font-size:0.78rem;color:var(--ink-soft);}
+    .who strong{color:var(--ink);}
     .split{display:grid;grid-template-columns:1fr 1fr;gap:3mm;}
     .card{border:1px solid var(--line);border-radius:2.5mm;padding:3mm;break-inside:avoid;}
     .card h2{font-size:0.88rem;margin-bottom:1.8mm;color:var(--terracotta-dark);}
@@ -109,7 +111,7 @@
       </div>
       <div class="meta">
         White-label AI operations for your clients<br>
-        flowgridos.co.uk/partners
+        flowgridos.co.uk · clive@platform91.com
       </div>
     </header>
 
@@ -119,11 +121,15 @@
       <p>Flowgrid OS lets agencies, MSPs and consultancies offer a complete AI operations suite under their own label. You own the client relationship; we handle the infrastructure, model routing, security and updates.</p>
     </section>
 
+    <section class="who">
+      <strong>Who it's for.</strong> UK small organisations and specialist teams (SMEs, charities and development trusts) with a team of three or more, managing recurring bids, reporting, development projects and evidence-heavy work. No technical team needed.
+    </section>
+
     <div class="split">
       <section class="card">
         <h2>Why partner</h2>
         <ul>
-          <li><strong>High recurring margins.</strong> ~89% Core, ~88% Pro and ~70% Managed after support labour.</li>
+          <li><strong>Recurring revenue.</strong> Per-seat subscriptions with margin you keep; economics are shared on a partner call.</li>
           <li><strong>Zero licensing overhang.</strong> MIT/Apache stack end-to-end — no surprise commercial fees.</li>
           <li><strong>Sticky clients.</strong> Vault, projects and usage data increase switching costs.</li>
         </ul>
@@ -131,9 +137,9 @@
       <section class="card">
         <h2>What your clients see</h2>
         <ul>
-          <li><strong>Fully branded workspace</strong> with their logo, accent and domain-ready shell.</li>
-          <li><strong>AI chat with citations</strong> grounded in their documents, not generic web answers.</li>
-          <li><strong>Knowledge vault, research, slides and CRM</strong> in one monthly bill.</li>
+          <li><strong>Branded outputs</strong> in their logo and colours: PDF reports and editable PowerPoint.</li>
+          <li><strong>Cited answers</strong> that link to the document and page, grounded in their own documents.</li>
+          <li><strong>Vault, confirmed facts and projects</strong> in one workspace, on one monthly bill.</li>
         </ul>
       </section>
     </div>
@@ -141,73 +147,42 @@
     <section class="card">
       <h2>The platform you resell</h2>
       <div class="platform">
-        <div class="plat"><div class="icon">1</div><strong>Brand layer</strong><span>Tenant logo, accent, white-label shell</span></div>
+        <div class="plat"><div class="icon">1</div><strong>Brand layer</strong><span>Client logo, colours, branded outputs</span></div>
         <div class="plat"><div class="icon">2</div><strong>Model router</strong><span>Cost-routed open weights + fallbacks</span></div>
-        <div class="plat"><div class="icon">3</div><strong>Vault & RAG</strong><span>Cited retrieval, per-tenant isolation</span></div>
-        <div class="plat"><div class="icon">4</div><strong>Modules</strong><span>Chat, research, slides, CRM + sector modules</span></div>
+        <div class="plat"><div class="icon">3</div><strong>Vault &amp; confirmed facts</strong><span>Cited answers; each client isolated at the database level</span></div>
+        <div class="plat"><div class="icon">4</div><strong>Modules</strong><span>Projects, exports + sector modules</span></div>
       </div>
-      <p style="font-size:0.66rem;color:var(--ink-soft);margin-top:2mm;"><strong style="color:var(--ink);">Sector modules are your margin story.</strong> Each is a per-client switch, so the same platform sells into a different room: <strong>Groundwork</strong> (community-led development projects) and <strong>Grantwork</strong> (grant funding and impact reporting) are live today; <strong>Tenderhouse</strong> (bids and tenders) is in development and taking design partners. A module turns "an AI workspace" into "software for what you do" — a far shorter sales conversation, and one no bundled incumbent can answer. <strong>Separate one-pagers for each are available — ask and we will send them.</strong></p>
+      <p style="font-size:0.66rem;color:var(--ink-soft);margin-top:2mm;"><strong style="color:var(--ink);">Sector modules are your sales story.</strong> Each is a per-client switch, so the same platform sells into a different room: <strong>Groundwork</strong> (community-led development projects) and <strong>Grantwork</strong> (grant funding and impact reporting) are available in pilot. A module turns “an AI workspace” into “software for what you do”, a far shorter sales conversation. <strong>Separate one-pagers for each are available. Ask and we will send them.</strong></p>
     </section>
 
-    <section>
-      <div class="eyebrow" style="margin-bottom:1.2mm;">Partner economics (verified July 2026)</div>
-      <div class="pricing">
-        <div class="tier">
-          <h3>Core</h3>
-          <div class="price">£29<span>/seat/mo · min 3</span></div>
-          <div class="margin">~89% gross margin</div>
-          <ul>
-            <li>Workspace, vault & chat</li>
-            <li>Research & slide export</li>
-            <li>CRM contacts</li>
-            <li>Self-serve support</li>
-          </ul>
-        </div>
-        <div class="tier pro">
-          <h3>Pro</h3>
-          <div class="price">£49<span>/seat/mo</span></div>
-          <div class="margin">~88% gross margin</div>
-          <ul>
-            <li>Everything in Core</li>
-            <li>Premium reasoning models</li>
-            <li>Deep research mode</li>
-            <li>Advanced reporting</li>
-          </ul>
-        </div>
-        <div class="tier">
-          <h3>Managed</h3>
-          <div class="price">£799<span>/mo + £1,500 onboarding</span></div>
-          <div class="margin">~70% margin after labour</div>
-          <ul>
-            <li>Includes 10 Pro seats</li>
-            <li>White-glove onboarding</li>
-            <li>Quarterly reviews & SLA</li>
-            <li>+£39/extra seat</li>
-          </ul>
-        </div>
-      </div>
+    <section class="card">
+      <h2>Partner terms</h2>
+      <ul>
+        <li><strong>Per-seat wholesale pricing and margin model</strong> are shared on a partner call, not published.</li>
+        <li><strong>Pilot first.</strong> We are onboarding in small pilot groups, so places are limited.</li>
+      </ul>
     </section>
 
     <section class="card">
       <h2>How it works</h2>
       <div class="steps">
-        <div class="step"><div class="num">1</div><strong>Sign a client</strong><span>Pick tier & collect brand assets.</span></div>
+        <div class="step"><div class="num">1</div><strong>Sign a client</strong><span>Agree scope &amp; collect brand assets.</span></div>
         <div class="step"><div class="num">2</div><strong>Provision workspace</strong><span>Operator console creates tenant, keys & invites.</span></div>
-        <div class="step"><div class="num">3</div><strong>Curate & train</strong><span>Upload docs, run onboarding, set caps.</span></div>
-        <div class="step"><div class="num">4</div><strong>Bill monthly</strong><span>You invoice client; we invoice you for COGS.</span></div>
+        <div class="step"><div class="num">3</div><strong>Curate & train</strong><span>Upload docs, run onboarding, set spending limits.</span></div>
+        <div class="step"><div class="num">4</div><strong>Bill monthly</strong><span>You invoice the client; we invoice you.</span></div>
       </div>
     </section>
 
     <section class="cta">
       <div>
         <h2>Become a Flowgrid OS partner.</h2>
-        <p>Book a partner call and we’ll share the operator console, margin model and onboarding runbook.</p>
+        <p>Book a partner call and we’ll share the operator console, margin model and onboarding runbook. Email clive@platform91.com</p>
       </div>
-      <a href="mailto:partners@flowgridos.co.uk?subject=Flowgrid OS partner enquiry">Partner enquiry</a>
+      <a href="mailto:clive@platform91.com?subject=Flowgrid OS partner enquiry">Partner enquiry</a>
     </section>
 
     <footer>
-      Built for UK SMBs · Model costs and licences verified July 2026 · flowgridos.co.uk/partners
+      Built for UK SMEs, charities and development trusts · flowgridos.co.uk · clive@platform91.com
     </footer>
   </div>
 </body>
