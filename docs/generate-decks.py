@@ -144,7 +144,7 @@ def customer_deck():
             "Branded exports: PDF and editable PowerPoint",
         ],
         [
-            "Research mode with cited web sources",
+            "Research mode: reads the web pages, not just the links, and cites each source",
             "Contact book with spreadsheet import",
             "Usage and cost recorded on every AI call",
             "Coming: email & calendar sync, meeting intelligence",
