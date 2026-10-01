@@ -1,14 +1,11 @@
 diff --git a/dist/commonjs/index.js b/dist/commonjs/index.js
-index 869a6be..066c809 100644
+index 48cf0d3dabc885249c65909c4912712c834786f5..08d99b3b16989077fd0440c59c268101cd28aaa2 100644
 --- a/dist/commonjs/index.js
 +++ b/dist/commonjs/index.js
-@@ -286,4 +286,13 @@ function expand_(str, max, maxLength, isTop) {
-     }
+@@ -331,3 +331,12 @@ function expand_(str, max, maxLength, maxDepth, depth, maxRewrites, isTop) {
      return acc;
  }
--//# sourceMappingURL=index.js.map
-\ No newline at end of file
-+//# sourceMappingURL=index.js.map
+ //# sourceMappingURL=index.js.map
 +// Compatibility shim: brace-expansion v1/v2 exported the expand function
 +// directly from require(); v5 only has named exports. Legacy consumers
 +// (minimatch@3/@9 via eslint plugins) call require('brace-expansion')(str),
