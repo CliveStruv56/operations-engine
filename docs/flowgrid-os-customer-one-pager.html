@@ -86,7 +86,7 @@
     .tier li::before{content:"✓";position:absolute;left:0;color:var(--sage);font-weight:700;}
     .tier.pro{border-color:var(--terracotta);background:var(--cream);}
 
-    .modules{display:grid;grid-template-columns:repeat(3,1fr);gap:2.2mm;margin-top:1.5mm;}
+    .modules{display:grid;grid-template-columns:repeat(2,1fr);gap:2.2mm;margin-top:1.5mm;}
     .mod{border:1px solid var(--line);border-radius:2mm;padding:2.2mm;}
     .mod h3{font-size:0.75rem;color:var(--terracotta-dark);display:flex;align-items:center;gap:1.5mm;}
     .mod .tag{font-size:0.55rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.3mm 1.2mm;border-radius:0.8mm;background:var(--sage);color:#fff;font-family:'Plus Jakarta Sans',sans-serif;letter-spacing:0.06em;}
@@ -122,12 +122,12 @@
 
     <section class="hero">
       <div class="eyebrow">One workspace. Your brand. Your data.</div>
-      <h1>The AI assistant that actually knows your business.</h1>
-      <p>Stop stitching together chat, document, slide and research tools. Flowgrid OS gives your team a single workspace where answers cite your own files, each task goes to the most cost-effective AI model, and usage never surprises you.</p>
+      <h1>Turn what your organisation knows into work you can trust.</h1>
+      <p>Find cited answers, keep recurring work structured, and produce outputs ready for review. Flowgrid OS connects your source documents, confirmed facts and live projects in one workspace, and every output cites its source.</p>
     </section>
 
     <section class="who">
-      <strong>Who it's for.</strong> Small and medium-sized businesses, charities and development trusts, who already hold their knowledge in reports, policies, funding agreements and spreadsheets, and want an AI assistant that works from those documents, shows its sources and keeps costs predictable. No technical team needed.
+      <strong>Who it's for.</strong> UK small organisations and specialist teams (SMEs, charities and development trusts) managing recurring bids, reporting, development projects and evidence-heavy work. No technical team needed.
     </section>
 
     <div class="split">
@@ -136,15 +136,16 @@
         <ul>
           <li><strong>One bill, one login.</strong> Consolidate chat, vault, research, slides and projects into one workspace.</li>
           <li><strong>Your name on it.</strong> Your logo, colours and house style are set up from day one, so it feels like your own tool.</li>
+          <li><strong>You review everything.</strong> Flowgrid never sends a document on your behalf. You check the citations, then you send.</li>
           <li><strong>No single-supplier dependence.</strong> We match each task to the right AI model, so you get top-quality results without paying premium prices for simple jobs.</li>
         </ul>
       </section>
       <section class="card">
         <h2>Built for privacy</h2>
         <ul>
-          <li><strong>Your data stays yours.</strong> It is walled off from every other organisation, enforced in the database itself, not just in the software.</li>
-          <li><strong>UK data residency, no training on your files.</strong> Your data is held in the UK, our AI providers do not keep what you send them, and nothing is used to train AI models.</li>
-          <li><strong>UK GDPR and a DPA.</strong> We provide a Data Processing Agreement, and every action in your workspace is logged.</li>
+          <li><strong>Your data stays yours.</strong> Your workspace is isolated from every other customer at the database level, not only by application code.</li>
+          <li><strong>UK-held, zero-data-retention hosting.</strong> Your data is held in the UK. AI requests go through one gateway to vetted providers with zero-data-retention hosting by default, and your documents are not used to train anyone's models.</li>
+          <li><strong>UK GDPR, a DPA and an easy exit.</strong> A Data Processing Agreement is part of your terms. Export in standard formats (PDF, PowerPoint, CSV), with return and deletion agreed up front.</li>
         </ul>
       </section>
     </div>
@@ -152,12 +153,14 @@
     <section class="card">
       <h2>What you get</h2>
       <div class="feature-list">
-        <div class="feature"><div class="icon">✓</div><div><strong>Branded AI chat</strong>An assistant that answers from your documents and shows the page it used.</div></div>
-        <div class="feature"><div class="icon">✓</div><div><strong>Cited knowledge vault</strong>Upload PDF, Word and Excel files and search across them all.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Cited answers</strong>Ask in plain English. Every answer links to the document and page it came from, and says so when it can’t find one.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Document vault</strong>Upload policies, minutes, bids and accounts (PDF, Word, Excel) and search across them all.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Confirmed facts</strong>Charity numbers, insurance dates, policy versions: review a fact once and every draft reuses it.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Projects and plans</strong>Stages, budgets, risks and tasks with owners, so work isn’t rebuilt in every chat.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Branded exports</strong>A conversation becomes a PDF; a funder response becomes editable PowerPoint.</div></div>
         <div class="feature"><div class="icon">✓</div><div><strong>Research mode</strong>Web search with sources listed, switched on for your workspace if you want it.</div></div>
-        <div class="feature"><div class="icon">✓</div><div><strong>Slide export</strong>Turn an outline into a PowerPoint deck.</div></div>
         <div class="feature"><div class="icon">✓</div><div><strong>Contact book</strong>Organisations and people, with easy spreadsheet import.</div></div>
-        <div class="feature"><div class="icon">✓</div><div><strong>Usage and cost dashboard</strong>See exactly what your team is using, and what it costs.</div></div>
+        <div class="feature"><div class="icon">✓</div><div><strong>Usage and cost record</strong>Every AI call is recorded with its usage and cost, visible in your workspace.</div></div>
         <div class="feature"><div class="icon soon">+</div><div><strong>Email &amp; calendar sync <span class="soon-tag">· coming</span></strong>Gmail and Microsoft 365 triage and drafting.</div></div>
         <div class="feature"><div class="icon soon">+</div><div><strong>Meeting intelligence <span class="soon-tag">· coming</span></strong>Summaries and action points from your calls.</div></div>
       </div>
@@ -165,70 +168,31 @@
 
     <section class="card">
       <h2>Built for your sector — optional modules</h2>
-      <p style="font-size:0.68rem;color:var(--ink-soft);">Switch on the module that matches your work and your workspace gains a structured set of records, plus the reports and documents that are drafted from them. Every figure traces back to your own data. <strong>Ask us for the one-pager on any of these.</strong></p>
+      <p style="font-size:0.68rem;color:var(--ink-soft);">The core platform (vault, confirmed facts and projects) is always included. Switch on a sector module and your workspace gains a structured set of records, plus the reports and documents that are drafted from them. Every figure traces back to your own data. <strong>Ask us for the one-pager on any of these.</strong></p>
       <div class="modules">
         <div class="mod">
-          <h3>Groundwork <span class="tag">Live</span></h3>
-          <p>Community-led development projects: stage-by-stage project tracking, funding, budget, risk and planning records, AI-drafted monthly reports, feasibility studies and funding bids.</p>
+          <h3>Groundwork <span class="tag">Available in pilot</span></h3>
+          <p>Community-led development projects: stage gates, funding, budget, risk and planning records, and client reporting, with monthly reports, feasibility studies and funding bids drafted from live records.</p>
         </div>
         <div class="mod">
-          <h3>Grantwork <span class="tag">Live</span></h3>
-          <p>Grant funding and impact reporting: funder pipeline, award conditions, outcome measures, and monitoring reports drafted from the results you recorded.</p>
-        </div>
-        <div class="mod">
-          <h3>Tenderhouse <span class="tag soon">In development</span></h3>
-          <p>Bids and tenders: a library of approved answers you can trace back to evidence, question-by-question drafting and a bid/no-bid scorecard. Design partners wanted.</p>
+          <h3>Grantwork <span class="tag">Available in pilot</span></h3>
+          <p>Applications to monitoring: funder pipeline, award conditions, impact evidence and monitoring returns in one workflow, drafted from the results you recorded.</p>
         </div>
       </div>
     </section>
 
-    <section>
-      <div class="eyebrow" style="margin-bottom:1.2mm;">Simple, per-seat pricing</div>
-      <div class="pricing">
-        <div class="tier">
-          <h3>Core</h3>
-          <div class="price">£29<span>/seat/mo · min 3</span></div>
-          <ul>
-            <li>Branded workspace & chat</li>
-            <li>Knowledge vault & citations</li>
-            <li>Research & slide export</li>
-            <li>Contact book</li>
-            <li>Standard support</li>
-          </ul>
-        </div>
-        <div class="tier pro">
-          <h3>Pro</h3>
-          <div class="price">£49<span>/seat/mo</span></div>
-          <ul>
-            <li>Everything in Core</li>
-            <li>Premium reasoning models</li>
-            <li>Deep research mode</li>
-            <li>Advanced project reports</li>
-            <li>Priority support</li>
-          </ul>
-        </div>
-        <div class="tier">
-          <h3>Managed</h3>
-          <div class="price">£799<span>/mo + £1,500 onboarding</span></div>
-          <ul>
-            <li>Includes 10 Pro seats</li>
-            <li>Hands-on setup &amp; onboarding</li>
-            <li>Custom workflows &amp; document curation</li>
-            <li>Quarterly reviews &amp; service guarantee (SLA)</li>
-            <li>+£39/extra seat</li>
-          </ul>
-        </div>
-      </div>
-      <div class="trust">
-        <span><strong>No surprise invoices.</strong> Spending limits you control: near the limit we switch to lower-cost models, and at the limit usage pauses.</span>
-        <span><strong>14-day trial.</strong> No card required.</span>
-      </div>
+    <section class="card">
+      <h2>Costs that stay predictable</h2>
+      <ul>
+        <li><strong>No surprise invoices.</strong> You set spending limits: near the limit we switch to lower-cost models, and at the limit usage pauses.</li>
+        <li><strong>Pilot places.</strong> We are onboarding organisations in small pilot groups. Ask us about fit and pilot terms when you book a demo.</li>
+      </ul>
     </section>
 
     <section class="cta">
       <div>
-        <h2>See your workspace before you commit.</h2>
-        <p>Book a 20-minute demo and we’ll build a live workspace around your own documents. Email clive@platform91.com</p>
+        <h2>Bring one repeated workflow. We’ll show you how it fits.</h2>
+        <p>A 20-minute demo around a report, bid or return you already produce, on representative data. No slides, no signup. Email clive@platform91.com or join the pilot list at flowgridos.co.uk.</p>
       </div>
       <a href="mailto:clive@platform91.com?subject=Book a Flowgrid OS demo">Book a demo</a>
     </section>
