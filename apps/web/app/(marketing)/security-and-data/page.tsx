@@ -46,7 +46,7 @@ const SECTIONS = [
     kicker: "Your data, your exit",
     title: "What if we leave?",
     plain:
-      "Your documents and records are yours, and are held in the UK. Exports are standard formats — PDF, PowerPoint, CSV — and we will agree return and deletion of your data as part of your terms, alongside a UK GDPR Data Processing Agreement.",
+      "Your documents and records are yours. Exports are standard formats — PDF, PowerPoint, CSV — and we will agree return and deletion of your data as part of your terms, under a UK GDPR Data Processing Agreement that names where your data is hosted.",
     detail:
       "Retention and deletion commitments, and the Data Processing Agreement, are set out in your agreement. Ask us anything specific before you sign — we would rather answer it now.",
   },
