@@ -155,8 +155,8 @@ def customer_deck():
 
     section_slide(prs, "Privacy & trust", [
         "Your workspace is isolated from every other customer at the database level, not only by application code.",
-        "UK-held data. Zero-data-retention hosting by default; your documents are not used to train anyone’s models.",
-        "UK GDPR, with a Data Processing Agreement as part of your terms, plus standard-format export and agreed return and deletion.",
+        "Zero-data-retention hosting by default; your documents are not used to train anyone’s models.",
+        "UK GDPR, with a Data Processing Agreement that names where your data is hosted, plus standard-format export and agreed return and deletion.",
         "Every AI call is recorded with usage and cost, and spending limits keep invoices predictable.",
     ])
 
