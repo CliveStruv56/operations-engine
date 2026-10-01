@@ -117,19 +117,19 @@ def customer_deck():
     prs.slide_width = SLIDE_W
     prs.slide_height = SLIDE_H
 
-    title_slide(prs, "AI workspace for UK small businesses", "One workspace. Your brand. Your data.")
+    title_slide(prs, "AI workspace for UK small organisations", "Turn what your organisation knows into work you can trust.")
 
     section_slide(prs, "The problem", [
-        "SMBs are buying AI in fragments — chat, documents, slides, research, each with its own login and bill.",
-        "Closed models are expensive and often train on your data.",
-        "Company knowledge sits in folders and spreadsheets, never where the work happens.",
+        "Small organisations run on scattered documents, repeated re-keying and blank-page reporting.",
+        "Generic AI tools give uncited answers that are hard to check before they reach a funder or client.",
+        "What the organisation knows sits in folders and spreadsheets, never where the work happens.",
     ])
 
     section_slide(prs, "The solution", [
-        "A single branded workspace for every client: their logo, their accent, their documents.",
-        "Answers cite the source page, so staff can trust what the AI says.",
-        "Every task is routed to the cheapest capable open-weight model — no closed-model lock-in.",
-        "Usage caps and per-tenant budgets prevent surprise invoices.",
+        "One workspace connects your source documents, confirmed facts and live projects.",
+        "Answers cite the document and page, and say so plainly when the vault has nothing.",
+        "Confirm a fact once and every draft reuses it; projects carry stages, budgets and risks.",
+        "Branded PDF and editable PowerPoint outputs. You review everything; Flowgrid never sends on your behalf.",
     ])
 
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -137,72 +137,28 @@ def customer_deck():
     add_two_col_bullets(
         slide, MARGIN, Inches(1.5), SLIDE_W - MARGIN * 2, Inches(5.4),
         [
-            "Branded AI chat with page-level citations",
-            "Cited knowledge vault (PDF, Word, Excel, Markdown)",
-            "Research mode with cited web sources",
-            "Native PowerPoint slide export",
+            "Cited answers: every answer links to its document and page",
+            "Document vault (PDF, Word, Excel), searchable",
+            "Confirmed facts: review once, reuse in every draft",
+            "Projects and plans with stages, budgets and risks",
+            "Branded exports: PDF and editable PowerPoint",
         ],
         [
-            "CRM contact book with CSV import",
-            "Project spine for stage-gated work",
-            "Email & calendar sync (roadmap)",
-            "Meeting intelligence (roadmap)",
+            "Research mode with cited web sources",
+            "Contact book with spreadsheet import",
+            "Usage and cost recorded on every AI call",
+            "Coming: email & calendar sync, meeting intelligence",
         ],
         size=19,
     )
     add_footer(slide)
 
     section_slide(prs, "Privacy & trust", [
-        "Tenant isolation enforced by Postgres row-level security.",
-        "Zero-data-retention US/EU hosts by default; nothing trains on your files.",
-        "Soft caps nudge, hard caps protect; full audit logs.",
-        "MIT/Apache stack only — no hidden licensing overhang.",
+        "Your workspace is isolated from every other customer at the database level, not only by application code.",
+        "UK-held data. Zero-data-retention hosting by default; your documents are not used to train anyone’s models.",
+        "UK GDPR, with a Data Processing Agreement as part of your terms, plus standard-format export and agreed return and deletion.",
+        "Every AI call is recorded with usage and cost, and spending limits keep invoices predictable.",
     ])
-
-    # Pricing slide
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, "Simple, per-seat pricing")
-    box_w = (SLIDE_W - MARGIN * 2 - Inches(0.6)) / 3
-    boxes = [
-        ("Core", "£29", "/seat/mo · min 3", [
-            "Workspace & chat",
-            "Vault & citations",
-            "Research & slides",
-            "CRM contacts",
-            "Standard support",
-        ]),
-        ("Pro", "£49", "/seat/mo", [
-            "Everything in Core",
-            "Premium reasoning",
-            "Deep research",
-            "Advanced reporting",
-            "Priority support",
-        ]),
-        ("Managed", "£799", "/mo + £1,500 onboarding", [
-            "Includes 10 Pro seats",
-            "White-glove onboarding",
-            "Custom workflows",
-            "Quarterly reviews",
-            "+£39/extra seat",
-        ]),
-    ]
-    for i, (name, price, suffix, items) in enumerate(boxes):
-        left = MARGIN + i * (box_w + Inches(0.3))
-        top = Inches(1.5)
-        shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, box_w, Inches(4.8))
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = CREAM if name != "Pro" else TERRACOTTA
-        shape.line.color.rgb = TERRACOTTA
-        shape.line.width = Pt(2)
-
-        fill = WHITE if name == "Pro" else INK
-        accent = WHITE if name == "Pro" else TERRACOTTA
-
-        add_textbox(slide, left + Inches(0.15), top + Inches(0.15), box_w - Inches(0.3), Inches(0.5), name, size=22, bold=True, color=accent, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
-        add_textbox(slide, left + Inches(0.15), top + Inches(0.7), box_w - Inches(0.3), Inches(0.6), price, size=32, bold=True, color=accent, align=PP_ALIGN.CENTER)
-        add_textbox(slide, left + Inches(0.15), top + Inches(1.25), box_w - Inches(0.3), Inches(0.4), suffix, size=12, color=fill, align=PP_ALIGN.CENTER)
-        add_bullets(slide, left + Inches(0.2), top + Inches(1.75), box_w - Inches(0.4), Inches(2.8), items, size=14, color=fill)
-    add_footer(slide)
 
     # CTA slide
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -210,9 +166,9 @@ def customer_deck():
     bg.fill.solid()
     bg.fill.fore_color.rgb = TERRACOTTA
     bg.line.fill.background()
-    add_textbox(slide, MARGIN, Inches(2.2), SLIDE_W - MARGIN * 2, Inches(1.2), "See your workspace before you commit.", size=40, bold=True, color=WHITE, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
-    add_textbox(slide, MARGIN, Inches(3.5), SLIDE_W - MARGIN * 2, Inches(0.8), "Book a 20-minute demo and we’ll build a live workspace around your own documents.", size=22, color=WHITE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "hello@flowgridos.co.uk · 14-day trial, no card required", size=18, color=WHITE, align=PP_ALIGN.CENTER)
+    add_textbox(slide, MARGIN, Inches(2.2), SLIDE_W - MARGIN * 2, Inches(1.2), "Bring one repeated workflow.", size=40, bold=True, color=WHITE, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
+    add_textbox(slide, MARGIN, Inches(3.5), SLIDE_W - MARGIN * 2, Inches(0.8), "We’ll show you how it fits: a 20-minute demo around a report, bid or return you already produce. No slides, no signup.", size=22, color=WHITE, align=PP_ALIGN.CENTER)
+    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "clive@platform91.com · or join the pilot list at flowgridos.co.uk", size=18, color=WHITE, align=PP_ALIGN.CENTER)
     add_footer(slide, "flowgridos.co.uk")
 
     path = ROOT / "flowgrid-os-customer-deck.pptx"
@@ -225,79 +181,37 @@ def partner_deck():
     prs.slide_width = SLIDE_W
     prs.slide_height = SLIDE_H
 
-    title_slide(prs, "Partner programme", "Sell a branded AI workspace without building one.", footer_text="flowgridos.co.uk/partners")
+    title_slide(prs, "Partner programme", "Sell a branded AI workspace without building one.", footer_text="flowgridos.co.uk")
 
     section_slide(prs, "The opportunity", [
-        "SMBs want one AI bill and their own brand — not a patchwork of tools.",
+        "Charities, trusts and SMEs want cited answers and structured work, not a patchwork of AI tools.",
         "Agencies, MSPs and consultancies can own the client relationship.",
         "Flowgrid OS handles infrastructure, model routing, security and updates.",
-    ], footer_text="flowgridos.co.uk/partners")
+    ], footer_text="flowgridos.co.uk")
 
     section_slide(prs, "The platform you resell", [
-        "Brand layer — tenant logo, accent and white-label shell.",
+        "Brand layer: client logo, colours and branded outputs.",
         "Model router — cost-routed open weights with automatic fallbacks.",
-        "Vault & RAG — cited retrieval with per-tenant database isolation.",
-        "Modules — chat, research, slides, CRM and project spine.",
-    ], footer_text="flowgridos.co.uk/partners")
+        "Vault & confirmed facts: cited answers, with each client isolated at the database level.",
+        "Modules: projects, exports and sector modules (Groundwork and Grantwork, available in pilot).",
+    ], footer_text="flowgridos.co.uk")
 
     section_slide(prs, "Why partner", [
-        "High recurring margins: ~89% Core, ~88% Pro, ~70% Managed after support labour.",
+        "Recurring revenue: per-seat subscriptions with margin you keep. Economics are shared on a partner call.",
         "Zero licensing overhang: MIT/Apache stack end-to-end.",
         "Sticky clients: vault, projects and usage data increase switching costs.",
         "Fast to deploy: new branded workspaces provisioned in minutes.",
-    ], footer_text="flowgridos.co.uk/partners")
-
-    # Economics / pricing slide
-    slide = prs.slides.add_slide(prs.slide_layouts[6])
-    add_title_bar(slide, "Partner economics")
-    box_w = (SLIDE_W - MARGIN * 2 - Inches(0.6)) / 3
-    boxes = [
-        ("Core", "£29", "/seat/mo · min 3", "~89% gross margin", [
-            "Workspace, vault & chat",
-            "Research & slide export",
-            "CRM contacts",
-            "Self-serve support",
-        ]),
-        ("Pro", "£49", "/seat/mo", "~88% gross margin", [
-            "Everything in Core",
-            "Premium reasoning",
-            "Deep research",
-            "Advanced reporting",
-        ]),
-        ("Managed", "£799", "/mo + £1,500 onboarding", "~70% margin after labour", [
-            "Includes 10 Pro seats",
-            "White-glove onboarding",
-            "Quarterly reviews & SLA",
-            "+£39/extra seat",
-        ]),
-    ]
-    for i, (name, price, suffix, margin_text, items) in enumerate(boxes):
-        left = MARGIN + i * (box_w + Inches(0.3))
-        top = Inches(1.45)
-        shape = slide.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, left, top, box_w, Inches(5.0))
-        shape.fill.solid()
-        shape.fill.fore_color.rgb = CREAM if name != "Pro" else TERRACOTTA
-        shape.line.color.rgb = TERRACOTTA
-        shape.line.width = Pt(2)
-
-        fill = WHITE if name == "Pro" else INK
-        accent = WHITE if name == "Pro" else TERRACOTTA
-
-        add_textbox(slide, left + Inches(0.15), top + Inches(0.15), box_w - Inches(0.3), Inches(0.5), name, size=22, bold=True, color=accent, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
-        add_textbox(slide, left + Inches(0.15), top + Inches(0.7), box_w - Inches(0.3), Inches(0.6), price, size=32, bold=True, color=accent, align=PP_ALIGN.CENTER)
-        add_textbox(slide, left + Inches(0.15), top + Inches(1.25), box_w - Inches(0.3), Inches(0.35), suffix, size=12, color=fill, align=PP_ALIGN.CENTER)
-        add_textbox(slide, left + Inches(0.15), top + Inches(1.6), box_w - Inches(0.3), Inches(0.4), margin_text, size=15, bold=True, color=SAGE if name != "Pro" else WHITE, align=PP_ALIGN.CENTER)
-        add_bullets(slide, left + Inches(0.2), top + Inches(2.15), box_w - Inches(0.4), Inches(2.7), items, size=14, color=fill)
-    add_footer(slide, "flowgridos.co.uk/partners")
+        "Pilot first: we are onboarding in small pilot groups, so places are limited.",
+    ], footer_text="flowgridos.co.uk")
 
     # How it works
     slide = prs.slides.add_slide(prs.slide_layouts[6])
     add_title_bar(slide, "How it works")
     steps = [
-        ("1", "Sign a client", "Pick tier & collect brand assets."),
+        ("1", "Sign a client", "Agree scope & collect brand assets."),
         ("2", "Provision workspace", "Operator console creates tenant, keys & invites."),
-        ("3", "Curate & train", "Upload docs, run onboarding, set caps."),
-        ("4", "Bill monthly", "You invoice client; we invoice you for COGS."),
+        ("3", "Curate & train", "Upload docs, run onboarding, set spending limits."),
+        ("4", "Bill monthly", "You invoice the client; we invoice you."),
     ]
     box_w = (SLIDE_W - MARGIN * 2 - Inches(0.9)) / 4
     for i, (num, title, desc) in enumerate(steps):
@@ -317,7 +231,7 @@ def partner_deck():
 
         add_textbox(slide, left + Inches(0.15), top + Inches(1.1), box_w - Inches(0.3), Inches(0.5), title, size=17, bold=True, color=TERRACOTTA_DARK, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
         add_textbox(slide, left + Inches(0.15), top + Inches(1.7), box_w - Inches(0.3), Inches(1.4), desc, size=14, color=INK_SOFT, align=PP_ALIGN.CENTER)
-    add_footer(slide, "flowgridos.co.uk/partners")
+    add_footer(slide, "flowgridos.co.uk")
 
     # CTA slide
     slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -327,8 +241,8 @@ def partner_deck():
     bg.line.fill.background()
     add_textbox(slide, MARGIN, Inches(2.2), SLIDE_W - MARGIN * 2, Inches(1.2), "Become a Flowgrid OS partner.", size=44, bold=True, color=WHITE, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
     add_textbox(slide, MARGIN, Inches(3.5), SLIDE_W - MARGIN * 2, Inches(0.8), "Book a partner call and we’ll share the operator console, margin model and onboarding runbook.", size=22, color=WHITE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "partners@flowgridos.co.uk", size=20, color=WHITE, align=PP_ALIGN.CENTER)
-    add_footer(slide, "flowgridos.co.uk/partners")
+    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "clive@platform91.com", size=20, color=WHITE, align=PP_ALIGN.CENTER)
+    add_footer(slide, "flowgridos.co.uk")
 
     path = ROOT / "flowgrid-os-partner-deck.pptx"
     prs.save(path)
