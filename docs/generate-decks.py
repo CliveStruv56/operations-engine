@@ -168,7 +168,7 @@ def customer_deck():
     bg.line.fill.background()
     add_textbox(slide, MARGIN, Inches(2.2), SLIDE_W - MARGIN * 2, Inches(1.2), "Bring one repeated workflow.", size=40, bold=True, color=WHITE, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
     add_textbox(slide, MARGIN, Inches(3.5), SLIDE_W - MARGIN * 2, Inches(0.8), "We’ll show you how it fits: a 20-minute demo around a report, bid or return you already produce. No slides, no signup.", size=22, color=WHITE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "clive@platform91.com · or join the pilot list at flowgridos.co.uk", size=18, color=WHITE, align=PP_ALIGN.CENTER)
+    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "hello@flowgridos.co.uk · or join the pilot list at flowgridos.co.uk", size=18, color=WHITE, align=PP_ALIGN.CENTER)
     add_footer(slide, "flowgridos.co.uk")
 
     path = ROOT / "flowgrid-os-customer-deck.pptx"
@@ -241,7 +241,7 @@ def partner_deck():
     bg.line.fill.background()
     add_textbox(slide, MARGIN, Inches(2.2), SLIDE_W - MARGIN * 2, Inches(1.2), "Become a Flowgrid OS partner.", size=44, bold=True, color=WHITE, align=PP_ALIGN.CENTER, font=DISPLAY_FONT)
     add_textbox(slide, MARGIN, Inches(3.5), SLIDE_W - MARGIN * 2, Inches(0.8), "Book a partner call and we’ll share the operator console, margin model and onboarding runbook.", size=22, color=WHITE, align=PP_ALIGN.CENTER)
-    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "clive@platform91.com", size=20, color=WHITE, align=PP_ALIGN.CENTER)
+    add_textbox(slide, MARGIN, Inches(4.5), SLIDE_W - MARGIN * 2, Inches(0.6), "hello@flowgridos.co.uk", size=20, color=WHITE, align=PP_ALIGN.CENTER)
     add_footer(slide, "flowgridos.co.uk")
 
     path = ROOT / "flowgrid-os-partner-deck.pptx"
