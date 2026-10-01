@@ -3,7 +3,7 @@ from datetime import date, datetime
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, EmailStr, Field, field_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, EmailStr, Field, field_validator
 
 from app.modules import FEATURE_FLAGS
 
@@ -79,6 +79,10 @@ def _reject_unknown_flags(v: dict[str, bool]) -> dict[str, bool]:
 
 
 class AdminTenantCreate(BaseModel):
+    # A trailing space in a pasted name used to be stored verbatim, and the
+    # purge dialog's exact-name check could then never be satisfied.
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     name: str = Field(min_length=1, max_length=200)
     owner_email: EmailStr
     seats: int | None = Field(default=None, ge=1, le=100)
@@ -107,6 +111,8 @@ class AdminFeaturesOut(BaseModel):
 class AdminTenantPatch(BaseModel):
     """Post-creation edits. Every field optional; only what is sent changes,
     so two operators editing different fields cannot clobber each other."""
+
+    model_config = ConfigDict(str_strip_whitespace=True)
 
     name: str | None = Field(default=None, min_length=1, max_length=200)
     seats: int | None = Field(default=None, ge=1, le=100)
@@ -150,6 +156,15 @@ class AdminPurgeIn(BaseModel):
 class AdminPurgeOut(BaseModel):
     objects_deleted: int
     key_revoked: bool
+
+
+class AdminJoinOut(BaseModel):
+    """The operator's own membership in a client workspace (dev/staging only)."""
+
+    tenant_id: UUID
+    membership_id: UUID
+    role: str
+    created: bool
 
 
 class AdminInviteOut(BaseModel):

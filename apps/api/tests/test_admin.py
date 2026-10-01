@@ -511,3 +511,78 @@ async def test_purge_function_refuses_an_unsuspended_tenant(client, two_tenants)
     # And the workspace is untouched.
     resp = await client.get("/api/v1/members", headers=auth(a.owner_id, a.id))
     assert resp.status_code == 200
+
+
+# -- operator join (dev/staging only) ------------------------------------------
+
+
+async def test_operator_can_open_a_workspace_outside_production(client, two_tenants):
+    """The console grants no membership on creation, so a new workspace never
+    shows in the operator's chooser. `join` fixes that for dev and staging:
+    one owner membership, idempotent, and the workspace then resolves."""
+    a, _ = two_tenants
+    operator_id = uuid4()
+    operator = admin_auth(operator_id)
+
+    # Before: the operator has no way into the workspace.
+    r = await client.get("/api/v1/tenants/me", headers=auth(operator_id, a.id))
+    assert r.status_code in (403, 404), r.text
+
+    r = await client.post(f"/api/v1/admin/tenants/{a.id}/join", headers=operator)
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert body["tenant_id"] == str(a.id)
+    assert body["role"] == "owner"
+    assert body["created"] is True
+
+    # After: the workspace opens for the operator like any member's.
+    r = await client.get("/api/v1/tenants/me", headers=auth(operator_id, a.id))
+    assert r.status_code == 200, r.text
+    assert r.json()["id"] == str(a.id)
+
+    # Joining again neither duplicates nor changes the membership.
+    r = await client.post(f"/api/v1/admin/tenants/{a.id}/join", headers=operator)
+    assert r.status_code == 200
+    assert r.json()["created"] is False
+    assert r.json()["membership_id"] == body["membership_id"]
+
+    r = await client.post(f"/api/v1/admin/tenants/{uuid4()}/join", headers=operator)
+    assert r.status_code == 404
+
+
+async def test_operator_join_is_refused_in_production_and_to_non_admins(
+    client, two_tenants, monkeypatch
+):
+    a, _ = two_tenants
+    # A tenant admin is not the platform operator.
+    r = await client.post(f"/api/v1/admin/tenants/{a.id}/join", headers=auth(a.owner_id, a.id))
+    assert r.status_code == 403
+
+    monkeypatch.setenv("ENVIRONMENT", "production")
+    get_settings.cache_clear()
+    try:
+        r = await client.post(f"/api/v1/admin/tenants/{a.id}/join", headers=admin_auth(uuid4()))
+        assert r.status_code == 403
+        assert r.json()["error"]["code"] == "operator_join_disabled"
+    finally:
+        monkeypatch.delenv("ENVIRONMENT", raising=False)
+        get_settings.cache_clear()
+
+
+async def test_workspace_names_are_stored_trimmed(client):
+    """A pasted name with a trailing space must not poison the purge check,
+    which compares the typed name against the stored one exactly."""
+    operator = admin_auth(uuid4())
+    r = await client.post(
+        "/api/v1/admin/tenants",
+        json={"name": "  Orchard Hill 2  ", "owner_email": "owner@example.org"},
+        headers=operator,
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["name"] == "Orchard Hill 2"
+    tid = r.json()["id"]
+    r = await client.patch(
+        f"/api/v1/admin/tenants/{tid}", json={"name": " Orchard Hill 3 "}, headers=operator
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["name"] == "Orchard Hill 3"

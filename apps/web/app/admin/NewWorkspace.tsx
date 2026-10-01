@@ -31,7 +31,7 @@ export function NewWorkspace({
       const created = await admin<AdminTenantCreated>("/admin/tenants", {
         method: "POST",
         body: JSON.stringify({
-          name,
+          name: name.trim(),
           owner_email: ownerEmail,
           seats,
           trial_days: trialDays,

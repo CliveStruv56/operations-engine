@@ -74,7 +74,8 @@ type Request = ConfirmRequest | TextRequest | TypedRequest;
 type Ask = {
   confirm: (r: Omit<ConfirmRequest, "kind">) => Promise<boolean>;
   text: (r: Omit<TextRequest, "kind">) => Promise<string | null>;
-  /** Resolves true only if the typed value matches `expected` exactly. */
+  /** Resolves true only if the typed value matches `expected` (whitespace
+   *  and Unicode-normalised — see `nameMismatch`). */
   confirmTyped: (r: Omit<TypedRequest, "kind">) => Promise<boolean>;
 };
 
@@ -89,6 +90,15 @@ const AskContext = createContext<Ask>({
 });
 
 export const useAsk = () => useContext(AskContext);
+
+/** The typed-confirmation check. People cannot see a trailing space in a
+ *  stored name, and keyboards disagree about composed characters, so compare
+ *  with whitespace runs collapsed and both sides NFC-normalised. Returns true
+ *  when the values do NOT match (the button stays disabled). */
+function nameMismatch(typed: string, expected: string): boolean {
+  const norm = (s: string) => s.normalize("NFC").replace(/\s+/g, " ").trim();
+  return norm(typed) !== norm(expected);
+}
 
 const FOCUSABLE =
   'button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -182,7 +192,7 @@ function Dialog({
   const needsValue = request.kind !== "confirm";
   const blocked =
     (request.kind === "text" && value.trim() === "") ||
-    (request.kind === "typed" && value !== request.expected);
+    (request.kind === "typed" && nameMismatch(value, request.expected));
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
