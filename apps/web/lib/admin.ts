@@ -49,6 +49,18 @@ export const suspendTenant = (tenantId: string, reason: string) =>
 export const resumeTenant = (tenantId: string) =>
   admin<AdminTenant>(`/admin/tenants/${tenantId}/resume`, { method: "POST" });
 
+export type AdminJoin = {
+  tenant_id: string;
+  membership_id: string;
+  role: string;
+  created: boolean;
+};
+
+/** Dev/staging only: give the operator an owner membership so the workspace
+ *  opens from the console. The API refuses this in production. */
+export const joinTenant = (tenantId: string) =>
+  admin<AdminJoin>(`/admin/tenants/${tenantId}/join`, { method: "POST" });
+
 /** Irreversible: files, model key, every row. Suspended workspaces only;
  *  the exact name is the confirmation. */
 export const purgeTenant = (tenantId: string, confirmName: string) =>

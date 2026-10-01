@@ -34,6 +34,7 @@ from app.schemas import (
     AdminFeaturesIn,
     AdminFeaturesOut,
     AdminInviteOut,
+    AdminJoinOut,
     AdminOwnerInviteIn,
     AdminPurgeIn,
     AdminPurgeOut,
@@ -345,6 +346,58 @@ async def admin_resume_tenant(
     return _tenant_out(row)
 
 
+@router.post("/admin/tenants/{tenant_id}/join", response_model=AdminJoinOut)
+async def admin_join_tenant(
+    tenant_id: UUID,
+    user: AuthUser = Depends(require_platform_admin),
+):
+    """Give the operator an owner membership so the workspace opens from the
+    console. The console deliberately grants no membership on creation (support
+    goes through /admin), so this is fenced to non-production environments:
+    it exists for building and demoing, not for walking into client data.
+    Idempotent — an existing membership is returned, its role untouched."""
+    if get_settings().environment == "production":
+        raise ApiError(
+            403,
+            "operator_join_disabled",
+            "Opening client workspaces from the console is disabled in production",
+        )
+    async with db.tenant_tx(user.id, tenant_id) as conn:
+        if await conn.fetchval("select 1 from tenants where id = $1", tenant_id) is None:
+            raise ApiError(404, "not_found", "Workspace not found")
+        existing = await conn.fetchrow(
+            "select id, role from memberships where user_id = $1 and tenant_id = $2",
+            user.id,
+            tenant_id,
+        )
+        if existing is not None:
+            return AdminJoinOut(
+                tenant_id=tenant_id,
+                membership_id=existing["id"],
+                role=existing["role"],
+                created=False,
+            )
+        row = await conn.fetchrow(
+            "insert into memberships (user_id, tenant_id, role, email)"
+            " values ($1, $2, 'owner', $3) returning id, role",
+            user.id,
+            tenant_id,
+            user.email,
+        )
+        await write_audit(
+            conn,
+            tenant_id,
+            user.id,
+            "tenant.operator_join",
+            "membership",
+            str(row["id"]),
+            meta={"platform_admin": True, "environment": get_settings().environment},
+        )
+    return AdminJoinOut(
+        tenant_id=tenant_id, membership_id=row["id"], role=row["role"], created=True
+    )
+
+
 @router.post("/admin/tenants/{tenant_id}/purge", response_model=AdminPurgeOut)
 async def admin_purge_tenant(
     tenant_id: UUID,
@@ -378,7 +431,9 @@ async def admin_purge_tenant(
             "purge_requires_suspension",
             "Suspend the workspace first — purge is the irreversible second step",
         )
-    if body.confirm_name.strip() != tenant["name"]:
+    # Both sides trimmed: a name stored with a stray trailing space (possible
+    # before names were stripped on write) must still be purgeable.
+    if body.confirm_name.strip() != tenant["name"].strip():
         raise ApiError(
             400, "confirm_mismatch", "Type the workspace's exact name to confirm the purge"
         )

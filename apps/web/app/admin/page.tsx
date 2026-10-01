@@ -9,6 +9,7 @@ import {
   AdminTenantRow,
   FEATURE_FLAGS,
   admin,
+  joinTenant,
   purgeTenant,
   resumeTenant,
 } from "@/lib/admin";
@@ -81,6 +82,19 @@ function AdminConsole() {
       refresh();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Invite failed — try again.");
+    }
+  }
+
+  // Open gives the operator a membership (dev/staging only — the API refuses
+  // it in production) and switches the app shell to that workspace. The
+  // membership persists, so it also appears in the chooser from then on.
+  async function openWorkspace(t: AdminTenantRow) {
+    try {
+      await joinTenant(t.id);
+      localStorage.setItem("tenantId", t.id);
+      router.push("/app");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not open the workspace.");
     }
   }
 
@@ -211,6 +225,13 @@ function AdminConsole() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-3 text-xs">
+                        <button
+                          onClick={() => openWorkspace(t)}
+                          title="Open this workspace as the operator (dev and staging only)"
+                          className="text-ink-muted underline hover:text-ink"
+                        >
+                          Open
+                        </button>
                         <button
                           onClick={() => setEditing(t)}
                           className="text-ink-muted underline hover:text-ink"
