@@ -1165,3 +1165,19 @@ discussion behind them.
     sentence saying so was added to the security page on 1 Oct (`4784f83`)
     and removed the same day (`12c9f63`); the wording that stands is a UK
     GDPR Data Processing Agreement "that names where your data is hosted".
+
+68. **Destructive module actions need admin — except the Groundwork budget
+    save, which stays at member** (code review MOD-1, 12 Oct 2026).
+
+    `make_feature_gate(flag, minimum=...)` now gates deleting a grant
+    application or funder, a contact or company, or a community asset, and
+    the CSV contact import, at admin — matching core `DELETE /projects/{id}`.
+    The flag is checked before the role, so a tenant without the module still
+    sees 404, never a 403 that reveals the route. The web app hides those
+    buttons from members.
+
+    The review also listed `PUT /projects/{id}/budget` (delete-all then
+    re-insert). It is **not** gated: it is the budget tab's only save path,
+    so gating it would stop members editing a budget at all. Its blast radius
+    is one project's budget lines, which any member can already change line
+    by line. If that changes, the fix is per-line endpoints, not a role.
