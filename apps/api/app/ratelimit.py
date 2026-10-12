@@ -73,6 +73,38 @@ class RateLimiter:
             "Too many page fetches — try again later, or paste the text",
         )
 
+    async def check_draft(self, tenant_id: UUID) -> None:
+        """Draft starts, across Groundwork and Grantwork. The in-flight cap
+        (`app/draft_capacity.py`) bounds concurrency; this bounds churn."""
+        await self._check(
+            f"rl:draft:{tenant_id}",
+            get_settings().draft_rate_limit_per_hour,
+            3600,
+            "Draft limit reached for this hour — try again later",
+        )
+
+    async def check_transcribe(self, tenant_id: UUID) -> None:
+        """Question-set transcription: one model call per request, synchronous."""
+        await self._check(
+            f"rl:transcribe:{tenant_id}",
+            get_settings().transcribe_rate_limit_per_hour,
+            3600,
+            "Transcription limit reached for this hour — try again later",
+        )
+
+    async def check_tenant_create(self, user_id: UUID) -> None:
+        """Workspace creation, keyed by account because there is no tenant yet.
+
+        Each new workspace mints a LiteLLM virtual key carrying real budget, so
+        open signup without a bound is a way to spend platform money.
+        """
+        await self._check(
+            f"rl:tenantcreate:{user_id}",
+            get_settings().tenant_create_rate_limit_per_day,
+            86400,
+            "Workspace limit reached for today — try again tomorrow",
+        )
+
     async def check_register_lookup(self, tenant_id: UUID) -> None:
         """Public-register lookups, which spend a platform-wide allowance.
 

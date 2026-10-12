@@ -44,6 +44,7 @@ from worker.health_card import generate_health_card
 from worker.parsing import parse_file
 from worker.secrets import decrypt_llm_key
 from worker.settings import get_settings
+from worker.stale import INTERRUPTED_REASON, sweep_stale_documents
 from worker.storage import download_file
 from worker.summarize import summarize_document
 from worker.workspace_export import build_workspace_export
@@ -247,10 +248,19 @@ async def ingest_document(ctx: dict, tenant_id: str, document_id: str, user_id: 
         with contextlib.suppress(Exception):
             await _propose_claims(pool, tenant_id, document_id, user_id, doc["title"], virtual_key)
         return f"ready:{len(chunks)} chunks"
-    except Exception as exc:
+    except BaseException as exc:
+        # BaseException, not Exception: arq cancels a job on SIGTERM (every
+        # deploy) and on job_timeout with CancelledError, which `except
+        # Exception` misses — the document then sat at `parsing` forever.
+        # Every other job already does this; `sweep_stale_documents` catches
+        # what this cannot (a killed process runs no handler at all).
         # Sanitized failure reason only — no file content in the row or logs.
-        reason = f"{type(exc).__name__}: {str(exc)[:200]}"
-        with contextlib.suppress(Exception):
+        reason = (
+            INTERRUPTED_REASON
+            if isinstance(exc, asyncio.CancelledError)
+            else f"{type(exc).__name__}: {str(exc)[:200]}"
+        )
+        with contextlib.suppress(BaseException):
             await _set_status(pool, tenant_id, document_id, "failed", reason)
         raise
 
@@ -354,12 +364,16 @@ class WorkerSettings:
         build_workspace_export,
     ]
     # The register's dates change at midnight with nobody touching anything —
-    # these are the only jobs that run on a clock rather than an enqueue.
+    # these and the stale-document sweep are the only jobs that run on a
+    # clock rather than an enqueue.
     # 06:10 UTC daily for the feed row; Monday 07:00 UTC for the email, early
     # enough to be in UK inboxes at the start of the working week.
     cron_jobs = [
         cron(sweep_claims, hour=6, minute=10),
         cron(send_claims_digest, weekday="mon", hour=7, minute=0),
+        # Hourly: documents a killed or cancelled ingest left at parsing/
+        # embedding are marked failed, so the user sees Reprocess.
+        cron(sweep_stale_documents, minute=25),
     ]
     on_startup = startup
     on_shutdown = shutdown

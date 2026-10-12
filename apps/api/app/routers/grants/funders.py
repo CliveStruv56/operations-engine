@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, Query
 from app.audit import write_audit
 from app.errors import ApiError
 from app.grants.schemas import CatalogueRow, FunderIn, FunderOut, FunderPatch
-from app.routers.grants.common import require_grants
+from app.routers.grants.common import require_grants, require_grants_admin
 from app.sqlutil import like_contains, patch_sets
 from app.tenant import TenantContext, get_conn
 
@@ -142,7 +142,7 @@ async def patch_funder(
 @router.delete("/grants/funders/{funder_id}", status_code=204)
 async def delete_funder(
     funder_id: UUID,
-    ctx: TenantContext = Depends(require_grants),
+    ctx: TenantContext = Depends(require_grants_admin),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     """Applications keep their history: the FK is `on delete set null`, so

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query
 from app.audit import write_audit
 from app.crm.schemas import ContactIn, ContactOut, ContactPatch
 from app.errors import ApiError
-from app.routers.crm.common import require_contacts
+from app.routers.crm.common import require_contacts, require_contacts_admin
 from app.sqlutil import like_contains, patch_sets
 from app.tenant import TenantContext, get_conn
 
@@ -147,7 +147,7 @@ async def patch_contact(
 @router.delete("/contacts/{contact_id}", status_code=204)
 async def delete_contact(
     contact_id: UUID,
-    ctx: TenantContext = Depends(require_contacts),
+    ctx: TenantContext = Depends(require_contacts_admin),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     deleted = await conn.execute("delete from crm_contacts where id = $1", contact_id)

@@ -7,3 +7,5 @@ alias keeps the import path consistent with the other modules.
 from app.modules import make_feature_gate
 
 require_community = make_feature_gate("community")
+# Deleting an asset record — there is no soft delete to recover it from.
+require_community_admin = make_feature_gate("community", minimum="admin")

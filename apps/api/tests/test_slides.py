@@ -263,3 +263,61 @@ async def test_export_uses_tenant_template(client, monkeypatch):
     prs = Presentation(BytesIO(uploads[f"{tenant.id}/slides/{deck_msg}.pptx"]))
     # Placeholder-based title proves the master's layouts were used.
     assert prs.slides[0].shapes.title.text == "Forced Quit on Apple Mac M3"
+
+
+async def test_brand_keys_must_be_this_tenants_own(client, monkeypatch):
+    """The object store has no tenant concept, so brand keys are checked by
+    prefix: another tenant's key is refused on write and ignored on read."""
+    tenant = await seed_tenant(client, f"pptxk-{uuid4().hex[:6]}")
+    victim = await seed_tenant(client, f"pptxv-{uuid4().hex[:6]}")
+    headers = auth(tenant.owner_id, tenant.id)
+    stolen = f"{victim.id}/documents/{uuid4()}/board-minutes.pdf"
+
+    for field in ("logo_key", "slides_template_key"):
+        for bad in (stolen, f"{victim.id}/brand/slides-template.pptx", "../x"):
+            resp = await client.patch(
+                "/api/v1/tenants/me", json={"brand": {field: bad}}, headers=headers
+            )
+            assert resp.status_code == 400, (field, bad)
+            assert resp.json()["error"]["code"] == "invalid_brand_key"
+
+    resp = await client.patch(
+        "/api/v1/tenants/me",
+        json={"brand": {"logo_key": f"{tenant.id}/brand/logo.webp"}},
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+
+    # A key that got in before the write check existed is never read.
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            "update tenants set brand = jsonb_build_object("
+            "'logo_key', $2::text, 'slides_template_key', $2::text) where id = $1",
+            tenant.id,
+            stolen,
+        )
+    downloaded: list[str] = []
+
+    async def fake_download(key):
+        downloaded.append(key)
+        return b""
+
+    async def fake_upload(key, data, mime):
+        pass
+
+    monkeypatch.setattr(Storage, "enabled", property(lambda self: True))
+    monkeypatch.setattr(storage, "upload_bytes", fake_upload)
+    monkeypatch.setattr(storage, "download_bytes", fake_download)
+    monkeypatch.setattr(storage, "presign_get", lambda key: f"https://signed.example/{key}")
+
+    resp = await client.get("/api/v1/tenants/me", headers=headers)
+    assert resp.status_code == 200
+    assert resp.json()["logo_url"] is None
+
+    deck_msg = await _seed_deck_message(tenant)
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages/{deck_msg}/slides",
+        headers=headers,
+    )
+    assert resp.status_code == 200, resp.text
+    assert downloaded == []
