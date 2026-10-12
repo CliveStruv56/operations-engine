@@ -5,6 +5,7 @@ against the real schema, as ops_app, through the migration-0030 discovery
 function."""
 
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import asyncpg
@@ -17,10 +18,10 @@ sys.path.append(str(Path(__file__).resolve().parents[2] / "worker"))
 from worker.stale import INTERRUPTED_REASON, sweep_stale_documents  # noqa: E402
 
 
-async def _set(tenant, status: str, age: str) -> None:
+async def _set(tenant, status: str, age: timedelta) -> None:
     async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
         await conn.execute(
-            "update documents set status = $2, updated_at = now() - $3::interval where id = $1",
+            "update documents set status = $2, updated_at = now() - $3 where id = $1",
             tenant.document_id,
             status,
             age,
@@ -40,10 +41,10 @@ async def test_sweep_fails_only_stranded_documents(client):
     embedding = await seed_tenant(client, "stale-embedding")
     live = await seed_tenant(client, "stale-live")
     done = await seed_tenant(client, "stale-done")
-    await _set(stuck, "parsing", "3 hours")
-    await _set(embedding, "embedding", "5 hours")
-    await _set(live, "parsing", "10 minutes")  # an ingest still running
-    await _set(done, "ready", "3 days")
+    await _set(stuck, "parsing", timedelta(hours=3))
+    await _set(embedding, "embedding", timedelta(hours=5))
+    await _set(live, "parsing", timedelta(minutes=10))  # an ingest still running
+    await _set(done, "ready", timedelta(days=3))
 
     pool = await asyncpg.create_pool(APP_URL, min_size=1, max_size=2)
     try:

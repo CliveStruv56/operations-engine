@@ -270,9 +270,16 @@ async def test_tenant_wide_draft_ceiling(client, gw, fake_draft_queue, fake_heal
     card = await client.post(f"/api/v1/projects/{gw['pid']}/health-card", headers=gw["h"])
     assert card.status_code == 202, card.text
 
-    resp = await client.post(
-        base, json={"kind": "monthly_report", "month": "2026-08"}, headers=gw["h"]
+    # A kind with nothing in flight, so the per-kind guard (409) cannot fire
+    # first — only the tenant ceiling can refuse it.
+    source = await client.post(
+        f"/api/v1/projects/{gw['pid']}/funding",
+        json={"name": "CLT grant", "kind": "grant"},
+        headers=gw["h"],
     )
+    assert source.status_code == 201, source.text
+    bid = {"kind": "funding_bid", "funding_source_id": source.json()["id"]}
+    resp = await client.post(base, json=bid, headers=gw["h"])
     assert resp.status_code == 429
     assert resp.json()["error"]["code"] == "drafts_busy"
 
@@ -282,7 +289,5 @@ async def test_tenant_wide_draft_ceiling(client, gw, fake_draft_queue, fake_heal
             " where tenant_id = $1",
             gw["t"].id,
         )
-    resp = await client.post(
-        base, json={"kind": "monthly_report", "month": "2026-08"}, headers=gw["h"]
-    )
+    resp = await client.post(base, json=bid, headers=gw["h"])
     assert resp.status_code == 202, resp.text
