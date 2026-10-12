@@ -6,6 +6,7 @@ import { Company, CompanyForm, crm } from "@/lib/crm";
 import { btn, btnGhost, input, label } from "./ui";
 import { Panel } from "@/components/Panel";
 import { useAsk } from "@/components/ui";
+import { useWorkspace } from "../workspace";
 
 const empty: CompanyForm = {
   name: "",
@@ -43,6 +44,9 @@ export function CompanyEditor({
   onSaved: () => void;
 }) {
   const ask = useAsk();
+  // Deletes are admin-only server-side (code review MOD-1) — no dead button.
+  const { tenant } = useWorkspace();
+  const isAdmin = tenant?.role === "admin" || tenant?.role === "owner";
   const [form, setForm] = useState<CompanyForm>(company ? toForm(company) : empty);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -81,8 +85,13 @@ export function CompanyEditor({
       tone: "danger",
     });
     if (!confirmed) return;
-    await crm(`/companies/${company.id}`, { method: "DELETE" });
-    onSaved();
+    setError(null);
+    try {
+      await crm(`/companies/${company.id}`, { method: "DELETE" });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong — try again.");
+    }
   }
 
   return (
@@ -172,7 +181,7 @@ export function CompanyEditor({
           <button type="submit" disabled={saving} className={btn}>
             {company ? "Save changes" : "Add company"}
           </button>
-          {company && (
+          {company && isAdmin && (
             <button type="button" onClick={remove} className={`${btnGhost} text-danger`}>
               Delete
             </button>

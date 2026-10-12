@@ -6,6 +6,7 @@ import { Company, Contact, ContactForm, crm } from "@/lib/crm";
 import { btn, btnGhost, input, label } from "./ui";
 import { Panel } from "@/components/Panel";
 import { useAsk } from "@/components/ui";
+import { useWorkspace } from "../workspace";
 
 const empty: ContactForm = {
   name: "",
@@ -45,6 +46,9 @@ export function ContactEditor({
   onSaved: () => void;
 }) {
   const ask = useAsk();
+  // Deletes are admin-only server-side (code review MOD-1) — no dead button.
+  const { tenant } = useWorkspace();
+  const isAdmin = tenant?.role === "admin" || tenant?.role === "owner";
   const [form, setForm] = useState<ContactForm>(contact ? toForm(contact) : empty);
   const [tagsText, setTagsText] = useState(contact?.tags.join(", ") ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -84,8 +88,13 @@ export function ContactEditor({
       tone: "danger",
     });
     if (!confirmed) return;
-    await crm(`/contacts/${contact.id}`, { method: "DELETE" });
-    onSaved();
+    setError(null);
+    try {
+      await crm(`/contacts/${contact.id}`, { method: "DELETE" });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Something went wrong — try again.");
+    }
   }
 
   return (
@@ -187,7 +196,7 @@ export function ContactEditor({
           <button type="submit" disabled={saving} className={btn}>
             {contact ? "Save changes" : "Add contact"}
           </button>
-          {contact && (
+          {contact && isAdmin && (
             <button type="button" onClick={remove} className={`${btnGhost} text-danger`}>
               Delete
             </button>

@@ -709,47 +709,57 @@ export default function ChatPanel({
     const ctrl = new AbortController();
     abortRef.current = ctrl;
 
-    await apiStream(
-      `/conversations/${convId}/messages`,
-      { content, use_vault: useVault, use_company: useCompany, task_kind: mode },
-      tenantId,
-      {
-        onDelta: pushDelta,
-        onDone: (message) => {
-          // The persisted message replaces the streamed text wholesale, so
-          // anything still buffered is redundant — drop it rather than let a
-          // queued frame land after the bubble has gone.
-          discardDeltas();
-          setSoftCap(Boolean(message.soft_cap));
-          setStreamText(null);
-          const done = message as unknown as Message & {
-            scope_used?: string | null;
-            coverage?: string | null;
-          };
-          setMessages((m) => [...m, done]);
-          if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
-          if (done.coverage) setCoverages((s) => ({ ...s, [done.id]: done.coverage! }));
-          ws.refreshConversations();
+    // apiStream reports every ending through one of its handlers, but a throw
+    // from one of those handlers would otherwise leave streamText at "" and
+    // the composer locked until reload (code review WEB-2).
+    try {
+      await apiStream(
+        `/conversations/${convId}/messages`,
+        { content, use_vault: useVault, use_company: useCompany, task_kind: mode },
+        tenantId,
+        {
+          onDelta: pushDelta,
+          onDone: (message) => {
+            // The persisted message replaces the streamed text wholesale, so
+            // anything still buffered is redundant — drop it rather than let a
+            // queued frame land after the bubble has gone.
+            discardDeltas();
+            setSoftCap(Boolean(message.soft_cap));
+            setStreamText(null);
+            const done = message as unknown as Message & {
+              scope_used?: string | null;
+              coverage?: string | null;
+            };
+            setMessages((m) => [...m, done]);
+            if (done.scope_used) setScopes((s) => ({ ...s, [done.id]: done.scope_used! }));
+            if (done.coverage) setCoverages((s) => ({ ...s, [done.id]: done.coverage! }));
+            ws.refreshConversations();
+          },
+          onError: (_code, msg) => {
+            discardDeltas();
+            setStreamText(null);
+            setError(msg);
+          },
+          onAbort: () => {
+            // The server may still have persisted the reply — converge on its state.
+            discardDeltas();
+            setStreamText(null);
+            if (convId) {
+              api<Message[]>(`/conversations/${convId}/messages`, {}, tenantId)
+                .then(setMessages)
+                .catch(() => {});
+            }
+          },
         },
-        onError: (_code, msg) => {
-          discardDeltas();
-          setStreamText(null);
-          setError(msg);
-        },
-        onAbort: () => {
-          // The server may still have persisted the reply — converge on its state.
-          discardDeltas();
-          setStreamText(null);
-          if (convId) {
-            api<Message[]>(`/conversations/${convId}/messages`, {}, tenantId)
-              .then(setMessages)
-              .catch(() => {});
-          }
-        },
-      },
-      ctrl.signal
-    );
-    abortRef.current = null;
+        ctrl.signal
+      );
+    } catch (err) {
+      discardDeltas();
+      setStreamText(null);
+      setError(err instanceof Error ? err.message : "Something went wrong — try again.");
+    } finally {
+      abortRef.current = null;
+    }
   }
 
   function pickSuggestion(s: Suggestion) {
