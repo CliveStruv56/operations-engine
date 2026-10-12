@@ -143,6 +143,7 @@ async def transcribe(
     the model is told never to invent a limit, and every limit it could not
     find comes back null for a person to fill in.
     """
+    await rate_limiter.check_transcribe(ctx.tenant_id)
     virtual_key = decrypt_llm_key(
         await conn.fetchval(
             "select litellm_key_encrypted from tenants where id = $1", ctx.tenant_id

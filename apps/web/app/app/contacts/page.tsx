@@ -9,6 +9,7 @@ import { CompanyEditor } from "./CompanyEditor";
 import { ContactEditor } from "./ContactEditor";
 import { ImportCsv } from "./ImportCsv";
 import { btn } from "./ui";
+import { useWorkspace } from "../workspace";
 
 type View = "people" | "companies";
 // Sentinel for "editor open in create mode" (vs null = closed).
@@ -26,6 +27,9 @@ export default function ContactsPage() {
 function ContactsPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
+  // CSV import overwrites names in place, so it is admin-only server-side.
+  const { tenant } = useWorkspace();
+  const isAdmin = tenant?.role === "admin" || tenant?.role === "owner";
   const [contacts, setContacts] = useState<Contact[] | null>(null);
   const [companies, setCompanies] = useState<Company[] | null>(null);
   const [view, setView] = useState<View>("people");
@@ -105,7 +109,7 @@ function ContactsPageInner() {
         <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Contacts</h1>
           <div className="flex flex-wrap items-center gap-2">
-            {view === "people" && <ImportCsv onDone={refresh} />}
+            {view === "people" && isAdmin && <ImportCsv onDone={refresh} />}
             <button
               onClick={() => (view === "people" ? setEditContact(NEW) : setEditCompany(NEW))}
               className={btn}

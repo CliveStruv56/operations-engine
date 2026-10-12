@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, Query
 from app.audit import write_audit
 from app.community.schemas import AssetIn, AssetOut, AssetPatch, Category
 from app.errors import ApiError
-from app.routers.community.common import require_community
+from app.routers.community.common import require_community, require_community_admin
 from app.sqlutil import like_contains, patch_sets
 from app.tenant import TenantContext, get_conn
 
@@ -142,7 +142,7 @@ async def patch_asset(
 @router.delete("/community/assets/{asset_id}", status_code=204)
 async def delete_asset(
     asset_id: UUID,
-    ctx: TenantContext = Depends(require_community),
+    ctx: TenantContext = Depends(require_community_admin),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     deleted = await conn.execute("delete from community_assets where id = $1", asset_id)

@@ -1,6 +1,6 @@
 import json
 from datetime import UTC, datetime, timedelta
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import asyncpg
 from fastapi import APIRouter, Depends
@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.db import db
 from app.errors import ApiError
 from app.litellm import litellm_client
+from app.ratelimit import rate_limiter
 from app.schemas import (
     LogoUploadIn,
     LogoUploadOut,
@@ -37,11 +38,33 @@ SLIDES_TEMPLATE_MIME = "application/vnd.openxmlformats-officedocument.presentati
 MAX_TEMPLATE_BYTES = 20 * 1024 * 1024
 
 
+def own_brand_key(tenant_id: UUID, field: str, key: object) -> str | None:
+    """`key` if it is one of the object keys this tenant's own presign routes
+    hand out for `field`, else None.
+
+    brand is free-form jsonb an admin PATCHes, and the object store has no
+    tenant concept — RLS cannot see a key. Without this check an admin could
+    store another tenant's document key here and have the API presign it for
+    their members, or download its bytes into a slides export.
+    """
+    if not isinstance(key, str):
+        return None
+    if field == "logo_key":
+        allowed = {f"{tenant_id}/brand/logo.{ext}" for ext in LOGO_MIMES.values()}
+    elif field == "slides_template_key":
+        allowed = {f"{tenant_id}/brand/slides-template.pptx"}
+    else:
+        return None
+    return key if key in allowed else None
+
+
 def _tenant_out(row: asyncpg.Record) -> dict:
     out = dict(row)
     out["brand"] = json.loads(out["brand"])
     out["features"] = json.loads(out["features"])
-    logo_key = out["brand"].get("logo_key")
+    # Checked on read as well as on write, so a key stored before the write
+    # check existed is never presigned.
+    logo_key = own_brand_key(out["id"], "logo_key", out["brand"].get("logo_key"))
     # Presigning is local crypto (see app/storage.py) — safe inline.
     out["logo_url"] = storage.presign_get(logo_key) if logo_key and storage.enabled else None
     return out
@@ -55,6 +78,9 @@ async def create_tenant(body: TenantCreate, user: AuthUser = Depends(get_current
     # workspaces come from the operator console; platform admins keep access.
     if not settings.open_signup and not is_platform_admin(user.email):
         raise ApiError(403, "signup_closed", "New workspaces are set up by your provider")
+    # Before the LiteLLM key is minted — the key is the thing being bounded.
+    if not is_platform_admin(user.email):
+        await rate_limiter.check_tenant_create(user.id)
     tenant_id = uuid4()
     trial_ends = datetime.now(UTC) + timedelta(days=settings.trial_days)
     soft_budget = settings.default_seats * settings.default_soft_budget_per_seat_usd
@@ -130,6 +156,15 @@ async def patch_my_tenant(
     ctx: TenantContext = Depends(require_role("admin")),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
+    if body.brand is not None:
+        for field in ("logo_key", "slides_template_key"):
+            key = body.brand.get(field)
+            if key is not None and own_brand_key(ctx.tenant_id, field, key) is None:
+                raise ApiError(
+                    400,
+                    "invalid_brand_key",
+                    f"brand.{field} must come from this workspace's upload",
+                )
     await conn.execute(
         """
         update tenants

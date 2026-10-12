@@ -14,9 +14,11 @@ import asyncpg
 from fastapi import APIRouter, Depends
 
 from app.audit import write_audit
+from app.draft_capacity import ensure_draft_capacity
 from app.errors import ApiError
 from app.grants.schemas import DraftIn, DraftJobOut
 from app.queue import ingest_queue
+from app.ratelimit import rate_limiter
 from app.refdata.questions import answer_sheet, require_question_set
 from app.refdata.schemas import AnswerSheetOut
 from app.routers.grants.common import module_application, require_grants
@@ -85,6 +87,10 @@ async def submit_draft(
             "draft_in_flight",
             "This draft is already being generated — it lands in the bid pack when done.",
         )
+    # Then the tenant-wide ceilings: the guard above stops double clicks,
+    # not fan-out across many projects/applications (code review MOD-2).
+    await ensure_draft_capacity(conn)
+    await rate_limiter.check_draft(ctx.tenant_id)
     row = await conn.fetchrow(
         """
         insert into grant_draft_jobs (tenant_id, application_id, kind, params, created_by)

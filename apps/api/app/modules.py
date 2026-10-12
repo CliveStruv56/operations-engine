@@ -24,7 +24,7 @@ import asyncpg
 from fastapi import Depends
 
 from app.errors import ApiError
-from app.tenant import TenantContext, get_conn, require_role
+from app.tenant import ROLE_ORDER, TenantContext, get_conn, require_role
 
 
 @dataclass(frozen=True)
@@ -156,14 +156,24 @@ FEED_PATTERNS: tuple[str, ...] = tuple(
 )
 
 
-def make_feature_gate(flag: str) -> Callable[..., Awaitable[TenantContext]]:
+def make_feature_gate(
+    flag: str, minimum: str = "member"
+) -> Callable[..., Awaitable[TenantContext]]:
     """Build a module gate dependency: every route 404s without the flag.
 
     404 rather than 403 is deliberate and matches both existing modules — a
     module the tenant has not bought should not be discoverable at all.
+
+    `minimum` raises the role a route needs, for destructive actions — deleting
+    a record that cascades, replacing a set wholesale, bulk-overwriting. Core
+    `DELETE /projects/{id}` already requires admin; the module equivalents
+    should not be easier. The flag is checked first, so a member of a tenant
+    without the module still sees 404, never a 403 that reveals the route.
     """
     if flag not in FEATURE_FLAGS:
         raise ValueError(f"unknown module flag: {flag}")
+    if minimum not in ROLE_ORDER:
+        raise ValueError(f"unknown role: {minimum}")
 
     async def gate(
         ctx: TenantContext = Depends(require_role("member")),
@@ -178,7 +188,9 @@ def make_feature_gate(flag: str) -> Callable[..., Awaitable[TenantContext]]:
         )
         if not enabled:
             raise ApiError(404, "not_found", "Not found")
+        if ROLE_ORDER[ctx.role] < ROLE_ORDER[minimum]:
+            raise ApiError(403, "insufficient_role", f"Requires {minimum} role")
         return ctx
 
-    gate.__name__ = f"require_{flag}"
+    gate.__name__ = f"require_{flag}" if minimum == "member" else f"require_{flag}_{minimum}"
     return gate

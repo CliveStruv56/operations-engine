@@ -16,6 +16,7 @@ from app.audit import write_audit
 from app.db import db
 from app.errors import ApiError
 from app.routers.conversations import _get_owned_conversation
+from app.routers.tenants import own_brand_key
 from app.schemas import SlidesExportOut
 from app.slides import PPTX_MIME, deck_filename, parse_deck, render_pptx
 from app.storage import storage
@@ -54,12 +55,17 @@ async def export_slides(
     if deck is None:
         raise ApiError(400, "not_a_deck", "This message is not a slide outline")
 
+    # Only this tenant's own brand objects — a stored key naming anything else
+    # (another tenant's document, say) is ignored, not downloaded.
     logo = None
-    if isinstance(brand.get("logo_key"), str):
-        logo = await storage.download_bytes(brand["logo_key"])
+    if logo_key := own_brand_key(ctx.tenant_id, "logo_key", brand.get("logo_key")):
+        logo = await storage.download_bytes(logo_key)
     template = None
-    if isinstance(brand.get("slides_template_key"), str):
-        template = await storage.download_bytes(brand["slides_template_key"])
+    template_key = own_brand_key(
+        ctx.tenant_id, "slides_template_key", brand.get("slides_template_key")
+    )
+    if template_key:
+        template = await storage.download_bytes(template_key)
     accent = brand.get("accent") if isinstance(brand.get("accent"), str) else None
 
     data = await anyio.to_thread.run_sync(render_pptx, deck, accent, logo, template)

@@ -7,7 +7,7 @@ from app.audit import write_audit
 from app.crm.importer import MAX_ROWS, ImportResult, apply_rows, parse_csv
 from app.crm.schemas import ImportIn, ImportOut
 from app.errors import ApiError
-from app.routers.crm.common import require_contacts
+from app.routers.crm.common import require_contacts_admin
 from app.tenant import TenantContext, get_conn
 
 router = APIRouter()
@@ -16,7 +16,7 @@ router = APIRouter()
 @router.post("/contacts/import", response_model=ImportOut)
 async def import_contacts(
     body: ImportIn,
-    ctx: TenantContext = Depends(require_contacts),
+    ctx: TenantContext = Depends(require_contacts_admin),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     result = ImportResult()

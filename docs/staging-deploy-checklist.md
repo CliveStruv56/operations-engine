@@ -264,6 +264,8 @@ them the workflow skips and says so.
 | `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` | | | ✓ | |
 | `NEXT_PUBLIC_API_URL` | | | ✓ | staging API origin |
 | `NEXT_PUBLIC_STORAGE_ORIGIN` | | | ✓ | the R2 endpoint origin — presigned-URL open allowlist |
+| `OPEN_SIGNUP` | ✓ | | | `false` (the default since 12 Oct — unset is now closed; `true` only on a service meant to take walk-in signups) |
+| `PLATFORM_ADMIN_EMAILS` | ✓ | | | operator login emails; exempt from the signup switch and the per-account workspace limit |
 
 ## 4. Order of operations
 

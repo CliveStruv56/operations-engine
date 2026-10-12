@@ -94,7 +94,11 @@ async def get_export_job(
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     row = await conn.fetchrow("select * from conversation_export_jobs where id = $1", job_id)
-    if row is None:  # RLS scoped — cross-tenant ids are invisible
+    # RLS hides other tenants' jobs; within the tenant, a job is its creator's
+    # alone. Only a conversation's owner can start an export, so without this
+    # anyone in the workspace holding a job id could fetch a presigned PDF of
+    # a colleague's private chat. 404, not 403 — same as the conversation.
+    if row is None or row["created_by"] != ctx.user_id:
         raise ApiError(404, "not_found", "Export job not found")
     download_url = None
     if row["status"] == "succeeded" and row["file_key"]:

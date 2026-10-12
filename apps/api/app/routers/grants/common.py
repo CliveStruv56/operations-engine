@@ -21,6 +21,9 @@ from app.modules import make_feature_gate
 from app.storage import ALLOWED_MIMES
 
 require_grants = make_feature_gate("grants")
+# Deleting an application cascades its whole pipeline, monitoring history and
+# bid pack; deleting a funder detaches every bid. Neither has a soft delete.
+require_grants_admin = make_feature_gate("grants", minimum="admin")
 
 STAGE_ORDER = ["case", "prospect", "apply", "decision", "deliver", "monitor", "evaluate"]
 DOC_UPLOAD_MIMES = {k: v for k, v in ALLOWED_MIMES.items() if v in ("pdf", "docx", "xlsx")}

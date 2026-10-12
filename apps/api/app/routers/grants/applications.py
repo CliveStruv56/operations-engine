@@ -25,7 +25,12 @@ from app.grants.schemas import (
     PortfolioRow,
 )
 from app.queue import ingest_queue
-from app.routers.grants.common import module_application, require_grants, visible_funder
+from app.routers.grants.common import (
+    module_application,
+    require_grants,
+    require_grants_admin,
+    visible_funder,
+)
 from app.routers.grants.common import visible_project as _visible_project
 from app.sqlutil import patch_sets
 from app.tenant import TenantContext, get_conn
@@ -347,7 +352,7 @@ async def set_status(
 @router.delete("/grants/applications/{application_id}", status_code=204)
 async def delete_application(
     application_id: UUID,
-    ctx: TenantContext = Depends(require_grants),
+    ctx: TenantContext = Depends(require_grants_admin),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
     deleted = await conn.execute("delete from grant_applications where id = $1", application_id)

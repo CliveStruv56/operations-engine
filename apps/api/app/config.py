@@ -75,6 +75,16 @@ class Settings(BaseSettings):
     # Form-page fetches spend the platform Exa key per call, like register
     # lookups spend the platform register keys — bounded for the same reason.
     form_fetch_rate_limit_per_hour: int = 20
+    # Workspaces one account may create per day through POST /tenants. Each
+    # mints a LiteLLM key with real budget, so even with signup open the
+    # count is bounded. Platform admins are exempt.
+    tenant_create_rate_limit_per_day: int = 3
+    # LLM drafting (Groundwork + Grantwork) and question-set transcription.
+    # A draft is ~11 model calls on a single shared worker, so a tenant may
+    # have only a few in flight at once, and starts are bounded per hour too.
+    draft_max_in_flight_per_tenant: int = 3
+    draft_rate_limit_per_hour: int = 20
+    transcribe_rate_limit_per_hour: int = 20
 
     # Comma-separated browser origins; prod sets the tenant-facing domain(s).
     # Wildcards are rejected — origins must be enumerated explicitly.
@@ -112,10 +122,12 @@ class Settings(BaseSettings):
     # Platform operator console. Comma-separated login emails that may use
     # /admin endpoints. Empty = console disabled entirely.
     platform_admin_emails: str = ""
-    # Open self-serve tenant creation. Staging/production set false so new
-    # workspaces come only from the operator console; platform admins are
-    # always allowed.
-    open_signup: bool = True
+    # Open self-serve tenant creation. Closed unless a service opts in, so a
+    # new service or preview env that forgets the variable cannot hand every
+    # Supabase account a workspace with a budgeted LiteLLM key. New
+    # workspaces come from the operator console; platform admins are always
+    # allowed. Local dev sets OPEN_SIGNUP=true in apps/api/.env.
+    open_signup: bool = False
 
     @property
     def platform_admin_email_list(self) -> list[str]:

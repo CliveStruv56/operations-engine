@@ -243,3 +243,51 @@ async def test_health_card_isolated_and_gated(client, gw, fake_health_card_queue
     # Module flag off → 404; A's project id under B's context → 404 either way.
     resp = await client.post(f"/api/v1/projects/{gw['pid']}/health-card", headers=headers)
     assert resp.status_code == 404
+
+
+async def test_tenant_wide_draft_ceiling(client, gw, fake_draft_queue, fake_health_card_queue):
+    """MOD-2: the per-kind guard stops double clicks, not fan-out. Past the
+    tenant's in-flight ceiling a new LLM draft is refused; the non-LLM health
+    card is neither counted nor refused, and a stranded old row frees its slot."""
+    base = f"/api/v1/projects/{gw['pid']}/drafts"
+    for body in (
+        {"kind": "monthly_report", "month": "2026-07"},
+        {"kind": "feasibility_study"},
+    ):
+        assert (await client.post(base, json=body, headers=gw["h"])).status_code == 202
+    async with db.tenant_tx(gw["t"].owner_id, gw["t"].id) as conn:
+        # A grant draft counts toward the same ceiling.
+        await conn.execute(
+            """
+            insert into grant_draft_jobs (tenant_id, application_id, kind, params, created_by)
+            values ($1, $2, 'case_for_support', '{}', $3)
+            """,
+            gw["t"].id,
+            gw["t"].application_id,
+            gw["t"].owner_id,
+        )
+
+    card = await client.post(f"/api/v1/projects/{gw['pid']}/health-card", headers=gw["h"])
+    assert card.status_code == 202, card.text
+
+    # A kind with nothing in flight, so the per-kind guard (409) cannot fire
+    # first — only the tenant ceiling can refuse it.
+    source = await client.post(
+        f"/api/v1/projects/{gw['pid']}/funding",
+        json={"name": "CLT grant", "kind": "grant"},
+        headers=gw["h"],
+    )
+    assert source.status_code == 201, source.text
+    bid = {"kind": "funding_bid", "funding_source_id": source.json()["id"]}
+    resp = await client.post(base, json=bid, headers=gw["h"])
+    assert resp.status_code == 429
+    assert resp.json()["error"]["code"] == "drafts_busy"
+
+    async with db.tenant_tx(gw["t"].owner_id, gw["t"].id) as conn:
+        await conn.execute(
+            "update grant_draft_jobs set created_at = now() - interval '3 hours'"
+            " where tenant_id = $1",
+            gw["t"].id,
+        )
+    resp = await client.post(base, json=bid, headers=gw["h"])
+    assert resp.status_code == 202, resp.text

@@ -1,7 +1,7 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-10-01 (**§6t is the latest state**; §1–6s are history,
+**Handoff date:** 2026-10-12 (**§6u is the latest state**; §1–6t are history,
 oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
@@ -1945,15 +1945,57 @@ token names and in the sales collateral.
   suite green. `f9ce8c3` added API tests after that; the new total is not
   recorded here because nobody re-ran it for this section.
 
+## 6u. Sep code review — §1 items 7–14 remediated (12 October 2026)
+
+All eight remaining rows of `docs/code-review-sep-2026.md` §1 are done; each
+row there now says what changed. **None of it has been run.** This session's
+container could not reach PyPI or npm, so `pytest`, `vitest`, `pnpm build`
+and the Playwright suite were not run. `ruff check`, `ruff format --check`
+and `mypy app` (api and worker) passed, and `tsc` showed no errors in the
+changed web files apart from the missing-dependency noise. Run the full
+commands in §5 before merging.
+
+| Row | What | Where |
+| --- | --- | --- |
+| 7 | `OPEN_SIGNUP` defaults closed; 3 workspaces per account per day | `config.py`, `ratelimit.py`, `routers/tenants.py`, `.env.example` |
+| 8 | Brand keys must be the tenant's own, on write and read | `routers/tenants.py::own_brand_key`, `routers/slides.py` |
+| 9 | Ingest catches cancellation; hourly stale-document sweep | `worker/main.py`, `worker/stale.py`, migration **0030** |
+| 10 | Admin for module deletes and CSV import; budget PUT excepted | `modules.py`, `routers/{grants,crm,community}`, ASSUMPTIONS **#68** |
+| 11 | ≤3 LLM drafts in flight per tenant; draft and transcribe limits | `app/draft_capacity.py`, both drafts routers, `question_sets.py` |
+| 12 | Export job readable by its creator only | `routers/conversation_exports.py` |
+| 13 | Security headers (CSP framing/base/object/form only) | `apps/web/next.config.ts` |
+| 14 | `api()`/`apiStream()` survive HTML errors, drops, network loss | `apps/web/lib/api.ts`, `app/app/chat.tsx` |
+
+New tests: `tests/test_ratelimit.py` (a fake Redis — the limiter is otherwise
+a no-op in the suite), `test_module_roles.py`, `test_worker_stale_sweep.py`,
+plus additions to `test_slides.py`, `test_conversation_exports.py` and
+`groundwork_room/test_drafts.py`; web `lib/api.test.ts` and
+`next.config.test.ts`.
+
+**Deploy notes.** Migration 0030 runs in the Railway pre-deploy hook as
+usual. A service that relied on `OPEN_SIGNUP` being unset to mean open is
+now closed — staging already sets `false`. The new worker cron (minute 25,
+hourly) needs only a worker redeploy.
+
+**Audit exception (12 Oct).** `apps/web/pnpm-workspace.yaml` ignores
+`GHSA-vfj7-8cjw-p6xm` (braces ≤3.0.3) under `auditConfig.ignoreGhsas`: no
+patched braces is published, and its only path is the lint-time
+`eslint-config-next` devDependency. Remove the entry and add an override as
+soon as braces 3.0.4 exists. `source-map-js` is fixed by override.
+
+**Still open from the review, outside §1:** the prompt-side half of LLM-1
+(retrieved text still sits in the system message), LLM-2 (a client
+disconnect loses the answer and its cost row), a `script-src` CSP, and
+refusing drafts at the month soft cap (row 11's note).
+
 ---
 
 ## 7. Read first in a new session
 
-**Active work: remediating `docs/code-review-sep-2026.md` §1.** Rows **1–6 are
-done** (see §6s); **rows 7–14 are open and unstarted**, and §1 is already
-ordered by blast radius × likelihood — start at row 7 and work down. Nothing is
-blocked and nothing needs a decision first. No commit between 3 Sep and 1 Oct
-touched rows 7–14.
+**`docs/code-review-sep-2026.md` §1 is fully remediated in code** — rows 1–6
+on 3 Sep (§6s), rows 7–14 on 12 Oct (§6u). The 12 Oct work was not run
+against a test suite; run §5's commands first. What is still open from that
+review is listed at the end of §6u.
 
 Everything else is background. The marketing site (§6q, §6r) is live at
 `www.flowgridos.co.uk`. The claims-register follow-ups in

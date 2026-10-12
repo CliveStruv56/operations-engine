@@ -9,16 +9,16 @@ minimumReleaseAgeExclude:
   - brace-expansion@5.0.9
   - js-yaml@4.3.1
   - nanoid@3.3.18
-  - '@next/env@16.3.8'
-  - '@next/eslint-plugin-next@16.3.8'
-  - '@next/swc-darwin-arm64@16.3.8'
-  - '@next/swc-darwin-x64@16.3.8'
-  - '@next/swc-linux-arm64-gnu@16.3.8'
-  - '@next/swc-linux-arm64-musl@16.3.8'
-  - '@next/swc-linux-x64-gnu@16.3.8'
-  - '@next/swc-linux-x64-musl@16.3.8'
-  - '@next/swc-win32-arm64-msvc@16.3.8'
-  - '@next/swc-win32-x64-msvc@16.3.8'
+  - "@next/env@16.3.8"
+  - "@next/eslint-plugin-next@16.3.8"
+  - "@next/swc-darwin-arm64@16.3.8"
+  - "@next/swc-darwin-x64@16.3.8"
+  - "@next/swc-linux-arm64-gnu@16.3.8"
+  - "@next/swc-linux-arm64-musl@16.3.8"
+  - "@next/swc-linux-x64-gnu@16.3.8"
+  - "@next/swc-linux-x64-musl@16.3.8"
+  - "@next/swc-win32-arm64-msvc@16.3.8"
+  - "@next/swc-win32-x64-msvc@16.3.8"
   - eslint-config-next@16.3.8
   - next@16.3.8
 overrides:
@@ -30,5 +30,15 @@ overrides:
   postcss@<=8.5.11: ^8.5.12
   postcss@<=8.5.17: ^8.5.18
   sharp@<0.35.0: ^0.35.0
+  source-map-js@<1.2.2: ^1.2.2
 patchedDependencies:
   brace-expansion@5.0.12: patches/brace-expansion@5.0.12.patch
+auditConfig:
+  ignoreGhsas:
+    # braces <=3.0.3 (DoS via deeply nested brace patterns). No patched
+    # release exists yet — 3.0.3 is the latest on npm, so no override can
+    # fix it. Its only path in is eslint-config-next > @next/eslint-plugin-next
+    # > fast-glob > micromatch, a devDependency run at lint time over globs we
+    # write; it never ships to the browser or server. Remove this entry and
+    # add a `braces@<=3.0.3` override once a fixed braces is published.
+    - GHSA-vfj7-8cjw-p6xm

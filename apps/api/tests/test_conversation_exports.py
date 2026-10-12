@@ -93,3 +93,39 @@ async def test_only_assistant_messages_export(client, monkeypatch):
 
     resp = await client.get(f"/api/v1/conversations/exports/{uuid4()}", headers=headers)
     assert resp.status_code == 404
+
+
+async def test_a_colleague_cannot_poll_someone_elses_export(client, monkeypatch):
+    """The POST is owner-only; the GET must be too, or a job id is enough to
+    fetch a presigned PDF of a colleague's private conversation."""
+    tenant = await seed_tenant(client, f"pdfo-{uuid4().hex[:6]}")
+    owner = auth(tenant.owner_id, tenant.id)
+    message_id = await _seed_message(tenant)
+    _fake_infra(monkeypatch)
+    resp = await client.post(
+        f"/api/v1/conversations/{tenant.conversation_id}/messages/{message_id}/pdf",
+        headers=owner,
+    )
+    assert resp.status_code == 202, resp.text
+    job_id = resp.json()["id"]
+    async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
+        await conn.execute(
+            "update conversation_export_jobs set status = 'succeeded', file_key = 'k.pdf'"
+            " where id = $1",
+            UUID(job_id),
+        )
+
+    colleague = uuid4()
+    accepted = await client.post(
+        "/api/v1/invites/accept", json={"token": tenant.invite_token}, headers=auth(colleague)
+    )
+    assert accepted.status_code == 200
+    resp = await client.get(
+        f"/api/v1/conversations/exports/{job_id}", headers=auth(colleague, tenant.id)
+    )
+    assert resp.status_code == 404
+    assert "download_url" not in resp.text
+
+    resp = await client.get(f"/api/v1/conversations/exports/{job_id}", headers=owner)
+    assert resp.status_code == 200
+    assert resp.json()["download_url"] == "https://signed.example/k.pdf"
