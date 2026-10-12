@@ -21,7 +21,7 @@ from worker.stale import INTERRUPTED_REASON, sweep_stale_documents  # noqa: E402
 async def _set(tenant, status: str, age: timedelta) -> None:
     async with db.tenant_tx(tenant.owner_id, tenant.id) as conn:
         await conn.execute(
-            "update documents set status = $2, updated_at = now() - $3 where id = $1",
+            "update documents set status = $2, updated_at = now() - $3::interval where id = $1",
             tenant.document_id,
             status,
             age,
