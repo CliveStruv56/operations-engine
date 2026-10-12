@@ -1977,6 +1977,12 @@ usual. A service that relied on `OPEN_SIGNUP` being unset to mean open is
 now closed — staging already sets `false`. The new worker cron (minute 25,
 hourly) needs only a worker redeploy.
 
+**Audit exception (12 Oct).** `apps/web/pnpm-workspace.yaml` ignores
+`GHSA-vfj7-8cjw-p6xm` (braces ≤3.0.3) under `auditConfig.ignoreGhsas`: no
+patched braces is published, and its only path is the lint-time
+`eslint-config-next` devDependency. Remove the entry and add an override as
+soon as braces 3.0.4 exists. `source-map-js` is fixed by override.
+
 **Still open from the review, outside §1:** the prompt-side half of LLM-1
 (retrieved text still sits in the system message), LLM-2 (a client
 disconnect loses the answer and its cost row), a `script-src` CSP, and
