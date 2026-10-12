@@ -1948,9 +1948,13 @@ token names and in the sales collateral.
 ## 6u. Sep code review — §1 items 7–14 remediated (12 October 2026)
 
 All eight remaining rows of `docs/code-review-sep-2026.md` §1 are done; each
-row there now says what changed. **None of it has been run.** This session's
-container could not reach PyPI or npm, so `pytest`, `vitest`, `pnpm build`
-and the Playwright suite were not run. `ruff check`, `ruff format --check`
+row there now says what changed. **Shipped 12 Oct as PR #9 (`5ed43b2`)** —
+CI ran every suite green on the merge commit, Vercel production and the
+Railway `api` (migration 0030 via the pre-deploy hook) and `worker` (the
+`sweep_stale_documents` cron is registered) all deployed from it the same
+afternoon. The paragraph below describes the state *before* that run: the
+authoring session's container could not reach PyPI or npm, so `pytest`,
+`vitest`, `pnpm build` and the Playwright suite were not run locally. `ruff check`, `ruff format --check`
 and `mypy app` (api and worker) passed, and `tsc` showed no errors in the
 changed web files apart from the missing-dependency noise. Run the full
 commands in §5 before merging.

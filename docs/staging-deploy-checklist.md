@@ -16,9 +16,17 @@
 > for edge port detection; LiteLLM config is baked via infra/litellm/Dockerfile
 > (Railway can't mount files).
 >
-> **Deploying api/worker to Railway** (verified 3 Aug 2026). Both services are
-> source-deployed — no linked repo, no source image — so a deploy is a CLI
-> upload that Railway builds from the app's own Dockerfile:
+> **Deploying api/worker to Railway** (corrected 12 Oct 2026). The `api` and
+> `worker` services are now **GitHub-linked** to `CliveStruv56/operations-engine`
+> on `main` (root directories `/apps/api` and `/apps/worker`, watch patterns
+> scoped to each) with *wait for check suites* on. A merge to `main` queues a
+> deployment per service in `WAITING`; Railway starts building only once every
+> GitHub check on the commit has finished — including the ~25-minute
+> `Worker image` GHCR build — so expect a ~20–30 min lag between merge and the
+> api going live. Nothing is wrong while they sit in `WAITING`. Verified on the
+> PR #9 merge (`5ed43b2`): both built and succeeded unattended. The `litellm`
+> service is still a CLI upload. The CLI form below remains valid for an
+> out-of-band deploy (a hotfix branch, or re-shipping without a merge):
 >
 > ```sh
 > railway up ./apps/api     --path-as-root --service api     --environment production
