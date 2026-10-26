@@ -6,7 +6,6 @@ import {
   AdminModule,
   AdminTenantRow,
   FALLBACK_MODULES,
-  FEATURE_FLAGS,
   listModules,
   moduleAdds,
   updateFeatures,
@@ -25,9 +24,8 @@ export function ModulesEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [flags, setFlags] = useState<Record<string, boolean>>(
-    Object.fromEntries(FEATURE_FLAGS.map((f) => [f.key, tenant.features[f.key] === true])),
-  );
+  // Only the boxes the operator has touched; the rest read the tenant's row.
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [modules, setModules] = useState<AdminModule[]>(FALLBACK_MODULES);
@@ -38,7 +36,10 @@ export function ModulesEditor({
       .catch(() => setModules(FALLBACK_MODULES));
   }, []);
 
-  const changed = FEATURE_FLAGS.filter((f) => flags[f.key] !== (tenant.features[f.key] === true));
+  // Driven by the API's module list, not the hand-mirrored FEATURE_FLAGS, so
+  // a module the console has never heard of is still saved and warned about.
+  const isOn = (flag: string) => flags[flag] ?? tenant.features[flag] === true;
+  const changed = modules.filter((m) => isOn(m.flag) !== (tenant.features[m.flag] === true));
 
   async function save() {
     if (!changed.length) return onClose();
@@ -47,7 +48,7 @@ export function ModulesEditor({
     try {
       await updateFeatures(
         tenant.id,
-        Object.fromEntries(changed.map((f) => [f.key, flags[f.key]])),
+        Object.fromEntries(changed.map((m) => [m.flag, isOn(m.flag)])),
       );
       onSaved();
     } catch (err) {
@@ -56,9 +57,7 @@ export function ModulesEditor({
     }
   }
 
-  const withdrawn = modules.filter((m) =>
-    changed.some((f) => f.key === m.flag && !flags[f.key]),
-  );
+  const withdrawn = changed.filter((m) => !isOn(m.flag));
   // What happens to the workspace's projects, said in numbers: a module that
   // supplies a kind leaves its projects in the list as general projects.
   const fallbackNotes = withdrawn.flatMap((m) =>
@@ -82,7 +81,7 @@ export function ModulesEditor({
                 <input
                   type="checkbox"
                   className="mt-1"
-                  checked={flags[m.flag] ?? false}
+                  checked={isOn(m.flag)}
                   onChange={(e) => setFlags({ ...flags, [m.flag]: e.target.checked })}
                 />
                 <span>
