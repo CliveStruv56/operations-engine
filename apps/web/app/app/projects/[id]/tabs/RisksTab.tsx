@@ -49,7 +49,7 @@ export function RisksTab({ id }: { id: string }) {
         </thead>
         <tbody className="divide-y divide-line">
           {risks.map((r) => (
-            <tr key={r.id} className={r.status === "closed" ? "opacity-50" : ""}>
+            <tr key={r.id} className={r.status === "closed" ? "bg-band text-ink-muted" : ""}>
               <td className="max-w-60 px-3 py-2">{r.description}</td>
               {(["likelihood", "impact"] as const).map((k) => (
                 <td key={k} className="px-3 py-2">

@@ -24,7 +24,7 @@ export function QuestionDisplay({ q }: { q: Question }) {
                 {q.limit.toLocaleString("en-GB")} {q.limit_kind}
               </span>
             )}
-            {q.uses_vault && <span>cites the vault</span>}
+            {q.uses_vault && <span>cites your documents</span>}
           </p>
         </div>
       </div>
@@ -92,7 +92,7 @@ export function QuestionRow({
                 checked={q.uses_vault}
                 onChange={(e) => onChange({ ...q, uses_vault: e.target.checked })}
               />
-              cite the vault
+              cite your documents
             </label>
             {missing && (
               <span className="text-warn">no limit found — check the funder&apos;s form</span>

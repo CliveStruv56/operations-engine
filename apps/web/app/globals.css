@@ -13,9 +13,11 @@
   --graphite: #23241f;
   --slate-gray: #3a4444;
   --stone: #333333;
-  /* Passing muted text on both white and the #f2f2ef sidebar. This token is
-     also an input edge, so darkening it improves field boundaries as well. */
-  --mist-gray: #666d6d;
+  /* Muted text that passes AA on every surface it sits on: 6.5:1 on white,
+     5.8 on the sidebar, 5.2 on bone and the lavender tint, 5.0 on pale sage.
+     It is also the input edge, so field boundaries stay clear. Never put it
+     on lavender mist (3.2) — use ink there. */
+  --mist-gray: #585f5f;
   --bone: #e5e6e1;
   --pale-sage: #d3e5e9;
   --lavender-mist: #bbb2ce;
@@ -34,6 +36,10 @@
   --edge-strong: var(--stone);
   /* Darker than the bone hairline so input boundaries remain clear. */
   --edge-input: var(--mist-gray);
+  /* Outline of a control that is not a text field — icon buttons and other
+     small bordered controls. Bone (1.25:1) is too faint to find a control
+     by; this clears the 3:1 non-text minimum on white (3.0 on the sidebar). */
+  --edge-ui: #8a8c86;
   /* text */
   --ink: var(--ink-black);
   --subtle: var(--slate-gray);
@@ -68,6 +74,7 @@
   --color-edge: var(--edge);
   --color-edge-strong: var(--edge-strong);
   --color-edge-input: var(--edge-input);
+  --color-edge-ui: var(--edge-ui);
   --color-ink: var(--ink);
   --color-subtle: var(--subtle);
   --color-faint: var(--faint);
@@ -155,9 +162,10 @@ body {
 
 /* Label voice: uppercase micro-labels for statuses, dates, counts and section
    headings — the catalogue register. Lining tabular figures so counts and
-   money align down a column. */
+   money align down a column. 12px is the floor for any text that carries
+   meaning; nothing in the app chrome goes smaller. */
 .data {
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   font-weight: 500;
   letter-spacing: 0.07em;
   font-variant-numeric: tabular-nums;
@@ -311,9 +319,9 @@ body {
 
 /* Dot-prefixed status pill: every tone carries a word, never colour alone. */
 .stamp {
-  font-size: 0.625rem;
+  font-size: 0.75rem;
   font-weight: 600;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   border-radius: 999px;
   padding: 0.1875rem 0.5625rem;

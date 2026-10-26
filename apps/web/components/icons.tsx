@@ -145,6 +145,24 @@ export function ArrowUpIcon(p: IconProps) {
   );
 }
 
+export function ChartIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <path d="M4 20h16" />
+      <path d="M7 16v-5M12 16V6M17 16v-8" />
+    </Icon>
+  );
+}
+
+export function GearIcon(p: IconProps) {
+  return (
+    <Icon {...p}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1" />
+    </Icon>
+  );
+}
+
 export function PlusIcon(p: IconProps) {
   return (
     <Icon {...p}>

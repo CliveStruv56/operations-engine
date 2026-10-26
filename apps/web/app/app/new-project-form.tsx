@@ -75,7 +75,7 @@ export default function NewProjectForm({
       }`}
     >
       <span className="block text-[13px] font-bold">{title}</span>
-      <span className="block text-[11px] text-faint">{hint}</span>
+      <span className="block text-xs text-faint">{hint}</span>
     </button>
   );
 
@@ -94,13 +94,13 @@ export default function NewProjectForm({
         className="w-full rounded-card border border-edge bg-surface px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
       />
       <div className="grid grid-cols-2 gap-1.5">
-        {card("blank", "Documents", "Vault and chat only")}
+        {card("blank", "Documents", "Documents and chat only")}
         {card("planned", "With a plan", "Tasks, people, dates")}
       </div>
       {kind === "planned" && (
         <div className="space-y-1.5">
           {seeds.map((s, i) => (
-            <p key={`${s.title}-${i}`} className="truncate text-[11px] text-subtle">
+            <p key={`${s.title}-${i}`} className="truncate text-xs text-subtle">
               {s.title}
               {s.due_date ? ` · ${fmtDate(s.due_date)}` : ""}
             </p>
@@ -135,7 +135,7 @@ export default function NewProjectForm({
             type="button"
             onClick={addSeed}
             disabled={!taskTitle.trim()}
-            className="text-[11px] font-bold text-electric-blue hover:underline disabled:text-faint"
+            className="text-xs font-bold text-electric-blue hover:underline disabled:text-faint"
           >
             Add task
           </button>

@@ -1181,3 +1181,25 @@ discussion behind them.
     so gating it would stop members editing a budget at all. Its blast radius
     is one project's budget lines, which any member can already change line
     by line. If that changes, the fix is per-line endpoints, not a role.
+
+69. **Inside the workspace, pages are named by what they do, not by brand**
+    (UI review, Oct 2026). The users are office admins on laptops, and a
+    brand is one more thing to learn before they can find a page.
+
+    The sidebar, page headings, module-off pages and in-app copy say
+    "Development projects" (not Groundwork), "Grant funding" (not
+    Grantwork), "Documents" (not the spec's "Knowledge Vault" / "Vault") and
+    "All projects" (not "Everything"). Visible text no longer says "claims
+    register"; the page is "Your organisation" and the copy talks about
+    confirmed facts. The strings live in `lib/product-language.ts`: the
+    workspace uses each entry's `function` name, and `brand` stays for the
+    marketing site, which still sells Groundwork and Grantwork by name.
+    Routes, API paths, code identifiers and the `?view=vault` query
+    parameter are unchanged.
+
+    The same review set a readability floor on top of #65: no meaningful
+    text below 12px, `--faint` darkened to `#585f5f` so muted text passes AA
+    on every surface it is used on, and `--edge-ui` for the outlines of
+    bordered controls (see `CLAUDE.md`). Usage and Settings moved from
+    12px footer links into full nav items in a fixed block above the
+    account row.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -27,7 +27,7 @@ export const itemActive =
 // projects / Projects / Shared with team / Recent — …) read as clearly
 // segmented blocks.
 export const navLabel =
-  "mt-4 flex items-baseline border-t border-edge-strong px-3 pb-1.5 pt-3.5 text-[10.5px] font-bold uppercase tracking-[.1em] text-faint";
+  "mt-4 flex items-baseline border-t border-edge-strong px-3 pb-1.5 pt-3.5 text-xs font-bold uppercase tracking-[.1em] text-faint";
 
 /** Bucket a conversation into a Recent group by its updated_at date. */
 function groupOf(c: Conversation): string {
@@ -56,6 +56,19 @@ export default function SidebarChats({
   const router = useRouter();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Closing the confirm row unmounts its focused button, so focus would drop
+  // to <body>. This remembers which ✕ to hand it back to — or, when the chat
+  // was deleted and its ✕ is gone, the page itself.
+  const returnFocusTo = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (confirmDeleteId !== null || returnFocusTo.current === null) return;
+    const target =
+      document.querySelector<HTMLElement>(`[data-delete-chat="${returnFocusTo.current}"]`) ??
+      document.getElementById("main-content");
+    target?.focus();
+    returnFocusTo.current = null;
+  }, [confirmDeleteId]);
 
   const inScope = projectId
     ? ws.conversations.filter((c) => c.project_id === projectId)
@@ -77,6 +90,7 @@ export default function SidebarChats({
     } catch (err) {
       ws.setError(err instanceof Error ? err.message : String(err));
     } finally {
+      returnFocusTo.current = id;
       setDeleting(false);
       setConfirmDeleteId(null);
     }
@@ -91,6 +105,9 @@ export default function SidebarChats({
             <Link
               key={c.id}
               href={href({ project: projectId, c: c.id })}
+              aria-current={
+                onWorkspace && view === "chat" && convId === c.id ? "page" : undefined
+              }
               title={`${c.title ?? "Untitled"} — shared by ${c.owner_email ?? "a teammate"}`}
               className={`${item} mb-0.5 ${
                 onWorkspace && view === "chat" && convId === c.id ? itemActive : itemRest
@@ -99,7 +116,7 @@ export default function SidebarChats({
               <ChatIcon className="h-3.5 w-3.5" />
               <span className="min-w-0">
                 <span className="block truncate font-medium">{c.title ?? "Untitled"}</span>
-                <span className="block truncate text-[10.5px] font-semibold text-faint">
+                <span className="block truncate text-xs font-semibold text-faint">
                   {c.owner_email ?? "a teammate"}
                 </span>
               </span>
@@ -121,7 +138,7 @@ export default function SidebarChats({
             {g.label === chatGroups[0].label && (
               <Link
                 href={href({ project: projectId })}
-                className="ml-auto text-[10.5px] font-bold text-electric-blue hover:underline"
+                className="ml-auto text-xs font-bold text-electric-blue hover:underline"
                 title="Start a new conversation"
               >
                 + New
@@ -140,6 +157,8 @@ export default function SidebarChats({
                   </span>
                   <span className="flex shrink-0 gap-2">
                     <button
+                      // The ✕ that opened this row is gone, so focus moves here.
+                      autoFocus
                       onClick={() => deleteConversation(c.id)}
                       disabled={deleting}
                       className="text-xs font-bold text-danger underline disabled:opacity-50"
@@ -147,7 +166,13 @@ export default function SidebarChats({
                       Delete
                     </button>
                     <button
-                      onClick={() => setConfirmDeleteId(null)}
+                      // A delete already sent cannot be taken back, so "Keep"
+                      // waits for it rather than pretending to cancel it.
+                      disabled={deleting}
+                      onClick={() => {
+                        returnFocusTo.current = c.id;
+                        setConfirmDeleteId(null);
+                      }}
                       className="text-xs font-semibold text-subtle underline"
                     >
                       Keep
@@ -158,6 +183,9 @@ export default function SidebarChats({
                 <>
                   <Link
                     href={href({ project: projectId, c: c.id })}
+                    aria-current={
+                      onWorkspace && view === "chat" && convId === c.id ? "page" : undefined
+                    }
                     className={`${item} mb-0.5 pr-8 ${
                       onWorkspace && view === "chat" && convId === c.id
                         ? itemActive
@@ -171,13 +199,18 @@ export default function SidebarChats({
                   </Link>
                   {c.is_mine && (
                     <button
+                      disabled={deleting}
                       onClick={(e) => {
                         e.stopPropagation();
                         setConfirmDeleteId(c.id);
                       }}
+                      data-delete-chat={c.id}
                       title="Delete conversation"
                       aria-label={`Delete conversation ${c.title ?? "Untitled"}`}
-                      className="absolute top-1/2 right-2 hidden h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-card border border-edge bg-card text-subtle group-hover:grid hover:text-danger focus-visible:grid"
+                      // Invisible, not display:none — a hidden button can never
+                      // take keyboard focus, so it could only be used by mouse.
+                      // Touch screens cannot hover, so there it is always shown.
+                      className="absolute top-1/2 right-1.5 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-card border border-edge-ui bg-card text-subtle opacity-0 group-hover:opacity-100 hover:text-danger focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                     >
                       ✕
                     </button>

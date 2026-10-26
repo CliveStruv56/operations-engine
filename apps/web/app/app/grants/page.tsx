@@ -138,7 +138,7 @@ export default function GrantsPage() {
       <div className="mx-auto max-w-6xl p-6">
         <header className="mb-6 flex items-baseline justify-between">
           <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">
-            {PRODUCT_LANGUAGE.grantwork.combined}
+            {PRODUCT_LANGUAGE.grantwork.function}
           </h1>
           <Link
             href="/app/grants/new"
@@ -206,11 +206,19 @@ export default function GrantsPage() {
                     key={r.id}
                     onClick={() => router.push(`/app/grants/${r.id}`)}
                     className={`cursor-pointer hover:bg-accent-soft ${
-                      ["declined", "withdrawn"].includes(r.status) ? "opacity-60" : ""
+                      ["declined", "withdrawn"].includes(r.status) ? "bg-band text-ink-muted" : ""
                     }`}
                   >
                     <td className="px-4 py-3 font-medium">
-                      {r.title}
+                      {/* The row click is a mouse convenience; this link is
+                          what keyboard and screen-reader users open. */}
+                      <Link
+                        href={`/app/grants/${r.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:text-electric-blue hover:underline"
+                      >
+                        {r.title}
+                      </Link>
                       {!r.restricted && (
                         <span className="stamp ml-2 text-ink-muted">unrestricted</span>
                       )}

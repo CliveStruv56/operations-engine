@@ -32,7 +32,7 @@ function phrase(i: ActivityItem): string | null {
   const title = i.target_title;
   switch (i.action) {
     case "document.complete":
-      return `added ${title ?? "a document"} to the vault`;
+      return `added ${title ?? "a document"} to documents`;
     case "document.delete":
       return "removed a document";
     case "project.create":
@@ -97,7 +97,7 @@ export default function ActivityCard() {
 
   return (
     <div className="mt-7 w-full max-w-[620px] rounded-card border border-edge bg-card px-5 py-4 text-left shadow-card">
-      <div className="flex items-center gap-2 text-[10.5px] font-bold tracking-[.1em] text-faint uppercase">
+      <div className="flex items-center gap-2 text-xs font-bold tracking-[.1em] text-faint uppercase">
         <PulseIcon className="h-3 w-3" />
         Recent team activity
       </div>
@@ -114,7 +114,7 @@ export default function ActivityCard() {
               </span>{" "}
               {text}
             </span>
-            <span className="ml-auto shrink-0 text-[11px] font-semibold text-faint">
+            <span className="ml-auto shrink-0 text-xs font-semibold text-faint">
               {timeAgo(i.created_at)}
             </span>
           </li>

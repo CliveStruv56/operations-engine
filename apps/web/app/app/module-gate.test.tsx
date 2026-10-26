@@ -52,7 +52,7 @@ describe("ModuleDisabled", () => {
   it("explains the module is off and offers a way back", () => {
     render(withWorkspace(<ModuleDisabled {...PROJECTS_DISABLED} />, { tenant: null }));
     expect(screen.getByRole("heading")).toHaveTextContent(
-      "Groundwork · Development projects isn't switched on"
+      "Development projects isn't switched on"
     );
     expect(screen.getByRole("link", { name: /back to your workspace/i })).toHaveAttribute(
       "href",

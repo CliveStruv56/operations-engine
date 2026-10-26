@@ -171,7 +171,7 @@ export default function CommandPalette() {
             aria-label="Search chats and documents"
             className="w-full bg-transparent text-[15px] text-ink placeholder:text-faint focus:outline-none"
           />
-          <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold text-faint">
+          <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-xs font-bold text-faint">
             esc
           </kbd>
         </div>
@@ -186,7 +186,7 @@ export default function CommandPalette() {
           )}
           {!q.trim() && (
             <p className="px-3 py-2 text-sm text-faint">
-              Type to search your conversations and vault documents.
+              Type to search your conversations and documents.
             </p>
           )}
           {(["conversation", "document", "contact"] as const).map((kind) => {
@@ -198,7 +198,7 @@ export default function CommandPalette() {
               kind === "conversation" ? "Chats" : kind === "document" ? "Documents" : "Contacts";
             return (
               <div key={kind}>
-                <p className="px-3 pt-2 pb-1 text-[10.5px] font-bold tracking-[.1em] text-faint uppercase">
+                <p className="px-3 pt-2 pb-1 text-xs font-bold tracking-[.1em] text-faint uppercase">
                   {label}
                 </p>
                 {group.map(({ row, i }) => (
@@ -207,7 +207,11 @@ export default function CommandPalette() {
                     onClick={() => go(row)}
                     onMouseEnter={() => setActive(i)}
                     className={`flex w-full items-center gap-2.5 rounded-card px-3 py-2 text-left text-[13.5px] font-semibold ${
-                      i === active ? "bg-accent-tint text-electric-blue" : "text-subtle"
+                      // The tint alone is 1.25:1 against white — the bar is what
+                      // actually shows which row Enter will open.
+                      i === active
+                        ? "bg-accent-tint text-electric-blue shadow-[inset_3px_0_0_0_var(--deep-violet)]"
+                        : "text-subtle"
                     }`}
                   >
                     {row.kind === "conversation" ? (
@@ -219,17 +223,17 @@ export default function CommandPalette() {
                     )}
                     <span className="truncate">{row.title}</span>
                     {row.kind === "contact" && row.detail && (
-                      <span className="truncate text-[11.5px] font-medium text-faint">
+                      <span className="truncate text-xs font-medium text-faint">
                         {row.detail}
                       </span>
                     )}
-                    <span className="ml-auto text-[10.5px] font-bold text-faint uppercase">
+                    <span className="ml-auto text-xs font-bold text-faint uppercase">
                       {row.kind === "conversation"
                         ? row.shared
                           ? "shared"
                           : "chat"
                         : row.kind === "document"
-                          ? "vault"
+                          ? "document"
                           : "contact"}
                     </span>
                   </button>

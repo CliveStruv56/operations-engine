@@ -78,7 +78,7 @@ function citeButton(
     nums.has(n) ? (
       <button
         onClick={() => onCite(n)}
-        className="mx-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-[10.5px] font-extrabold text-electric-blue hover:bg-deep-violet hover:text-white"
+        className="mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-xs font-extrabold text-electric-blue hover:bg-deep-violet hover:text-white"
         aria-label={`Source ${n}`}
       >
         {n}
@@ -93,7 +93,7 @@ function SourceCard({ c }: { c: Citation }) {
   return (
     <div id={`src-${c.chunk_id}`} className="rounded-[11px] border border-edge bg-canvas p-3">
       <div className="flex items-center gap-2 text-xs font-bold">
-        <span className="mr-0.5 inline-flex h-[17px] min-w-[17px] items-center justify-center rounded-[5px] bg-accent-tint px-1 text-[10.5px] font-extrabold text-electric-blue">
+        <span className="mr-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-accent-tint px-1 text-xs font-extrabold text-electric-blue">
           {c.n}
         </span>
         {web ? (
@@ -102,7 +102,7 @@ function SourceCard({ c }: { c: Citation }) {
           <DocIcon className="h-3 w-3 text-electric-blue" />
         )}
         <span className="min-w-0 truncate">{c.title}</span>
-        <em className="ml-auto shrink-0 text-[11px] font-semibold not-italic text-faint">
+        <em className="ml-auto shrink-0 text-xs font-semibold not-italic text-faint">
           {web
             ? domainOf(c.url)
             : c.page_start != null
@@ -112,7 +112,7 @@ function SourceCard({ c }: { c: Citation }) {
               : ""}
         </em>
       </div>
-      <p className="mt-1.5 line-clamp-4 text-[11.5px] leading-relaxed text-subtle italic">
+      <p className="mt-1.5 line-clamp-4 text-xs leading-relaxed text-subtle italic">
         &ldquo;{c.snippet}&rdquo;
       </p>
       {web && c.url && (
@@ -120,7 +120,7 @@ function SourceCard({ c }: { c: Citation }) {
           href={c.url}
           target="_blank"
           rel="noreferrer"
-          className="mt-1.5 block truncate text-[11px] font-bold text-electric-blue hover:underline"
+          className="mt-1.5 block truncate text-xs font-bold text-electric-blue hover:underline"
         >
           Open source ↗
         </a>
@@ -180,7 +180,7 @@ function AssistantMessageInner({
   return (
     <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
       {cites.length > 0 && (
-        <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[13px] py-1.5 text-[11.5px] font-bold text-grounded">
+        <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[13px] py-1.5 text-xs font-bold text-grounded">
           <i className="h-1.5 w-1.5 rounded-full bg-grounded" />
           {docCount > 0 && `Grounded in ${docCount} of your documents`}
           {docCount > 0 && webCount > 0 && " · "}
@@ -244,21 +244,21 @@ function AssistantMessageInner({
               disabled={saving}
               className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Save to Vault"}
+              {saving ? "Saving…" : "Save to documents"}
             </button>
           </>
         )}
         {m.model && (
-          <span className="ml-auto text-[11px] font-semibold text-faint">
+          <span className="ml-auto text-xs font-semibold text-faint">
             {scope === "project" && "Drafted from project documents · "}
-            {scope === "vault" && "Drafted from your whole vault · "}
+            {scope === "vault" && "Drafted from all your documents · "}
             {m.model}
           </span>
         )}
       </div>
       {coverage === "none" && !readOnly && (
         <p className="mt-2.5 flex flex-wrap items-center gap-2.5 rounded-card bg-sidebar px-3 py-2 text-xs text-ink-muted">
-          <span>Your vault could not back this answer.</span>
+          <span>Your documents could not back this answer.</span>
           <button
             onClick={onAddDocument}
             className="font-medium text-electric-blue underline hover:text-ink"
@@ -537,7 +537,7 @@ export default function ChatPanel({
         });
         if (!put.ok) throw new Error(`Upload failed (${put.status})`);
         await api(`/documents/${id}/complete`, { method: "POST" }, tenantId);
-        toast({ message: `Saved to vault — “${title}” is indexing.` });
+        toast({ message: `Saved to documents — “${title}” is indexing.` });
         refreshDocs();
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -913,7 +913,7 @@ export default function ChatPanel({
               {attachments.map((d) => (
                 <span
                   key={d.id}
-                  className={`flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1 text-[11.5px] font-semibold ${
+                  className={`flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1 text-xs font-semibold ${
                     d.status === "failed" ? "bg-danger-soft text-danger" : "bg-sidebar text-subtle"
                   }`}
                   title={d.status === "failed" ? (d.error ?? "Failed to read") : d.title}
@@ -921,14 +921,14 @@ export default function ChatPanel({
                   <ClipIcon className="h-3 w-3" />
                   <span className="max-w-44 truncate">{d.title}</span>
                   {d.status !== "ready" && (
-                    <span className="text-[10.5px] font-bold uppercase">
+                    <span className="text-xs font-bold uppercase">
                       {d.status === "failed" ? "failed" : "reading…"}
                     </span>
                   )}
                 </span>
               ))}
               {uploadingCount > 0 && (
-                <span className="flex items-center gap-1.5 rounded-full border border-edge bg-sidebar px-2.5 py-1 text-[11.5px] font-semibold text-subtle">
+                <span className="flex items-center gap-1.5 rounded-full border border-edge bg-sidebar px-2.5 py-1 text-xs font-semibold text-subtle">
                   <Spinner className="h-3 w-3" /> Uploading…
                 </span>
               )}
@@ -940,7 +940,7 @@ export default function ChatPanel({
               onClick={() => fileRef.current?.click()}
               disabled={uploadingCount > 0}
               aria-label="Attach a file to this chat"
-              title="Attach a file — it joins the vault and this chat reads it first"
+              title="Attach a file — it joins your documents and this chat reads it first"
               className="mb-1.5 flex-none rounded-lg p-1.5 text-subtle transition hover:bg-sidebar hover:text-ink disabled:opacity-50"
             >
               <ClipIcon className="h-[18px] w-[18px]" />
@@ -973,6 +973,7 @@ export default function ChatPanel({
                   send();
                 }
               }}
+              aria-label="Message"
               placeholder={
                 mode === "research"
                   ? "Research a question across the web…"
@@ -986,7 +987,7 @@ export default function ChatPanel({
               <button
                 type="button"
                 onClick={stopStreaming}
-                className="inline-flex flex-none items-center gap-2 rounded-xl bg-ink px-[18px] py-[9px] text-[13.5px] font-bold text-white hover:opacity-90"
+                className="inline-flex flex-none items-center gap-2 rounded-btn bg-ink px-[18px] py-[9px] text-[13.5px] font-medium text-on-ink hover:bg-stone"
               >
                 <StopIcon className="h-3.5 w-3.5" />
                 Stop
@@ -995,7 +996,7 @@ export default function ChatPanel({
               <button
                 type="submit"
                 disabled={!draft.trim()}
-                className="inline-flex flex-none items-center gap-2 rounded-btn bg-accent px-[18px] py-[9px] text-[13.5px] font-medium text-white transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-edge disabled:text-faint"
+                className="inline-flex flex-none items-center gap-2 rounded-btn bg-accent px-[18px] py-[9px] text-[13.5px] font-medium text-accent-ink transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-edge disabled:text-subtle"
               >
                 Send
                 <ArrowUpIcon className="h-3.5 w-3.5" />
@@ -1033,12 +1034,12 @@ export default function ChatPanel({
               />
               <span className="text-xs font-semibold text-subtle">Include company data</span>
             </span>
-            <span className="ml-auto hidden text-[11.5px] font-semibold text-faint sm:block">
-              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold">
+            <span className="ml-auto hidden text-xs font-semibold text-faint sm:block">
+              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-xs font-bold">
                 ↵
               </kbd>{" "}
               Send ·{" "}
-              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold">
+              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-xs font-bold">
                 ⇧↵
               </kbd>{" "}
               New line

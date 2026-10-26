@@ -6,6 +6,7 @@ import { api } from "@/lib/api";
 import { Spinner } from "@/components/activity";
 import { openPresigned } from "@/lib/groundwork";
 import { ACCEPT, uploadMime } from "@/lib/uploads";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 import type { Project } from "./workspace";
 import ProjectPlanPanel from "./project-plan";
 
@@ -191,7 +192,7 @@ export default function VaultPanel({
       <header className="flex items-baseline justify-between border-b border-line px-6 py-4">
         <div>
           <h2 className="font-display text-[22px] font-medium tracking-[-0.01em]">
-            {activeProject ? `Vault — ${activeProject.name}` : "Vault"}
+            {activeProject ? `${PRODUCT_LANGUAGE.documents.navigation} — ${activeProject.name}` : PRODUCT_LANGUAGE.documents.navigation}
           </h2>
           <p className="mt-0.5 text-sm text-ink-muted">
             {activeProject
@@ -223,6 +224,16 @@ export default function VaultPanel({
             upload(e.dataTransfer.files);
           }}
           onClick={() => fileInput.current?.click()}
+          // Without these the zone was mouse-only: the file input itself is
+          // hidden, so nothing else on the page can open the picker.
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fileInput.current?.click();
+            }
+          }}
           className={`cursor-pointer rounded-card border border-dashed px-8 py-10 text-center transition-colors ${
             dragging
               ? "border-deep-violet bg-accent-soft"
@@ -257,7 +268,7 @@ export default function VaultPanel({
         {visible.length === 0 && !busy ? (
           <p className="mt-8 text-center text-sm text-ink-faint">
             {activeProject
-              ? "No documents in this project yet. Upload here, or assign existing documents from Everything."
+              ? "No documents in this project yet. Upload here, or assign existing documents from All projects."
               : "No documents yet. Add your staff handbook, policies, or price lists — anything your team asks questions about."}
           </p>
         ) : (

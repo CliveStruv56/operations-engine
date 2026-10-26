@@ -43,7 +43,7 @@ export default function ExportSection() {
       <h2 className="data mb-3 text-ink-muted uppercase">Your data</h2>
       <p className="text-sm text-ink-muted">
         Your documents and records are yours. Download the whole workspace as one archive:
-        every vault document, everything Flowgrid produced for you, and every register —
+        every document, everything Flowgrid produced for you, and every register —
         as spreadsheets and as a complete machine-readable copy. Take one whenever you want
         your own backup.
       </p>
@@ -57,7 +57,7 @@ export default function ExportSection() {
         </button>
         {busy && (
           <span className="text-xs text-ink-faint">
-            Gathering everything — a full vault can take a few minutes. The download opens
+            Gathering everything — a large workspace can take a few minutes. The download opens
             when it is ready.
           </span>
         )}

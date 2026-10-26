@@ -210,7 +210,7 @@ export function DraftModal({
             <p className="text-xs text-ink-faint">
               {kind === "monitoring_report"
                 ? "Assembled from this application's records. Outcome figures come from the values you recorded — never from the model."
-                : "Assembled from this application's records and cited vault documents."}{" "}
+                : "Assembled from this application's records and cited documents."}{" "}
               Anything the data doesn&apos;t cover is marked [TO CONFIRM]. Nothing is sent to a
               funder without you.
             </p>

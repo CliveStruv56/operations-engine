@@ -85,7 +85,7 @@ export default function PortfolioPage() {
       <header className="mb-6 flex items-baseline justify-between">
         <div>
           <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">
-            {PRODUCT_LANGUAGE.groundwork.combined}
+            {PRODUCT_LANGUAGE.groundwork.function}
           </h1>
         </div>
         <Link
@@ -104,7 +104,7 @@ export default function PortfolioPage() {
             Track each development scheme from first meeting to occupied homes.
           </p>
           <p className="mt-1 text-sm text-ink-muted">
-            A new project starts with the full CLH stage plan, task list, document checklist and
+            A new project starts with the full community-led housing stage plan, task list, document checklist and
             risk register already in place.
           </p>
         </div>
@@ -126,18 +126,31 @@ export default function PortfolioPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((r) => {
+                // due_date is a calendar date: compare it with today's local
+                // date, or a milestone reads "overdue" on the day it is due.
+                // Built by hand — locale date formats are not guaranteed.
+                const now = new Date();
+                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
                 const overdue =
-                  r.next_milestone && new Date(r.next_milestone.due_date) < new Date();
+                  r.next_milestone !== null && r.next_milestone.due_date < today;
                 return (
                   <tr
                     key={r.id}
                     onClick={() => router.push(`/app/projects/${r.id}`)}
                     className={`cursor-pointer hover:bg-accent-soft ${
-                      r.status !== "active" ? "opacity-60" : ""
+                      r.status !== "active" ? "bg-band text-ink-muted" : ""
                     }`}
                   >
                     <td className="px-4 py-3 font-medium">
-                      {r.name}
+                      {/* The row click is a mouse convenience; this link is
+                          what keyboard and screen-reader users open. */}
+                      <Link
+                        href={`/app/projects/${r.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:text-electric-blue hover:underline"
+                      >
+                        {r.name}
+                      </Link>
                       {r.status === "dormant" && (
                         <Stamp tone="warn" className="ml-2">
                           dormant · {r.dormancy_reason}
@@ -158,7 +171,9 @@ export default function PortfolioPage() {
                     </td>
                     <td className={`px-4 py-3 ${overdue ? "text-danger" : "text-ink-muted"}`}>
                       {r.next_milestone
-                        ? `${r.next_milestone.title} · ${fmtDate(r.next_milestone.due_date)}`
+                        ? `${r.next_milestone.title} · ${fmtDate(r.next_milestone.due_date)}${
+                            overdue ? " — overdue" : ""
+                          }`
                         : "—"}
                     </td>
                     <td className="data px-4 py-3">

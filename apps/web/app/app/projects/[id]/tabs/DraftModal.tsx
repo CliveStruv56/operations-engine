@@ -225,7 +225,7 @@ export function DraftModal({
             )}
             <p className="text-xs text-ink-faint">
               The draft is assembled from this project&apos;s records
-              {kind !== "monthly_report" && " and cited vault documents"}. Anything the data
+              {kind !== "monthly_report" && " and cited documents"}. Anything the data
               doesn&apos;t cover is marked [TO CONFIRM] — nothing is sent anywhere without you.
             </p>
             {error && (
