@@ -1203,3 +1203,37 @@ discussion behind them.
     bordered controls (see `CLAUDE.md`). Usage and Settings moved from
     12px footer links into full nav items in a fixed block above the
     account row.
+
+70. **Every project has a stored kind; modules add kinds or add-ons**
+    (operator decisions, 26 Oct 2026; `docs/project-types-brief.md`).
+
+    - **The rule.** Every project has the core capability: scoped chat,
+      documents, and an optional plan (#51). A module either supplies a
+      *kind* of project or an *add-on* tab that appears on every project.
+      The registry is `app/projects/kinds.py`.
+    - **Kinds at launch.** *General project* (`general`, core, opens its
+      chat) and *Development project* (`development`, from the `projects`
+      module, opens its room).
+    - **Add-ons at launch.** Contacts and Grant applications. Grant funding
+      is an add-on, not a kind: kinds are exclusive, and a development
+      scheme is exactly what people apply for grants for. #23 is unchanged.
+    - **Storage.** The kind is stored on `projects.kind`, a CHECK constraint
+      in 0031. The spec and #1 inferred it from a `proj_projects` row.
+      A trigger on `proj_projects` keeps the column in step with the
+      extension row, whatever the code path.
+    - **This supersedes the presentation half of #15.** There is one
+      Projects list, not a separate "Development projects" section.
+    - **Development projects open their room.** The room has a "Chat about
+      this project" button.
+    - **When a module is switched off,** its projects stay in the list and
+      behave as general projects (`kind_available = false`). The stored
+      kind is untouched.
+    - **The `projects` flag key stays,** although "Projects" is now core.
+      Renaming it would rewrite every tenant's `features`. Every surface
+      shows its label, "Development projects", instead.
+    - **`POST /projects`** still accepts the old `kind: "blank"` and
+      `kind: "planned"` values beside the new `kind: "general"` and
+      `with_plan`.
+    - **The one Groundwork template is still `proj_projects.project_type`**
+      (`clh_new_build`). It is a template within the development kind, not a
+      kind (roadmap §2.4).

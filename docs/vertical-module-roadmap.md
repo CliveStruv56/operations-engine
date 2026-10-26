@@ -71,6 +71,7 @@ but Groundwork's own split is deliberately left in place.
 | 1.4 `PATCH .../features` | ✅ endpoint + operator-console editor |
 | 1.5 Generalised drafting pipeline | ✅ `apps/worker/worker/drafting/` (engine) + `drafts/` (Groundwork adapter) |
 | 1.6 Hygiene (web flag guard, schema location) | ◑ flag guard shipped; schema rule recorded (ASSUMPTIONS #20), Groundwork's split left as-is |
+| 1.8 Project kinds and add-ons | ◑ registry `apps/api/app/projects/kinds.py` + `projects.kind` (0031). A module that *is* a kind of project registers a `ProjectKind`; one that adds a tab to every project registers a `ProjectAddOn` (`docs/project-types-brief.md`, ASSUMPTIONS #70). Phase 1 shipped; the shared project page and add-on tabs are phase 2. |
 
 ### 1.1 Module manifest — replaces six hand-edited registration points ✅
 

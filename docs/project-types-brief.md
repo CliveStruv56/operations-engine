@@ -1,7 +1,9 @@
 # One Projects list, with project kinds and add-on modules
 
-**Status: decisions settled 26 Oct 2026 (§10). Approved for build; not built
-yet.** Revised the same day after the operator's review of the first draft.
+**Status: decisions settled 26 Oct 2026 (§10). Phase 1 built 26 Oct 2026;
+phase 2 not started.** Revised the same day after the operator's review of the
+first draft. As-built differences from this text are noted inline and in
+ASSUMPTIONS #70.
 
 This follows on from the UI review merged in #11. That review found two project
 sections side by side in the sidebar. The operator asked for one list, with a
@@ -136,11 +138,13 @@ create index projects_tenant_kind on projects (tenant_id, kind);
 - **A CHECK constraint, not free text.** An unknown kind can then never reach
   the database. Adding a kind is one `alter … check` line in that kind's own
   migration.
-- **No drift.** `POST /projects/{id}/setup` sets `kind = 'development'` in the
-  same transaction that inserts the `proj_projects` row. Every future
-  module-supplied kind follows this rule: the kind and its extension row are
-  written together or not at all. A test asserts that every `development`
-  project has a `proj_projects` row, and that no other project does.
+- **No drift (as built: a trigger).** A trigger on `proj_projects` sets
+  `kind = 'development'` when the extension row is inserted and puts it back to
+  `general` if that row alone is deleted. It runs as the invoking role, so RLS
+  still applies. This covers every code path, including direct inserts, not
+  just `POST /projects/{id}/setup`. Every future module-supplied kind follows
+  the same rule: its kind and its extension row are written together, by the
+  database. `test_groundwork_row_sets_and_clears_the_kind` asserts it.
 - **Security.** `projects` already has RLS and is in the isolation suite's
   `TENANT_TABLES`. Adding a column adds no new table, but the isolation suite
   gains one assertion: filtering `GET /projects?kind=` never returns another
@@ -164,9 +168,10 @@ create index projects_tenant_kind on projects (tenant_id, kind);
   general look, so a new kind degrades gracefully.
 - `POST /projects` accepts `kind`, but only kinds whose `create` is `inline`. A
   module kind still goes through its own setup endpoint, which checks the flag.
-- Today's `POST /projects` field `kind: "blank" | "planned"` is renamed to
-  `with_plan: bool`. That frees the name `kind` for the project kind, and a
-  general project can still start with a plan.
+- `POST /projects` takes `kind: "general"` and `with_plan: bool`. As built, the
+  old values `kind: "blank"` and `kind: "planned"` are still accepted, so older
+  clients keep working: blank means general, and planned means general with a
+  plan.
 
 ## 5. What users see
 
