@@ -65,7 +65,7 @@ Primary CTA opens a short scheduling/qualification flow. Secondary CTA opens an 
 | `/` | Category, value, proof, workflow and conversion overview | Book a demo |
 | `/solutions/groundwork` | Community-led development workflow | Discuss a pilot |
 | `/solutions/grantwork` | Grant application and reporting workflow | Discuss a pilot |
-| `/platform` | Vault, claims, projects, outputs, governance | Book a demo |
+| `/platform` | Documents, confirmed facts, projects, outputs, governance | Book a demo |
 | `/security-and-data` | Plain-English architecture, data flow and substantiated controls | Ask a question |
 | `/about` | Why Flowgrid exists and who is behind it | Book a demo |
 | `/contact` | Demo/pilot form and contact alternative | Submit request |
@@ -86,7 +86,7 @@ Defer pricing until packaging and operational entitlements are reconfirmed. Defe
 - Headline and subhead above.
 - Primary CTA: Book a demo.
 - Secondary CTA: Explore the platform.
-- Product visual: a composed UI view showing a cited answer beside a source, with a claims status and a project output cue. Use real product UI or clearly labelled representative data; never fabricate customer information.
+- Product visual: a composed UI view showing a cited answer beside a source, with a confirmed-fact status and a project output cue. Use real product UI or clearly labelled representative data; never fabricate customer information.
 - Trust line: “Built for UK small organisations and specialist teams.”
 
 ### Problem-to-outcome strip
@@ -100,23 +100,27 @@ Three concise before/after pairs:
 ### How it works
 
 1. **Bring the evidence together.** Add documents and connect the facts your organisation relies on.
-2. **Keep work structured.** Use projects, plans and specialist registers instead of rebuilding context in each chat.
+2. **Keep work structured.** Every project comes with scoped chat, its documents and a plan of owned tasks. Work in projects instead of rebuilding context in each chat.
 3. **Produce and review.** Draft from evidence, check citations and export a useful deliverable.
 
 ### Product proof
 
 Use four outcome cards, each paired with a real interface crop or short silent video:
 
-- Ask the vault; open the cited page.
-- Confirm a claim once; reuse it across drafts.
-- Turn a project into a plan with owned tasks.
+- Ask your documents; open the cited page.
+- Confirm a fact once; reuse it across drafts.
+- Turn a project into a plan with owned tasks (every project has chat, documents and a plan; modules add stages, budgets and risks).
 - Export a conversation to PDF or a response to editable PowerPoint.
 
 ### Solutions
 
-- **Groundwork:** keep community-led development projects moving through stage gates, funding, budget, risks and client reporting.
-- **Grantwork:** manage applications, award conditions, impact evidence and monitoring returns in one workflow.
-- **Core platform:** for teams that need cited knowledge, controlled facts and repeatable project work without a sector module.
+Lead with the project model in plain English: *Every project comes with scoped chat, its documents and a plan of owned tasks. Switch on a module and projects gain what your sector needs: stage gates, budgets, funding and risks for development schemes; grant records and contacts as tabs on any project.*
+
+- **Groundwork · Development projects:** keep community-led development projects moving through stage gates, funding, budget, risks and client reporting.
+- **Grantwork · Grant funding:** manage applications, award conditions, impact evidence and monitoring returns, as a tab on any project.
+- **Core platform — documents, confirmed facts and projects:** for teams that need cited answers, confirmed facts and projects with chat, documents and a plan, without a sector module.
+
+Naming (ASSUMPTIONS #69 and #71): marketing keeps the brand names Groundwork and Grantwork in headlines and pairs each with its in-app name on first mention in body copy. "Vault" and "claims register" are retired from marketing; say "documents" and "confirmed (organisational) facts", as the workspace does.
 
 Do not show Tenderhouse or Assurance as “coming soon” until there is an explicit lead-validation strategy and owner.
 
