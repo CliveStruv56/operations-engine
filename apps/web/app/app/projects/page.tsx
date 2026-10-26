@@ -126,8 +126,11 @@ export default function PortfolioPage() {
             </thead>
             <tbody className="divide-y divide-line">
               {rows.map((r) => {
+                // due_date is a calendar date: compare it with today's local
+                // date, or a milestone reads "overdue" on the day it is due.
                 const overdue =
-                  r.next_milestone && new Date(r.next_milestone.due_date) < new Date();
+                  r.next_milestone !== null &&
+                  r.next_milestone.due_date < new Date().toLocaleDateString("en-CA");
                 return (
                   <tr
                     key={r.id}

@@ -56,15 +56,17 @@ export default function SidebarChats({
   const router = useRouter();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  // "Keep" unmounts the confirm row and remounts the ✕, so focus would drop
-  // to <body>; this remembers which ✕ to hand it back to.
+  // Closing the confirm row unmounts its focused button, so focus would drop
+  // to <body>. This remembers which ✕ to hand it back to — or, when the chat
+  // was deleted and its ✕ is gone, the page itself.
   const returnFocusTo = useRef<string | null>(null);
 
   useEffect(() => {
     if (confirmDeleteId !== null || returnFocusTo.current === null) return;
-    document
-      .querySelector<HTMLButtonElement>(`[data-delete-chat="${returnFocusTo.current}"]`)
-      ?.focus();
+    const target =
+      document.querySelector<HTMLElement>(`[data-delete-chat="${returnFocusTo.current}"]`) ??
+      document.getElementById("main-content");
+    target?.focus();
     returnFocusTo.current = null;
   }, [confirmDeleteId]);
 
@@ -88,6 +90,7 @@ export default function SidebarChats({
     } catch (err) {
       ws.setError(err instanceof Error ? err.message : String(err));
     } finally {
+      returnFocusTo.current = id;
       setDeleting(false);
       setConfirmDeleteId(null);
     }
