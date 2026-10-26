@@ -1,13 +1,14 @@
 # Session Context Handoff
 
 **Project:** Flowgrid OS (codename "Operations Engine" until 2 Aug 2026)
-**Handoff date:** 2026-10-12 (**§6u is the latest state**; §1–6t are history,
+**Handoff date:** 2026-10-26 (**§6v is the latest state**; §1–6u are history,
 oldest first)
 **Prepared by:** the UI-overhaul session, extended through the 1–4 Aug QA,
 rename, module-kit, Grantwork and smoke-test sessions, the 12 Aug
 claims-register build, the 14 Aug evaluation-gap and project-plan work, the
-16 Aug public marketing-site build, the 3 Sep code-review remediation, and a
-1 Oct catch-up written from the git history (§6t)
+16 Aug public marketing-site build, the 3 Sep code-review remediation, a
+1 Oct catch-up written from the git history (§6t), the 12 Oct remediation of
+review rows 7–14 (§6u), and the 26 Oct UI review and project-kinds build (§6v)
 **Purpose:** Resume in a new context window without re-deriving this work.
 **Start at §7** — it names the active task and the order to read things in.
 
@@ -1988,14 +1989,55 @@ soon as braces 3.0.4 exists. `source-map-js` is fixed by override.
 disconnect loses the answer and its cost row), a `script-src` CSP, and
 refusing drafts at the month soft cap (row 11's note).
 
+## 6v. UI review, plain names and project kinds (26 October 2026)
+
+Four PRs, all merged with CI green (api, worker, web lint/types/vitest/build,
+Playwright e2e). The session's container could not reach npm or PyPI, so the
+suites ran in CI only; locally it ran ruff, the standalone `mypy app` and a
+TypeScript parse check. The operator's decisions are in
+`docs/project-types-brief.md` §10.
+
+| PR | What |
+| --- | --- |
+| #11 | UI review for office admins on laptops. Readability floor: no meaningful text below 12px, `--faint` `#585f5f` (AA on every surface but lavender mist), `--edge-ui` for bordered controls. Keyboard fixes (real links for project and grant names, a focusable chat delete, focus restored after delete, `aria-current`). Plain names in the workspace — Development projects, Grant funding, Documents, All projects, Your organisation — with `brand` kept for the marketing site (ASSUMPTIONS **#69**). Usage and Settings join the nav |
+| #12 | Project kinds, phase 1. Migration **0031** adds `projects.kind` (CHECK `general`/`development`), backfilled from `proj_projects`, kept in step by a trigger on `proj_projects`. Registry `app/projects/kinds.py`; `GET /project-kinds`; `?kind=` filter; projects most recently updated first; `GET /admin/modules` and project counts by kind in the console. One Projects list in the sidebar; a switched-off module's projects stay listed as general projects (ASSUMPTIONS **#70**) |
+| #13 | Project kinds, phase 2. Every project has a page: the development room while its module is on, otherwise a core page (overview with the plan, documents), both with the Contacts and Grant applications add-on tabs. "Change kind" (general → development via `/app/projects/new?project=`), `/app/projects/all` filtered by kind, an 8-row sidebar cap, a "Project page" link in the chat banner, and a read-only "Your modules" list in settings. `GET /modules`, `GET /grants/applications?project_id=` |
+| #14 | `.coderabbit.yaml`: path rules for migrations, API code and tests, web UI and tests, and docs; stacked PRs reviewed whatever their base; lockfiles skipped. `auto_pause_after_reviewed_commits` stays at its default of 5 to protect the 10-reviews-an-hour allowance |
+
+**Traps hit on the way, now in `.coderabbit.yaml` so review catches them:**
+
+- `seed_tenant` already writes a grant application and a contact linked to
+  the tenant's project, so a "fresh" tenant is not empty. Assert membership,
+  not exact lists.
+- A Vitest `beforeEach(() => mock.mockReset())` returns the mock, which
+  Vitest then calls as a teardown; a mock returning a never-settling promise
+  hangs the hook. Use a block body.
+- A page that reads params with React's `use(params)` suspends under the
+  test library and renders nothing. `page.tsx` only unwraps the params;
+  test the inner component (`projects/[id]/project-page.tsx`).
+- `module_catalogue()` needs `dict[str, Any]`; `dict[str, object]` fails
+  mypy at the `features.get(m["flag"])` call site.
+
+**Suites on #13's final CI run:** api **456**, web **154** vitest, Playwright
+e2e green; the worker job passed (its count was not recorded here).
+
+**Open, not started:** nothing from this work. The brief's phases are both
+built. The operator checks in §7 are unchanged.
+
 ---
 
 ## 7. Read first in a new session
 
+**Latest work: §6v** (26 Oct) — the UI review, plain names, and project
+kinds in both phases. Nothing from it is open. Read
+`docs/project-types-brief.md` and ASSUMPTIONS #69–#70 before touching the
+sidebar, the new-project flow or `/app/projects/*`.
+
 **`docs/code-review-sep-2026.md` §1 is fully remediated in code** — rows 1–6
 on 3 Sep (§6s), rows 7–14 on 12 Oct (§6u). The 12 Oct work was not run
-against a test suite; run §5's commands first. What is still open from that
-review is listed at the end of §6u.
+against a test suite at the time; the full suites have since run green in
+CI on #12–#14 (§6v). What is still open
+from that review is listed at the end of §6u.
 
 Everything else is background. The marketing site (§6q, §6r) is live at
 `www.flowgridos.co.uk`. The claims-register follow-ups in
@@ -2003,7 +2045,7 @@ Everything else is background. The marketing site (§6q, §6r) is live at
 (§6t) — an earlier version of this paragraph said the opposite.
 
 **Suites as of 3 Sep 2026, all green:** api **433**, worker **215**, web
-**119** vitest. On 1 Oct the API suite was re-run at 433 and the Playwright e2e
+**119** vitest (26 Oct, in CI: api **456**, web **154** — §6v). On 1 Oct the API suite was re-run at 433 and the Playwright e2e
 suite (`apps/web/e2e/`) ran green, both before the last API tests were added
 (§6t). The api suite needs the dev compose stack up.
 

@@ -87,6 +87,7 @@ relevant app's commands pass locally.
 | `docs/drafting-engine-brief.md` | DRAFT-001/002 on the shared drafting engine — closed 4 Aug 2026 |
 | `docs/funder-forms-guide.md` | How funder forms work end to end — transcribe, verify, draft, paste; Flowgrid never submits to a funder |
 | `docs/claims-register-brief.md` | The core claims register — one true place for what a tenant asserts about itself. **Approved and in build from 12 Aug 2026**; §12's open questions are settled in `docs/groundwork/ASSUMPTIONS.md` #30–#35 |
+| `docs/project-types-brief.md` | One Projects list: stored project kinds and add-on modules. Both phases built 26 Oct 2026; as-built notes in `docs/groundwork/ASSUMPTIONS.md` #70 |
 | `docs/next-phase-brief.md` | Earlier work brief, closed 1 Aug 2026 |
 | `docs/performance-review-aug-2026.md` | LLM latency review — read its status banner first: several findings were later disproven by measurement |
 | `docs/staging-deploy-checklist.md` | How staging actually deploys (Railway + Vercel, **not** the compose file) |
