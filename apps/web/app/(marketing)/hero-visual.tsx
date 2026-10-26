@@ -1,5 +1,5 @@
 /* Composed, clearly-labelled representative product view: a cited answer
- * beside its source, a confirmed claim and a project output cue. All data
+ * beside its source, a confirmed fact and a project output cue. All data
  * is example data — no customer information. */
 
 export function HeroVisual() {
@@ -14,7 +14,7 @@ export function HeroVisual() {
           {/* Cited answer */}
           <div className="rounded-lg border border-bone p-4">
             <p className="text-[12px] font-medium uppercase tracking-[0.08em] text-slate">
-              Ask the vault
+              Ask your documents
             </p>
             <p className="mt-2 text-[14px] leading-[1.5] text-ink">
               &ldquo;What match funding did we commit to in the hall
@@ -72,7 +72,7 @@ export function HeroVisual() {
       </div>
       <figcaption className="sr-only">
         Illustration of Flowgrid answering a question with a citation that
-        links to the source page, alongside a confirmed claim and a one-click
+        links to the source page, alongside a confirmed fact and a one-click
         report export.
       </figcaption>
     </figure>

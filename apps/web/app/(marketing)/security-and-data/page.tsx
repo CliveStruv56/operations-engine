@@ -30,9 +30,9 @@ const SECTIONS = [
     kicker: "Accuracy",
     title: "Will it invent facts?",
     plain:
-      "Grounded answers cite the document and page they came from, so you can check any claim in one click. When the vault has no answer, Flowgrid says so rather than improvising.",
+      "Grounded answers cite the document and page they came from, so you can check any statement in one click. When your documents hold no answer, Flowgrid says so rather than improvising.",
     detail:
-      "Retrieval runs over your own vault; answers carry source excerpts, and drafting workflows are transcribe → verify → draft → paste, with a human review step before anything leaves the workspace. Flowgrid never submits documents to a funder or client on your behalf.",
+      "Retrieval runs over your own documents; answers carry source excerpts, and drafting workflows are transcribe → verify → draft → paste, with a human review step before anything leaves the workspace. Flowgrid never submits documents to a funder or client on your behalf.",
   },
   {
     kicker: "Cost & oversight",

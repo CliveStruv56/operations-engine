@@ -9,13 +9,13 @@ export const metadata: Metadata = {
 };
 
 const content: SolutionContent = {
-  kicker: "Groundwork · For community-led development",
+  kicker: "Groundwork · Development projects · For community-led development",
   headline: "Keep the project record current. Let the client report follow.",
   workaround:
-    "Most development consultants rebuild the same picture every month: trawling emails for the latest budget, re-keying risks into Word, and writing funder updates from memory. Groundwork keeps one live record per project, so reporting becomes an export, not an evening.",
+    "Most development consultants rebuild the same picture every month: trawling emails for the latest budget, re-keying risks into Word, and writing funder updates from memory. Groundwork, the development-projects module of Flowgrid OS, keeps one live record per project, so reporting becomes an export, not an evening.",
   diagram: {
     ariaLabel:
-      "Documents from the vault and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every figure cites its source for you to review before anything is sent.",
+      "Your documents and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every figure cites its source for you to review before anything is sent.",
     vault: {
       caption: "surveys · minutes · studies",
       arrowLabel: "cited by page",
@@ -61,14 +61,15 @@ const content: SolutionContent = {
       title: "Reports draw from the live record",
       body: "Monthly reports, feasibility studies and funding bids are drafted from the current project data, with citations back to your source documents.",
       evidence:
-        "Drafts assembled from project records and the vault, exported in your branding.",
+        "Drafts assembled from project records and your documents, exported in your branding.",
       spot: "output",
     },
   ],
   workspace: [
     "A portfolio of development projects, each with five stage gates",
+    "Every project's own chat, documents and plan of owned tasks, as standard",
     "Budget lines, funding sources and a risk register per project",
-    "The document vault: feasibility work, surveys, minutes and correspondence, all citable",
+    "Your documents: feasibility work, surveys, minutes and correspondence, all citable",
     "Confirmed organisational facts shared across every draft",
     "A health card summarising each project's status for the client",
   ],

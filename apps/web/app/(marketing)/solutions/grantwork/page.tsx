@@ -9,13 +9,13 @@ export const metadata: Metadata = {
 };
 
 const content: SolutionContent = {
-  kicker: "Grantwork · For grant-funded organisations",
+  kicker: "Grantwork · Grant funding · For grant-funded organisations",
   headline: "Carry evidence from application to monitoring return.",
   workaround:
-    "The facts a funder asks for at application time are the same ones they ask for at monitoring time — but most teams reconstruct them twice, in different Word documents, months apart. Grantwork keeps funders, conditions and evidence in one record so nothing is written from scratch twice.",
+    "The facts a funder asks for at application time are the same ones they ask for at monitoring time — but most teams reconstruct them twice, in different Word documents, months apart. Grantwork, the grant-funding module of Flowgrid OS, keeps funders, conditions and evidence in one record so nothing is written from scratch twice.",
   diagram: {
     ariaLabel:
-      "Documents from the vault and confirmed organisational facts flow into one record per grant, carrying its stages, conditions, deadlines and impact evidence. Application drafts, monitoring returns, paste-ready funder-form answers and editable PowerPoint are assembled out of that record, and every answer cites its evidence — you verify and paste; Flowgrid never submits to a funder.",
+      "Your documents and confirmed organisational facts flow into one record per grant, carrying its stages, conditions, deadlines and impact evidence. Application drafts, monitoring returns, paste-ready funder-form answers and editable PowerPoint are assembled out of that record, and every answer cites its evidence — you verify and paste; Flowgrid never submits to a funder.",
     vault: {
       caption: "past bids · policies · accounts",
       arrowLabel: "cited by page",
@@ -45,9 +45,9 @@ const content: SolutionContent = {
   outcomes: [
     {
       title: "Applications answered from confirmed facts",
-      body: "Charity numbers, policies, safeguarding statements and track record come from your reviewed claims register — consistent in every application.",
+      body: "Charity numbers, policies, safeguarding statements and track record come from your confirmed organisational facts — consistent in every application.",
       evidence:
-        "Funder-form transcription and drafting that pulls from claims and the vault, with citations to check.",
+        "Funder-form transcription and drafting that pulls from confirmed facts and your documents, with citations to check.",
       spot: "claim",
     },
     {
@@ -67,9 +67,10 @@ const content: SolutionContent = {
   ],
   workspace: [
     "A register of funders, applications and live awards",
+    "Grant applications as a tab on any project — including a development scheme",
     "Stages, conditions and deadlines per grant",
     "Impact measures and outcome evidence collected against each award",
-    "The document vault: previous bids, policies, accounts and reports, all citable",
+    "Your documents: previous bids, policies, accounts and reports, all citable",
     "Confirmed organisational facts reused across every application",
   ],
   deliverables: [
