@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import SidebarProjects from "./sidebar-projects";
+import SidebarProjects, { SIDEBAR_PROJECT_CAP } from "./sidebar-projects";
 import type { Project, Tenant } from "./workspace";
 import { withWorkspace } from "@/test/workspace";
 import { GENERAL_KIND, type ProjectKinds } from "@/lib/projects";
@@ -44,14 +44,18 @@ const project = (over: Partial<Project>): Project =>
     ...over,
   }) as Project;
 
-function mount(projects: Project[], kinds: ProjectKinds = KINDS) {
+function mount(
+  projects: Project[],
+  kinds: ProjectKinds = KINDS,
+  { projectId = null, pathname = "/app" }: { projectId?: string | null; pathname?: string } = {}
+) {
   render(
     withWorkspace(
       <nav>
         <SidebarProjects
           view="chat"
-          projectId={null}
-          pathname="/app"
+          projectId={projectId}
+          pathname={pathname}
           onWorkspace
           onClose={() => {}}
         />
@@ -117,5 +121,45 @@ describe("the one Projects list", () => {
     expect(screen.queryByRole("link", { name: /^Old/ })).toBeNull();
     const planned = screen.getByRole("link", { name: /Planned, General project, 2 tasks/ });
     expect(within(planned).getByText("2 tasks")).toBeInTheDocument();
+  });
+});
+
+describe("a long Projects list", () => {
+  const many = Array.from({ length: SIDEBAR_PROJECT_CAP + 2 }, (_, i) =>
+    project({ id: `p${i}`, name: `Scheme ${i}` })
+  );
+
+  it("shows the most recent few and links to the rest", () => {
+    mount(many);
+    expect(screen.getByRole("link", { name: /^Scheme 0, / })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /^Scheme 9, / })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: `All ${SIDEBAR_PROJECT_CAP + 2} projects →` })
+    ).toHaveAttribute("href", "/app/projects/all");
+  });
+
+  it("keeps the open project listed even when it is past the cap", () => {
+    mount(many, KINDS, { projectId: "p9" });
+    expect(screen.getByRole("link", { name: /^Scheme 9, / })).toHaveAttribute(
+      "aria-current",
+      "true"
+    );
+  });
+
+  it("marks a general project current while its project page is open", () => {
+    mount([project({ id: "g1", name: "Hall refit" })], KINDS, {
+      pathname: "/app/projects/g1",
+    });
+    expect(screen.getByRole("link", { name: /^Hall refit, / })).toHaveAttribute(
+      "aria-current",
+      "page"
+    );
+  });
+
+  it("links to archived projects through the full list", () => {
+    mount([project({ id: "a1", name: "Old", archived: true })]);
+    expect(
+      screen.getByRole("link", { name: "All projects, including archived →" })
+    ).toHaveAttribute("href", "/app/projects/all");
   });
 });

@@ -1237,3 +1237,24 @@ discussion behind them.
     - **The one Groundwork template is still `proj_projects.project_type`**
       (`clh_new_build`). It is a template within the development kind, not a
       kind (roadmap §2.4).
+    - **Phase 2: one project page for every kind.** `/app/projects/{id}` is
+      no longer gated on the `projects` flag. It shows the development room
+      while the kind's module is on, and a core page (overview with the
+      plan, documents) otherwise. Both show the add-on tabs from
+      `GET /project-kinds`. The core page's Documents tab lists the
+      project's documents and links to Documents for uploads, rather than
+      duplicating the upload flow.
+    - **The full list is `/app/projects/all`,** filtered by kind in the URL.
+      `/app/projects` stays the development portfolio, because renaming it
+      would break every link to it. The static `all` segment wins over
+      `[id]`, and project ids are UUIDs, so the two never collide. The
+      sidebar lists the eight most recently updated projects and links to
+      the full list for the rest.
+    - **"Change kind" reuses the setup page.** `/app/projects/new?project=`
+      sets up an existing project rather than creating one. A project with a
+      plan is told why it cannot become a development project (#51) rather
+      than offered a request the API would refuse with 409.
+    - **`GET /modules`** gives workspace members the operator's module
+      catalogue with an `enabled` flag, for the read-only "Your modules"
+      list in settings. It is read-only: switching stays with the operator
+      (#22).

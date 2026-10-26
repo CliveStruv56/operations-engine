@@ -26,8 +26,7 @@ from app.config import get_settings
 from app.db import db
 from app.errors import ApiError
 from app.litellm import litellm_client
-from app.modules import MODULES
-from app.projects.kinds import PROJECT_ADDONS, PROJECT_KINDS
+from app.projects.kinds import module_catalogue
 from app.refdata.promote import list_candidates, promote, withdraw
 from app.refdata.questions import get_platform_set, list_platform_sets
 from app.refdata.schemas import PromoteCandidate, PromoteIn, QuestionSetOut
@@ -219,17 +218,7 @@ def _tenant_out(row) -> dict:
 @router.get("/admin/modules", response_model=list[AdminModuleOut])
 async def admin_list_modules(user: AuthUser = Depends(require_platform_admin)):
     """The module manifest with the project kinds and add-ons each supplies."""
-    return [
-        {
-            "flag": m.flag,
-            "label": m.label,
-            "kinds": [
-                {"key": k.key, "label": k.label} for k in PROJECT_KINDS if k.module == m.flag
-            ],
-            "addons": [a.label for a in PROJECT_ADDONS if a.module == m.flag],
-        }
-        for m in MODULES
-    ]
+    return module_catalogue()
 
 
 @router.patch("/admin/tenants/{tenant_id}", response_model=AdminTenantOut)

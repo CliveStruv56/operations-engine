@@ -165,6 +165,7 @@ async def create_application(
 async def portfolio(
     status: str | None = Query(default=None, max_length=20),
     funder_id: UUID | None = None,
+    project_id: UUID | None = None,
     ctx: TenantContext = Depends(require_grants),
     conn: asyncpg.Connection = Depends(get_conn),
 ):
@@ -176,6 +177,10 @@ async def portfolio(
     if funder_id:
         params.append(funder_id)
         clauses.append(f"a.funder_id = ${len(params)}")
+    if project_id:
+        # A project's Grant applications tab (docs/project-types-brief.md §3).
+        params.append(project_id)
+        clauses.append(f"a.project_id = ${len(params)}")
     where = f"where {' and '.join(clauses)}" if clauses else ""
     rows = await conn.fetch(
         f"""

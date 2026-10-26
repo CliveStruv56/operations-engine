@@ -4,6 +4,9 @@
 // new-project picker are built from it. A new kind needs no change here beyond
 // an icon — an unknown kind falls back to the general kind's behaviour.
 
+import { api } from "@/lib/api";
+import { STAGE_LABEL } from "@/lib/groundwork";
+
 export type ProjectKind = {
   key: string;
   label: string;
@@ -59,6 +62,26 @@ export function effectiveKind(
   return kinds.kinds.find((k) => k.key === GENERAL_KIND.key) ?? GENERAL_KIND;
 }
 
+/** A project's one-line status: the stage for a development project, open
+ *  plan tasks or documents otherwise. */
+export function projectStatus(
+  project: {
+    stage_current: string | null;
+    has_plan: boolean;
+    open_task_count: number;
+    document_count: number;
+  },
+  kind: ProjectKind
+): string {
+  if (kind.key === "development" && project.stage_current) {
+    return STAGE_LABEL[project.stage_current] ?? project.stage_current;
+  }
+  if (project.has_plan && project.open_task_count > 0) {
+    return `${project.open_task_count} task${project.open_task_count === 1 ? "" : "s"}`;
+  }
+  return `${project.document_count} doc${project.document_count === 1 ? "" : "s"}`;
+}
+
 /** Where a kind created by its module's own page ("setup") is set up. A setup
  *  kind missing from this map is not offered in the picker — better hidden
  *  than a card that leads nowhere. */
@@ -66,7 +89,50 @@ export const SETUP_PATHS: Record<string, string> = {
   development: "/app/projects/new",
 };
 
-/** The page that holds a project's room (`home: "room"`). */
-export function roomPath(projectId: string): string {
+/** Every project's own page: the development room for a development
+ *  project, the core page (overview, documents, add-on tabs) for the rest.
+ *  It is the home of a `home: "room"` kind; a chat-home kind links to it. */
+export function projectPagePath(projectId: string): string {
   return `/app/projects/${projectId}`;
+}
+
+/** The full, filterable list of projects — the sidebar shows only the most
+ *  recent few and links here for the rest. */
+export const ALL_PROJECTS_PATH = "/app/projects/all";
+
+/** A setup kind this project may become, with where to set it up. Kinds
+ *  whose module is off, or with no setup page, are left out. */
+export function upgradeTargets(
+  project: { kind?: string; kind_available?: boolean },
+  kinds: ProjectKinds
+): { kind: ProjectKind; path: string }[] {
+  const from = effectiveKind(project, kinds);
+  return from.upgrades_to.flatMap((key) => {
+    const kind = kinds.kinds.find((k) => k.key === key && k.available);
+    const path = SETUP_PATHS[key];
+    return kind && path ? [{ kind, path }] : [];
+  });
+}
+
+/** One module as the catalogue describes it: the flag, its label, and the
+ *  kinds and add-ons it supplies. `enabled` is present on a workspace's own
+ *  list (GET /modules), absent on the operator's (GET /admin/modules). */
+export type ModuleEntry = {
+  flag: string;
+  label: string;
+  kinds: { key: string; label: string }[];
+  addons: string[];
+  enabled?: boolean;
+};
+
+export const listWorkspaceModules = (tenantId: string) =>
+  api<ModuleEntry[]>("/modules", {}, tenantId);
+
+/** One line on what switching a module on adds. */
+export function moduleAdds(m: ModuleEntry): string | null {
+  const parts = [
+    ...m.kinds.map((k) => `the ${k.label} kind`),
+    ...m.addons.map((a) => `a ${a} tab on every project`),
+  ];
+  return parts.length ? `Adds ${parts.join(" and ")}` : null;
 }

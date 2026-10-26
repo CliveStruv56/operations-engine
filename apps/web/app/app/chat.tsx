@@ -2,8 +2,10 @@
 
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api, apiStream } from "@/lib/api";
 import { openPresigned } from "@/lib/groundwork";
+import { projectPagePath } from "@/lib/projects";
 import { ACCEPT, uploadMime } from "@/lib/uploads";
 import { PulsingDots, Spinner } from "@/components/activity";
 import {
@@ -776,8 +778,16 @@ export default function ChatPanel({
       {/* The empty-state hero carries the project context; the banner only
           needs to keep the scope visible once a conversation is underway. */}
       {activeProject && !empty && (
-        <p className="border-b border-edge bg-sidebar px-6 py-1.5 text-xs font-bold text-subtle">
-          Project: {activeProject.name} — answers prefer this project&apos;s documents
+        <p className="flex items-center gap-3 border-b border-edge bg-sidebar px-6 py-1.5 text-xs font-bold text-subtle">
+          <span className="min-w-0 truncate">
+            Project: {activeProject.name} — answers prefer this project&apos;s documents
+          </span>
+          <Link
+            href={projectPagePath(activeProject.id)}
+            className="ml-auto shrink-0 text-electric-blue hover:underline"
+          >
+            Project page
+          </Link>
         </p>
       )}
       {activeConv?.is_mine && !empty && <ShareBar conversation={activeConv} onError={setError} />}

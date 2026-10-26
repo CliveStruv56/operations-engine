@@ -17,9 +17,9 @@ a development scheme is exactly the thing people apply for grants for.
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
-from app.modules import FEATURE_FLAGS
+from app.modules import FEATURE_FLAGS, MODULES
 
 
 @dataclass(frozen=True)
@@ -106,3 +106,19 @@ def kind_available(kind: str, features: dict[str, object]) -> bool:
     if spec is None:
         return False
     return spec.module is None or features.get(spec.module) is True
+
+
+def module_catalogue() -> list[dict[str, Any]]:
+    """Every module with the kinds and add-ons it supplies — what the operator
+    console's checkboxes and a workspace's "Your modules" list both show."""
+    return [
+        {
+            "flag": m.flag,
+            "label": m.label,
+            "kinds": [
+                {"key": k.key, "label": k.label} for k in PROJECT_KINDS if k.module == m.flag
+            ],
+            "addons": [a.label for a in PROJECT_ADDONS if a.module == m.flag],
+        }
+        for m in MODULES
+    ]

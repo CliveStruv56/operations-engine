@@ -1,6 +1,7 @@
 // Operator console (platform admin) — types + fetch helper. Admin endpoints
 // carry no tenant context, so no X-Tenant-Id header.
 import { api } from "@/lib/api";
+import { moduleAdds, type ModuleEntry } from "@/lib/projects";
 import type { QuestionSet } from "@/lib/questions";
 
 export const admin = <T,>(path: string, init: RequestInit = {}) => api<T>(path, init);
@@ -178,12 +179,7 @@ export function blockedReason(c: PromoteCandidate): string | null {
 
 /** One module and what it adds — kinds of project, or tabs on every project.
  *  Served by the API from its manifest and project-kind registry. */
-export type AdminModule = {
-  flag: string;
-  label: string;
-  kinds: { key: string; label: string }[];
-  addons: string[];
-};
+export type AdminModule = ModuleEntry;
 
 export const listModules = () => admin<AdminModule[]>("/admin/modules");
 
@@ -196,11 +192,4 @@ export const FALLBACK_MODULES: AdminModule[] = FEATURE_FLAGS.map((f) => ({
   addons: [],
 }));
 
-/** One line for the operator: what switching this module on adds. */
-export function moduleAdds(m: AdminModule): string | null {
-  const parts = [
-    ...m.kinds.map((k) => `the ${k.label} kind`),
-    ...m.addons.map((a) => `a ${a} tab on every project`),
-  ];
-  return parts.length ? `Adds ${parts.join(" and ")}` : null;
-}
+export { moduleAdds };

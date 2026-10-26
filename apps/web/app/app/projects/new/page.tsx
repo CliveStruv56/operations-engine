@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { gw } from "@/lib/groundwork";
+import { projectPagePath } from "@/lib/projects";
 import { Spinner } from "@/components/activity";
 import { useWorkspace } from "../../workspace";
 import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../../module-gate";
@@ -30,8 +31,11 @@ const TOGGLES = [
 export default function NewProjectPage() {
   const router = useRouter();
   const ws = useWorkspace();
-  // The sidebar's new-project picker hands over the name already typed.
-  const initialName = useSearchParams().get("name") ?? "";
+  const sp = useSearchParams();
+  // "Change kind" on a project page hands over an existing project to set
+  // up; the new-project picker hands over the name already typed.
+  const existing = ws.projects.find((p) => p.id === sp.get("project")) ?? null;
+  const initialName = existing?.name ?? sp.get("name") ?? "";
   const flagOn = useModuleEnabled("projects");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,10 +58,12 @@ export default function NewProjectPage() {
     setBusy(true);
     setError(null);
     try {
-      const core = await gw<{ id: string }>("/projects", {
-        method: "POST",
-        body: JSON.stringify({ name: form.name }),
-      });
+      const core =
+        existing ??
+        (await gw<{ id: string }>("/projects", {
+          method: "POST",
+          body: JSON.stringify({ name: form.name }),
+        }));
       await gw(`/projects/${core.id}/setup`, {
         method: "POST",
         body: JSON.stringify({
@@ -88,17 +94,31 @@ export default function NewProjectPage() {
     <main className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto max-w-2xl p-6">
       <p className="data text-ink-faint uppercase">
-        <Link href="/app/projects" className="hover:text-ink">
-          ← Development projects
-        </Link>
+        {existing ? (
+          <Link href={projectPagePath(existing.id)} className="hover:text-ink">
+            ← {existing.name}
+          </Link>
+        ) : (
+          <Link href="/app/projects" className="hover:text-ink">
+            ← Development projects
+          </Link>
+        )}
       </p>
-      <h1 className="mt-1 mb-6 font-display text-[26px] font-medium tracking-[-0.01em]">New development project</h1>
+      <h1 className="mt-1 mb-6 font-display text-[26px] font-medium tracking-[-0.01em]">
+        {existing ? `Make ${existing.name} a development project` : "New development project"}
+      </h1>
+      {existing && (
+        <p className="-mt-4 mb-6 text-sm text-ink-muted">
+          Its chats, documents and contacts stay as they are. This adds the stage plan, tasks,
+          document checklist and risk register.
+        </p>
+      )}
 
       <form onSubmit={submit} className="space-y-5 rounded-card border border-edge bg-surface p-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="text-sm sm:col-span-2">
             Project name
-            <input required value={form.name} onChange={set("name")} className={`mt-1 ${input}`} placeholder="e.g. Millbrook Meadow" />
+            <input required readOnly={existing !== null} value={form.name} onChange={set("name")} className={`mt-1 ${input} read-only:text-faint`} placeholder="e.g. Millbrook Meadow" />
           </label>
           <label className="text-sm">
             Client group
@@ -160,7 +180,7 @@ export default function NewProjectPage() {
               <Spinner className="mr-1.5" /> Setting up the project spine…
             </>
           ) : (
-            "Create project"
+            existing ? "Set up as a development project" : "Create project"
           )}
         </button>
         <p className="text-xs text-ink-faint">

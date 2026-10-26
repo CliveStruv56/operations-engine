@@ -8,6 +8,7 @@ import { Claim, listClaims } from "@/lib/claims";
 import { Spinner } from "@/components/activity";
 import { useWorkspace, type Tenant } from "../workspace";
 import ExportSection from "./export-section";
+import ModulesSection from "./modules-section";
 import Members from "./members";
 
 import { btnPrimary as btn, cardPadded as card, input } from "@/components/ui/styles";
@@ -356,12 +357,13 @@ export default function SettingsPage() {
         <header>
           <h1 className="font-display text-[26px] font-medium tracking-[-0.01em]">Workspace settings</h1>
           <p className="mt-0.5 text-sm text-ink-muted">
-            Branding, people and roles for {tenant.name}.
+            Branding, modules, people and roles for {tenant.name}.
           </p>
         </header>
         <WorkspaceSection tenant={tenant} />
         <OrganisationSection />
         <BrandSection tenant={tenant} />
+        <ModulesSection tenantId={tenant.id} />
         <ExportSection />
         <Members tenant={tenant} />
       </div>
