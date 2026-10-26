@@ -105,7 +105,9 @@ relevant app's commands pass locally.
   a fixed status taxonomy — sage = upcoming, lavender = in progress (`active`
   = deep-violet text on lavender), rose = shipped/complete — never decorative.
   `grounded` green stays scoped to trust states; `--ok` is the RAG status
-  green. Tenant `brand.accent` colours remain **exports only** (slides,
+  green. Readability floor: no meaningful text below 12px (`text-xs`), muted
+  text is `--faint` (#585f5f, AA on every surface but lavender mist), and
+  bordered non-field controls use `--edge-ui`, not the bone hairline. Tenant `brand.accent` colours remain **exports only** (slides,
   health-card PDFs), never app chrome — see `docs/groundwork/ASSUMPTIONS.md`
   #17. Legacy utility names alias the current palette in
   `apps/web/app/globals.css`.

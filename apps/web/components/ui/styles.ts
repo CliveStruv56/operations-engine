@@ -16,8 +16,8 @@ const pressable = "active:scale-[.99] disabled:cursor-not-allowed";
 export const btnPrimary =
   `inline-flex min-h-9 items-center justify-center gap-2 rounded-btn bg-accent px-5 py-2 ` +
   `text-sm font-medium text-accent-ink transition-colors hover:bg-accent-deep ` +
-  // `text-faint` when disabled is 4.42:1 on --edge and misses AA for 13.5px
-  // text. --subtle is the same idea at a passing ratio.
+  // Disabled text is --subtle (8.0:1 on --edge) so a greyed-out label stays
+  // legible; --faint only just clears AA there.
   `disabled:bg-edge disabled:text-subtle ${pressable}`;
 
 /** Row-height primary, for table rows and tab toolbars where a 36px control
@@ -50,7 +50,7 @@ export const btnQuiet =
 /** 36×36 icon button — a circle under the pill radius. Requires an aria-label
  *  at the call site. */
 export const btnIcon =
-  `inline-flex h-9 w-9 items-center justify-center rounded-btn border border-edge bg-card ` +
+  `inline-flex h-9 w-9 items-center justify-center rounded-btn border border-edge-ui bg-card ` +
   `text-subtle transition-colors hover:bg-sidebar hover:text-ink ${pressable}`;
 
 export const input =

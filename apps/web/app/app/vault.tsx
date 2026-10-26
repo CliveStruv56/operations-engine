@@ -223,6 +223,16 @@ export default function VaultPanel({
             upload(e.dataTransfer.files);
           }}
           onClick={() => fileInput.current?.click()}
+          // Without these the zone was mouse-only: the file input itself is
+          // hidden, so nothing else on the page can open the picker.
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              fileInput.current?.click();
+            }
+          }}
           className={`cursor-pointer rounded-card border border-dashed px-8 py-10 text-center transition-colors ${
             dragging
               ? "border-deep-violet bg-accent-soft"

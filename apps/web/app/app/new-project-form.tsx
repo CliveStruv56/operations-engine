@@ -75,7 +75,7 @@ export default function NewProjectForm({
       }`}
     >
       <span className="block text-[13px] font-bold">{title}</span>
-      <span className="block text-[11px] text-faint">{hint}</span>
+      <span className="block text-xs text-faint">{hint}</span>
     </button>
   );
 
@@ -100,7 +100,7 @@ export default function NewProjectForm({
       {kind === "planned" && (
         <div className="space-y-1.5">
           {seeds.map((s, i) => (
-            <p key={`${s.title}-${i}`} className="truncate text-[11px] text-subtle">
+            <p key={`${s.title}-${i}`} className="truncate text-xs text-subtle">
               {s.title}
               {s.due_date ? ` · ${fmtDate(s.due_date)}` : ""}
             </p>
@@ -135,7 +135,7 @@ export default function NewProjectForm({
             type="button"
             onClick={addSeed}
             disabled={!taskTitle.trim()}
-            className="text-[11px] font-bold text-electric-blue hover:underline disabled:text-faint"
+            className="text-xs font-bold text-electric-blue hover:underline disabled:text-faint"
           >
             Add task
           </button>

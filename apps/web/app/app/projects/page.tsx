@@ -133,11 +133,19 @@ export default function PortfolioPage() {
                     key={r.id}
                     onClick={() => router.push(`/app/projects/${r.id}`)}
                     className={`cursor-pointer hover:bg-accent-soft ${
-                      r.status !== "active" ? "opacity-60" : ""
+                      r.status !== "active" ? "bg-band text-ink-muted" : ""
                     }`}
                   >
                     <td className="px-4 py-3 font-medium">
-                      {r.name}
+                      {/* The row click is a mouse convenience; this link is
+                          what keyboard and screen-reader users open. */}
+                      <Link
+                        href={`/app/projects/${r.id}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="hover:text-electric-blue hover:underline"
+                      >
+                        {r.name}
+                      </Link>
                       {r.status === "dormant" && (
                         <Stamp tone="warn" className="ml-2">
                           dormant · {r.dormancy_reason}
@@ -158,7 +166,9 @@ export default function PortfolioPage() {
                     </td>
                     <td className={`px-4 py-3 ${overdue ? "text-danger" : "text-ink-muted"}`}>
                       {r.next_milestone
-                        ? `${r.next_milestone.title} · ${fmtDate(r.next_milestone.due_date)}`
+                        ? `${r.next_milestone.title} · ${fmtDate(r.next_milestone.due_date)}${
+                            overdue ? " — overdue" : ""
+                          }`
                         : "—"}
                     </td>
                     <td className="data px-4 py-3">

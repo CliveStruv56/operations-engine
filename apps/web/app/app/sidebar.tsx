@@ -94,7 +94,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             <span className="block truncate text-[15.5px] font-extrabold tracking-tight">
               {tenant.name}
             </span>
-            <span className="block text-[10.5px] font-bold uppercase tracking-[.09em] text-faint">
+            <span className="block text-xs font-bold uppercase tracking-[.09em] text-faint">
               Flowgrid
             </span>
           </span>
@@ -107,7 +107,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           >
             <SearchIcon className="h-3.5 w-3.5" />
             Search chats &amp; documents
-            <kbd className="ml-auto rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-[10.5px] font-bold text-faint">
+            <kbd className="ml-auto rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-xs font-bold text-faint">
               ⌘K
             </kbd>
           </button>
@@ -116,6 +116,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3.5 pb-3" onClick={onClose}>
           <Link
             href={href({ project: projectId })}
+            aria-current={onWorkspace && view === "chat" ? "page" : undefined}
             className={`${item} mb-0.5 ${onWorkspace && view === "chat" ? itemActive : itemRest}`}
           >
             <ChatIcon />
@@ -123,6 +124,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           </Link>
           <Link
             href={href({ view: "vault", project: projectId })}
+            aria-current={onWorkspace && view === "vault" ? "page" : undefined}
             className={`${item} ${onWorkspace && view === "vault" ? itemActive : itemRest}`}
           >
             <VaultIcon />
@@ -132,6 +134,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               module, or none. */}
           <Link
             href="/app/forms"
+            aria-current={pathname.startsWith("/app/forms") ? "page" : undefined}
             className={`${item} mt-0.5 ${
               pathname.startsWith("/app/forms") ? itemActive : itemRest
             }`}
@@ -145,6 +148,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           <Link
             href="/app/claims"
             aria-label={claimsNote ? `${PRODUCT_LANGUAGE.organisation.navigation} — ${claimsNote}` : undefined}
+            aria-current={pathname.startsWith("/app/claims") ? "page" : undefined}
             className={`${item} mt-0.5 ${
               pathname.startsWith("/app/claims") ? itemActive : itemRest
             }`}
@@ -157,7 +161,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               // two the same is how a warning stops being read.
               <span
                 title={claimsNote ?? undefined}
-                className={`ml-auto rounded-full px-1.5 py-px text-[10.5px] font-bold ${
+                className={`ml-auto rounded-full px-1.5 py-px text-xs font-bold ${
                   claims && claims.needs_attention > 0
                     ? "bg-warn-soft text-warn"
                     : "bg-accent-soft text-electric-blue"
@@ -170,6 +174,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           {tenant.features?.contacts === true && (
             <Link
               href="/app/contacts"
+              aria-current={pathname.startsWith("/app/contacts") ? "page" : undefined}
               className={`${item} mt-0.5 ${
                 pathname.startsWith("/app/contacts") ? itemActive : itemRest
               }`}
@@ -182,6 +187,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           {tenant.features?.community === true && (
             <Link
               href="/app/community"
+              aria-current={pathname.startsWith("/app/community") ? "page" : undefined}
               className={`${item} mt-0.5 ${
                 pathname.startsWith("/app/community") ? itemActive : itemRest
               }`}
@@ -194,13 +200,14 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           {tenant.features?.grants === true && (
             <Link
               href="/app/grants"
+              aria-current={pathname.startsWith("/app/grants") ? "page" : undefined}
               className={`${item} mt-0.5 ${
                 pathname.startsWith("/app/grants") ? itemActive : itemRest
               }`}
             >
               <GrantIcon />
               {PRODUCT_LANGUAGE.grantwork.brand}
-              <span className="ml-auto text-[10.5px] font-semibold text-faint">
+              <span className="ml-auto text-xs font-semibold text-faint">
                 {PRODUCT_LANGUAGE.grantwork.function}
               </span>
             </Link>
@@ -212,7 +219,8 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 {PRODUCT_LANGUAGE.groundwork.brand}
                 <Link
                   href="/app/projects"
-                  className={`ml-auto text-[10.5px] font-bold ${
+                  aria-current={pathname === "/app/projects" ? "page" : undefined}
+                  className={`ml-auto text-xs font-bold ${
                     onDevPages ? "text-electric-blue" : "text-faint hover:text-electric-blue"
                   }`}
                 >
@@ -231,6 +239,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 <div key={p.id} className="group relative">
                   <Link
                     href={href({ view: view === "vault" ? "vault" : undefined, project: p.id })}
+                    aria-current={onWorkspace && projectId === p.id ? "true" : undefined}
                     className={`${item} mb-0.5 pr-9 ${
                       onWorkspace && projectId === p.id ? itemActive : itemRest
                     }`}
@@ -258,13 +267,14 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 e.stopPropagation();
                 setAddingProject(true);
               }}
-              className="ml-auto text-[10.5px] font-bold text-electric-blue hover:underline"
+              className="ml-auto text-xs font-bold text-electric-blue hover:underline"
             >
               + New
             </button>
           </div>
           <Link
             href={href({ view: view === "vault" ? "vault" : undefined })}
+            aria-current={onWorkspace && projectId === null ? "true" : undefined}
             className={`${item} mb-0.5 ${onWorkspace && projectId === null ? itemActive : itemRest}`}
           >
             <TargetIcon />
@@ -274,13 +284,14 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             <Link
               key={p.id}
               href={href({ view: view === "vault" ? "vault" : undefined, project: p.id })}
+              aria-current={onWorkspace && projectId === p.id ? "true" : undefined}
               className={`${item} mb-0.5 ${
                 onWorkspace && projectId === p.id ? itemActive : itemRest
               }`}
             >
               <HomeIcon />
               <span className="truncate">{p.name}</span>
-              <span className="ml-auto text-[11.5px] font-semibold text-faint">
+              <span className="ml-auto text-xs font-semibold text-faint">
                 {p.has_plan && p.open_task_count > 0
                   ? `${p.open_task_count} · ${p.document_count}`
                   : p.document_count}
@@ -314,7 +325,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 style={{ width: `${Math.min(100, Math.round((trialDaysLeft / 14) * 100))}%` }}
               />
             </div>
-            <div className="mt-2 flex items-center justify-between text-[11.5px] font-semibold text-faint">
+            <div className="mt-2 flex items-center justify-between text-xs font-semibold text-faint">
               Ends {new Date(tenant.trial_ends_at!).toLocaleDateString("en-GB")}
             </div>
           </div>
@@ -327,7 +338,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             </span>
             <span className="min-w-0">
               <span className="block text-[13px] font-bold capitalize">{tenant.role}</span>
-              <span className="block truncate text-[11px] font-semibold text-faint">
+              <span className="block truncate text-xs font-semibold text-faint">
                 {ws.email}
               </span>
             </span>
@@ -336,6 +347,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             <Link
               href="/app/usage"
               onClick={onClose}
+              aria-current={pathname.startsWith("/app/usage") ? "page" : undefined}
               className={`text-xs font-semibold ${
                 pathname.startsWith("/app/usage")
                   ? "text-electric-blue"
@@ -348,6 +360,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               <Link
                 href="/app/settings"
                 onClick={onClose}
+                aria-current={pathname.startsWith("/app/settings") ? "page" : undefined}
                 className={`text-xs font-semibold ${
                   pathname.startsWith("/app/settings")
                     ? "text-electric-blue"

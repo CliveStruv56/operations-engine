@@ -271,7 +271,7 @@ export default function EmptyHero({
               </span>
               {s.text}
               {s.mode && (
-                <span className="absolute -top-[9px] right-3 rounded-full border border-edge-strong bg-accent-tint px-2 py-[3px] text-[10px] font-extrabold text-electric-blue">
+                <span className="absolute -top-[9px] right-3 rounded-full border border-edge-strong bg-accent-tint px-2 py-[3px] text-xs font-extrabold text-electric-blue">
                   → {s.mode === "report" ? "Report" : s.mode === "slides" ? "Slide deck" : s.mode}
                 </span>
               )}
