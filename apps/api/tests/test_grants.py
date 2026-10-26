@@ -585,6 +585,19 @@ async def test_application_links_to_a_core_project(client):
     assert detail["project_name"] is not None
 
 
+async def test_portfolio_filters_by_project(client):
+    """A project's Grant applications tab lists only that project's bids."""
+    tenant, headers = await make_tenant(client, "byproj")
+    linked = await create_application(client, headers, project_id=str(tenant.project_id))
+    await create_application(client, headers, title="Unlinked bid")
+    rows = (
+        await client.get(
+            f"/api/v1/grants/applications?project_id={tenant.project_id}", headers=headers
+        )
+    ).json()
+    assert [r["id"] for r in rows] == [linked]
+
+
 async def test_cross_tenant_object_references_404(client):
     a, headers = await make_tenant(client, "grca")
     b, _ = await make_tenant(client, "grcb")

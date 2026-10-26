@@ -225,6 +225,13 @@ class AdminModuleOut(BaseModel):
     addons: list[str]
 
 
+class WorkspaceModuleOut(AdminModuleOut):
+    """A module as a workspace sees it: the same catalogue entry, plus whether
+    this workspace has it. Read-only — only the operator switches modules."""
+
+    enabled: bool
+
+
 class MemberOut(BaseModel):
     id: UUID
     user_id: UUID

@@ -20,9 +20,21 @@ from fastapi import APIRouter, Depends, Query
 
 from app.audit import write_audit
 from app.errors import ApiError
-from app.projects.kinds import KINDS_BY_KEY, PROJECT_ADDONS, PROJECT_KINDS, kind_available
+from app.projects.kinds import (
+    KINDS_BY_KEY,
+    PROJECT_ADDONS,
+    PROJECT_KINDS,
+    kind_available,
+    module_catalogue,
+)
 from app.routers.project_plan import insert_plan_tasks, seed_project_brief
-from app.schemas import ProjectCreate, ProjectKindsOut, ProjectOut, ProjectUpdate
+from app.schemas import (
+    ProjectCreate,
+    ProjectKindsOut,
+    ProjectOut,
+    ProjectUpdate,
+    WorkspaceModuleOut,
+)
 from app.sqlutil import patch_sets
 from app.tenant import TenantContext, get_conn, require_role
 
@@ -96,6 +108,17 @@ async def list_project_kinds(
             for a in PROJECT_ADDONS
         ],
     }
+
+
+@router.get("/modules", response_model=list[WorkspaceModuleOut])
+async def list_workspace_modules(
+    ctx: TenantContext = Depends(require_role("member")),
+    conn: asyncpg.Connection = Depends(get_conn),
+):
+    """Which modules this workspace has and what each adds — settings' "Your
+    modules" list, so a member can see why a kind is missing from the picker."""
+    features = await tenant_features(conn, ctx.tenant_id)
+    return [{**m, "enabled": features.get(m["flag"]) is True} for m in module_catalogue()]
 
 
 @router.post("/projects", status_code=201, response_model=ProjectOut)

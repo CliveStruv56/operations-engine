@@ -172,3 +172,16 @@ async def test_admin_sees_what_each_module_adds_and_counts_by_kind(client):
     # Not for workspace users.
     resp = await client.get("/api/v1/admin/modules", headers=auth(t.owner_id, t.id))
     assert resp.status_code == 403
+
+
+async def test_workspace_sees_its_modules_read_only(client):
+    """Settings' "Your modules": every module, whether this workspace has it,
+    and what it adds — so a missing kind in the picker has a visible reason."""
+    t = await seed_tenant(client, f"mods-{uuid4().hex[:6]}")
+    await set_flag(t, "grants", True)
+    modules = (await client.get("/api/v1/modules", headers=auth(t.owner_id, t.id))).json()
+    by_flag = {m["flag"]: m for m in modules}
+    assert by_flag["grants"]["enabled"] is True
+    assert by_flag["grants"]["addons"] == ["Grant applications"]
+    assert by_flag["projects"]["enabled"] is False
+    assert by_flag["projects"]["kinds"] == [{"key": "development", "label": "Development project"}]
