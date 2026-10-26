@@ -1,7 +1,7 @@
 # One Projects list, with project kinds and add-on modules
 
 **Status: decisions settled 26 Oct 2026 (§10). Phase 1 built 26 Oct 2026;
-phase 2 not started.** Revised the same day after the operator's review of the
+phase 2 built the same day.** Revised the same day after the operator's review of the
 first draft. As-built differences from this text are noted inline and in
 ASSUMPTIONS #70.
 
@@ -318,7 +318,7 @@ template is shown as "Scheme type".
    - the operator console's module descriptions and switch-off copy;
    - the export column;
    - tests and #70.
-2. **Phase 2:**
+2. **Phase 2 (built 26 Oct 2026; as-built notes in ASSUMPTIONS #70):**
    - the project page for every kind (§5.1);
    - the add-on tabs: Grant applications and Contacts, on every project;
    - the "Change kind" menu;
