@@ -204,6 +204,25 @@ class AdminTenantRow(BaseModel):
     pending_invites: int
     month_cost_usd: float
     month_requests: int
+    #: Live (unarchived) projects by kind — the module switch-off warning
+    #: quotes the count that will fall back to general projects.
+    project_counts: dict[str, int] = {}
+
+
+class AdminKindRef(BaseModel):
+    key: str
+    label: str
+
+
+class AdminModuleOut(BaseModel):
+    """One `tenants.features` flag and what switching it on adds, so the
+    console can say "adds the Development project kind" rather than a bare
+    checkbox — and stops hand-mirroring the manifest."""
+
+    flag: str
+    label: str
+    kinds: list[AdminKindRef]
+    addons: list[str]
 
 
 class MemberOut(BaseModel):
@@ -387,10 +406,23 @@ class PlanTaskSeed(BaseModel):
 
 
 class ProjectCreate(BaseModel):
+    """`kind` is the project kind, and only kinds created inline are accepted —
+    a module kind (development) is made by its own setup endpoint, which
+    checks the module flag. `with_plan` starts a general project with a plan.
+
+    "blank" and "planned" are the pre-0031 values of this field, kept so
+    older clients keep working: blank = general, planned = general with a plan.
+    """
+
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2_000)
-    kind: Literal["blank", "planned"] = "blank"
+    kind: Literal["general", "blank", "planned"] = "general"
+    with_plan: bool = False
     tasks: list[PlanTaskSeed] = Field(default_factory=list, max_length=20)
+
+    @property
+    def plan_requested(self) -> bool:
+        return self.with_plan or self.kind == "planned"
 
 
 class ProjectUpdate(BaseModel):
@@ -409,8 +441,37 @@ class ProjectOut(BaseModel):
     created_at: datetime
     updated_at: datetime
     document_count: int = 0
+    kind: str = "general"
+    # False when the kind's module is switched off: the project then behaves
+    # as a general project (chat and documents) until the module returns.
+    kind_available: bool = True
+    # Development projects only: the stage the scheme is in.
+    stage_current: str | None = None
+    # Kept while the web moves to `kind`; equal to kind == "development".
     is_development: bool = False
     open_task_count: int = 0
+
+
+class ProjectKindOut(BaseModel):
+    key: str
+    label: str
+    description: str
+    home: Literal["chat", "room"]
+    create: Literal["inline", "setup"]
+    upgrades_to: list[str]
+    available: bool
+
+
+class ProjectAddOnOut(BaseModel):
+    key: str
+    label: str
+    description: str
+    available: bool
+
+
+class ProjectKindsOut(BaseModel):
+    kinds: list[ProjectKindOut]
+    addons: list[ProjectAddOnOut]
 
 
 class PlanTaskIn(BaseModel):

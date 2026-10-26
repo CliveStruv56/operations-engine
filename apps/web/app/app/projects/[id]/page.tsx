@@ -15,7 +15,9 @@ import { StakeholdersTab } from "./tabs/StakeholdersTab";
 import { ContactsTab } from "./tabs/ContactsTab";
 import { input } from "./tabs/ui";
 import { useAsk } from "@/components/ui";
+import { btnSecondary } from "@/components/ui/styles";
 import { useWorkspace } from "../../workspace";
+import { href } from "../../sidebar-chats";
 import { ModuleDisabled, PROJECTS_DISABLED, useModuleEnabled } from "../../module-gate";
 import { ApiError } from "@/lib/api";
 
@@ -136,6 +138,11 @@ export default function ProjectRoom({ params }: { params: Promise<{ id: string }
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* The sidebar opens a development project here, not in its chat —
+              so the scoped chat is one click from the room. */}
+          <Link href={href({ project: id })} className={btnSecondary}>
+            Chat about this project
+          </Link>
           <span className="flex items-center gap-1">
             {STAGES.map((s) => (
               <button

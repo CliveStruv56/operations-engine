@@ -42,6 +42,8 @@ workspace**. `pnpm-workspace.yaml` lives in `apps/web/`.
 
 Key api modules: `app/tenant.py` (RLS context), `app/retrieval.py` (RAG),
 `app/routing.py` + `app/litellm.py` (model routing), `app/schemas.py`,
+`app/projects/kinds.py` (the project-kind and add-on registry — every
+project has one stored `projects.kind`; see `docs/project-types-brief.md`),
 `app/groundwork/schemas.py` and `app/crm/schemas.py` (all Pydantic models —
 add new ones there, not inline), `app/crm/` + `app/routers/crm/` (contact
 book, chat lookup, CSV import), `app/claims/` + `app/routers/claims.py` (the

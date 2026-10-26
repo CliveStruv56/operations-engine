@@ -1,22 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { fmtDate } from "@/lib/groundwork";
 import { listMembers, type MemberRow, type PlanTaskSeed } from "@/lib/project-plan";
+import { GENERAL_KIND, SETUP_PATHS } from "@/lib/projects";
 import { useWorkspace } from "./workspace";
-
-type Kind = "blank" | "planned";
 
 export default function NewProjectForm({
   onCreated,
   onCancel,
+  onLeave,
 }: {
   onCreated: (projectId: string) => void;
   onCancel: () => void;
+  /** Called when the form hands over to another page (a setup kind), so the
+   *  mobile sidebar it sits in closes too. */
+  onLeave?: () => void;
 }) {
   const ws = useWorkspace();
+  const router = useRouter();
   const [name, setName] = useState("");
-  const [kind, setKind] = useState<Kind>("blank");
+  // Only kinds this workspace has, and only ones the form can reach: inline
+  // kinds, or setup kinds whose page the web knows (lib/projects.ts).
+  const kinds = ws.projectKinds.kinds.filter(
+    (k) => k.available && (k.create === "inline" || SETUP_PATHS[k.key])
+  );
+  const [kindKey, setKindKey] = useState(GENERAL_KIND.key);
+  const kind = kinds.find((k) => k.key === kindKey) ?? GENERAL_KIND;
+  const [withPlan, setWithPlan] = useState(false);
+  const planning = kind.create === "inline" && withPlan;
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [taskTitle, setTaskTitle] = useState("");
   const [taskDue, setTaskDue] = useState("");
@@ -25,9 +38,9 @@ export default function NewProjectForm({
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!ws.tenant || kind !== "planned") return;
+    if (!ws.tenant || !planning) return;
     listMembers(ws.tenant.id).then(setMembers).catch(() => setMembers([]));
-  }, [kind, ws.tenant]);
+  }, [planning, ws.tenant]);
 
   function addSeed() {
     if (!taskTitle.trim()) return;
@@ -46,6 +59,13 @@ export default function NewProjectForm({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    if (kind.create === "setup") {
+      // A module kind is set up on its own page, which creates the project.
+      router.push(`${SETUP_PATHS[kind.key]}?name=${encodeURIComponent(name)}`);
+      onCancel();
+      onLeave?.();
+      return;
+    }
     setBusy(true);
     // A task typed but not yet added with the button still counts — Create
     // must not silently discard it.
@@ -59,25 +79,13 @@ export default function NewProjectForm({
         ]
       : [];
     const created = await ws.createProject(name, {
-      kind,
-      tasks: kind === "planned" ? [...seeds, ...pending] : undefined,
+      withPlan: planning,
+      tasks: planning ? [...seeds, ...pending] : undefined,
     });
     setBusy(false);
     if (created) onCreated(created.id);
   }
 
-  const card = (k: Kind, title: string, hint: string) => (
-    <button
-      type="button"
-      onClick={() => setKind(k)}
-      className={`rounded-card border px-3 py-2 text-left ${
-        kind === k ? "border-deep-violet bg-accent-soft" : "border-edge bg-card"
-      }`}
-    >
-      <span className="block text-[13px] font-bold">{title}</span>
-      <span className="block text-xs text-faint">{hint}</span>
-    </button>
-  );
 
   return (
     <form
@@ -93,11 +101,41 @@ export default function NewProjectForm({
         placeholder="Project name"
         className="w-full rounded-card border border-edge bg-surface px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
       />
-      <div className="grid grid-cols-2 gap-1.5">
-        {card("blank", "Documents", "Documents and chat only")}
-        {card("planned", "With a plan", "Tasks, people, dates")}
-      </div>
-      {kind === "planned" && (
+      {kinds.length > 1 && (
+        <div role="radiogroup" aria-label="Kind of project" className="grid gap-1.5">
+          {kinds.map((k) => (
+            <button
+              key={k.key}
+              type="button"
+              role="radio"
+              aria-checked={kind.key === k.key}
+              onClick={() => setKindKey(k.key)}
+              className={`rounded-card border px-3 py-2 text-left ${
+                kind.key === k.key ? "border-deep-violet bg-accent-soft" : "border-edge bg-card"
+              }`}
+            >
+              <span className="block text-[13px] font-bold">{k.label}</span>
+              <span className="block text-xs text-faint">{k.description}</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {kind.create === "inline" ? (
+        <label className="flex items-start gap-2 text-xs text-subtle">
+          <input
+            type="checkbox"
+            checked={withPlan}
+            onChange={(e) => setWithPlan(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-semibold text-ink">Add a plan</span> — tasks, people, dates
+          </span>
+        </label>
+      ) : (
+        <p className="text-xs text-subtle">You&rsquo;ll set it up on the next page.</p>
+      )}
+      {planning && (
         <div className="space-y-1.5">
           {seeds.map((s, i) => (
             <p key={`${s.title}-${i}`} className="truncate text-xs text-subtle">
@@ -147,7 +185,7 @@ export default function NewProjectForm({
           disabled={busy}
           className="flex-1 rounded-btn bg-accent px-3 py-1.5 text-xs font-bold text-accent-ink disabled:opacity-50"
         >
-          {busy ? "Creating…" : "Create"}
+          {busy ? "Creating…" : kind.create === "setup" ? "Continue" : "Create"}
         </button>
         <button
           type="button"

@@ -222,6 +222,14 @@ function AdminConsole() {
                         ))}
                         <span className="text-xs text-ink-faint underline">Edit</span>
                       </button>
+                      {t.project_counts && Object.keys(t.project_counts).length > 0 && (
+                        <p className="mt-1 text-xs text-ink-faint">
+                          {Object.entries(t.project_counts)
+                            .map(([kind, n]) => `${n} ${kind}`)
+                            .join(" · ")}{" "}
+                          projects
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-3 text-xs">

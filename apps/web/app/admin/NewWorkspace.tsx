@@ -1,8 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
-import { AdminInvite, AdminTenantCreated, FEATURE_FLAGS, admin, inviteUrl } from "@/lib/admin";
+import {
+  AdminInvite,
+  AdminModule,
+  AdminTenantCreated,
+  FALLBACK_MODULES,
+  admin,
+  inviteUrl,
+  listModules,
+  moduleAdds,
+} from "@/lib/admin";
 import { Panel } from "@/components/Panel";
 
 import { input, label } from "@/components/ui/styles";
@@ -22,6 +31,13 @@ export function NewWorkspace({
   const [accent, setAccent] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [modules, setModules] = useState<AdminModule[]>(FALLBACK_MODULES);
+
+  useEffect(() => {
+    listModules()
+      .then((m) => setModules(m))
+      .catch(() => setModules(FALLBACK_MODULES));
+  }, []);
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
@@ -101,16 +117,23 @@ export function NewWorkspace({
         <div>
           <span className={label}>Modules</span>
           <div className="flex flex-col gap-1.5">
-            {FEATURE_FLAGS.map((f) => (
-              <label key={f.key} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={flags[f.key] === true}
-                  onChange={(e) => setFlags({ ...flags, [f.key]: e.target.checked })}
-                />
-                {f.label}
-              </label>
-            ))}
+            {modules.map((m) => {
+              const adds = moduleAdds(m);
+              return (
+                <label key={m.flag} className="flex items-start gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={flags[m.flag] === true}
+                    onChange={(e) => setFlags({ ...flags, [m.flag]: e.target.checked })}
+                  />
+                  <span>
+                    {m.label}
+                    {adds && <span className="block text-xs text-ink-muted">{adds}</span>}
+                  </span>
+                </label>
+              );
+            })}
           </div>
         </div>
         <div>

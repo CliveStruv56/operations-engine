@@ -526,3 +526,22 @@ async def test_membership_visibility_requires_user_context(two_tenants):
             assert {r["tenant_id"] for r in rows} == {a.id}
     finally:
         await conn.close()
+
+
+async def test_project_kind_filter_stays_within_the_tenant(client, two_tenants):
+    """`GET /projects?kind=` (0031) filters the RLS-scoped list; it must never
+    become a way to enumerate another tenant's projects, and the kind trigger
+    must only ever touch the inserting tenant's row."""
+    a, b = two_tenants
+    async with db.tenant_tx(a.owner_id, a.id) as conn:
+        await conn.execute(
+            "insert into proj_projects (id, tenant_id) values ($1, $2)", a.project_id, a.id
+        )
+    for kind in ("general", "development"):
+        resp = await client.get(f"/api/v1/projects?kind={kind}", headers=auth(b.owner_id, b.id))
+        assert resp.status_code == 200
+        assert str(a.project_id) not in {p["id"] for p in resp.json()}
+    async with db.tenant_tx(b.owner_id, b.id) as conn:
+        assert await conn.fetchval("select kind from projects where id = $1", b.project_id) == (
+            "general"
+        )

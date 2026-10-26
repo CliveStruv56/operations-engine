@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   ChartIcon,
   ChatIcon,
@@ -10,26 +9,21 @@ import {
   GearIcon,
   GlobeIcon,
   GrantIcon,
-  HomeIcon,
   PeopleIcon,
-  PulseIcon,
   SealIcon,
   SearchIcon,
-  TargetIcon,
   VaultIcon,
 } from "@/components/icons";
 import { claimsWaiting, claimsWaitingLabel } from "@/lib/claims";
 import { PRODUCT_LANGUAGE } from "@/lib/product-language";
-import SidebarChats, { href, item, itemActive, itemRest, navLabel } from "./sidebar-chats";
-import NewProjectForm from "./new-project-form";
+import SidebarChats, { href, item, itemActive, itemRest } from "./sidebar-chats";
+import SidebarProjects from "./sidebar-projects";
 import { useWorkspace } from "./workspace";
 
 export default function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const ws = useWorkspace();
-  const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  const [addingProject, setAddingProject] = useState(false);
 
   const tenant = ws.tenant;
   if (!tenant) return null;
@@ -38,7 +32,6 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const projectId = sp.get("project");
   const convId = sp.get("c");
   const onWorkspace = pathname === "/app";
-  const onDevPages = pathname.startsWith("/app/projects");
 
   // What the register is waiting on. A fact only gets updated if somebody is
   // told it has gone off before they need it, and this is the one place that is
@@ -47,11 +40,6 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const claimsCount = claims ? claimsWaiting(claims) : 0;
   const claimsNote = claims ? claimsWaitingLabel(claims) : null;
 
-  const devProjects = tenant.features?.projects === true
-    ? ws.projects.filter((p) => !p.archived && p.is_development)
-    : [];
-  const coreProjects = ws.projects.filter((p) => !p.archived && !p.is_development);
-
   // Time-dependent by design: trial countdown and chat date groups may be a
   // render stale at worst — they refresh on any navigation.
   // eslint-disable-next-line react-hooks/purity
@@ -59,12 +47,6 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
   const trialDaysLeft = tenant.trial_ends_at
     ? Math.max(0, Math.ceil((new Date(tenant.trial_ends_at).getTime() - now) / 86_400_000))
     : null;
-
-  async function onProjectCreated(id: string) {
-    setAddingProject(false);
-    router.push(href({ view: view === "vault" ? "vault" : undefined, project: id }));
-    onClose();
-  }
 
   return (
     <>
@@ -212,98 +194,13 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             </Link>
           )}
 
-          {tenant.features?.projects === true && (
-            <>
-              <div className={navLabel}>
-                {PRODUCT_LANGUAGE.groundwork.function}
-                <Link
-                  href="/app/projects"
-                  aria-current={pathname === "/app/projects" ? "page" : undefined}
-                  aria-label={`See all ${PRODUCT_LANGUAGE.groundwork.function.toLowerCase()}`}
-                  className={`ml-auto text-xs font-bold normal-case tracking-normal ${
-                    onDevPages ? "text-electric-blue" : "text-subtle hover:text-electric-blue"
-                  }`}
-                >
-                  See all
-                </Link>
-              </div>
-              {devProjects.length === 0 && (
-                <Link
-                  href="/app/projects"
-                  className="block px-3 py-1 text-xs font-medium text-faint hover:text-ink"
-                >
-                  Stage-gated schemes, gates &amp; funding →
-                </Link>
-              )}
-              {devProjects.map((p) => (
-                <div key={p.id} className="group relative">
-                  <Link
-                    href={href({ view: view === "vault" ? "vault" : undefined, project: p.id })}
-                    aria-current={onWorkspace && projectId === p.id ? "true" : undefined}
-                    className={`${item} mb-0.5 pr-9 ${
-                      onWorkspace && projectId === p.id ? itemActive : itemRest
-                    }`}
-                  >
-                    <PulseIcon />
-                    <span className="block truncate">{p.name}</span>
-                  </Link>
-                  <Link
-                    href={`/app/projects/${p.id}`}
-                    title="Open project room"
-                    aria-label={`Open ${p.name} project room`}
-                    className="absolute top-1/2 right-2 grid h-[22px] w-[22px] -translate-y-1/2 place-items-center rounded-card text-faint hover:bg-card hover:text-electric-blue"
-                  >
-                    ↗
-                  </Link>
-                </div>
-              ))}
-            </>
-          )}
-
-          <div className={navLabel}>
-            Projects
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setAddingProject(true);
-              }}
-              className="ml-auto text-xs font-bold text-electric-blue hover:underline"
-            >
-              + New
-            </button>
-          </div>
-          <Link
-            href={href({ view: view === "vault" ? "vault" : undefined })}
-            aria-current={onWorkspace && projectId === null ? "true" : undefined}
-            className={`${item} mb-0.5 ${onWorkspace && projectId === null ? itemActive : itemRest}`}
-          >
-            <TargetIcon />
-            {PRODUCT_LANGUAGE.projects.all}
-          </Link>
-          {coreProjects.map((p) => (
-            <Link
-              key={p.id}
-              href={href({ view: view === "vault" ? "vault" : undefined, project: p.id })}
-              aria-current={onWorkspace && projectId === p.id ? "true" : undefined}
-              className={`${item} mb-0.5 ${
-                onWorkspace && projectId === p.id ? itemActive : itemRest
-              }`}
-            >
-              <HomeIcon />
-              <span className="truncate">{p.name}</span>
-              <span className="ml-auto text-xs font-semibold text-faint">
-                {p.has_plan && p.open_task_count > 0
-                  ? `${p.open_task_count} · ${p.document_count}`
-                  : p.document_count}
-              </span>
-            </Link>
-          ))}
-          {addingProject && (
-            <NewProjectForm
-              onCreated={onProjectCreated}
-              onCancel={() => setAddingProject(false)}
-            />
-          )}
+          <SidebarProjects
+            view={view}
+            projectId={projectId}
+            pathname={pathname}
+            onWorkspace={onWorkspace}
+            onClose={onClose}
+          />
 
           <SidebarChats
             projectId={projectId}

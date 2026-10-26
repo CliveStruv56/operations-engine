@@ -20,6 +20,8 @@ export type AdminTenantRow = {
   pending_invites: number;
   month_cost_usd: number;
   month_requests: number;
+  /** Live projects by kind (`general`, `development`, …). */
+  project_counts?: Record<string, number>;
 };
 
 export type AdminTenantPatch = {
@@ -172,4 +174,33 @@ export function blockedReason(c: PromoteCandidate): string | null {
       : `${c.limits_missing} questions still have no limit`;
   if (!c.source_url) return "it does not say where its questions came from";
   return null;
+}
+
+/** One module and what it adds — kinds of project, or tabs on every project.
+ *  Served by the API from its manifest and project-kind registry. */
+export type AdminModule = {
+  flag: string;
+  label: string;
+  kinds: { key: string; label: string }[];
+  addons: string[];
+};
+
+export const listModules = () => admin<AdminModule[]>("/admin/modules");
+
+/** The hand-mirrored list above, in the API's shape: used until
+ *  /admin/modules answers, and if it fails, so the console still works. */
+export const FALLBACK_MODULES: AdminModule[] = FEATURE_FLAGS.map((f) => ({
+  flag: f.key,
+  label: f.label,
+  kinds: [],
+  addons: [],
+}));
+
+/** One line for the operator: what switching this module on adds. */
+export function moduleAdds(m: AdminModule): string | null {
+  const parts = [
+    ...m.kinds.map((k) => `the ${k.label} kind`),
+    ...m.addons.map((a) => `a ${a} tab on every project`),
+  ];
+  return parts.length ? `Adds ${parts.join(" and ")}` : null;
 }

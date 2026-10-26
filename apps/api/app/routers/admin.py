@@ -26,6 +26,8 @@ from app.config import get_settings
 from app.db import db
 from app.errors import ApiError
 from app.litellm import litellm_client
+from app.modules import MODULES
+from app.projects.kinds import PROJECT_ADDONS, PROJECT_KINDS
 from app.refdata.promote import list_candidates, promote, withdraw
 from app.refdata.questions import get_platform_set, list_platform_sets
 from app.refdata.schemas import PromoteCandidate, PromoteIn, QuestionSetOut
@@ -35,6 +37,7 @@ from app.schemas import (
     AdminFeaturesOut,
     AdminInviteOut,
     AdminJoinOut,
+    AdminModuleOut,
     AdminOwnerInviteIn,
     AdminPurgeIn,
     AdminPurgeOut,
@@ -208,7 +211,25 @@ def _tenant_out(row) -> dict:
     out = dict(row)
     out["features"] = json.loads(out["features"])
     out["brand"] = json.loads(out["brand"])
+    if "project_counts" in out:
+        out["project_counts"] = json.loads(out["project_counts"])
     return out
+
+
+@router.get("/admin/modules", response_model=list[AdminModuleOut])
+async def admin_list_modules(user: AuthUser = Depends(require_platform_admin)):
+    """The module manifest with the project kinds and add-ons each supplies."""
+    return [
+        {
+            "flag": m.flag,
+            "label": m.label,
+            "kinds": [
+                {"key": k.key, "label": k.label} for k in PROJECT_KINDS if k.module == m.flag
+            ],
+            "addons": [a.label for a in PROJECT_ADDONS if a.module == m.flag],
+        }
+        for m in MODULES
+    ]
 
 
 @router.patch("/admin/tenants/{tenant_id}", response_model=AdminTenantOut)
@@ -491,7 +512,11 @@ async def admin_list_tenants(user: AuthUser = Depends(require_platform_admin)):
                    coalesce((select count(*) from usage_events u
                      where u.tenant_id = t.id
                        and u.created_at >= date_trunc('month', now())), 0)::int
-                       as month_requests
+                       as month_requests,
+                   coalesce((select jsonb_object_agg(k.kind, k.n) from (
+                       select p.kind, count(*)::int as n from projects p
+                       where p.tenant_id = t.id and not p.archived group by p.kind
+                     ) k), '{}'::jsonb) as project_counts
             from tenants t order by t.created_at desc
             """
         )
