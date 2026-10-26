@@ -1,4 +1,5 @@
 import { WorkspaceContext, type WorkspaceState } from "@/app/app/workspace";
+import { CORE_KINDS } from "@/lib/projects";
 
 /** A loaded, unremarkable workspace. Tests override only what they assert on,
  *  so adding a field to WorkspaceState does not touch every test. */
@@ -9,6 +10,7 @@ const BASE: WorkspaceState = {
   suspended: false,
   memberships: null,
   projects: [],
+  projectKinds: CORE_KINDS,
   conversations: [],
   conversationsLoaded: true,
   claimSummary: null,

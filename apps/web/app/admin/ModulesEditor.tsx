@@ -1,8 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError } from "@/lib/api";
-import { AdminTenantRow, FEATURE_FLAGS, updateFeatures } from "@/lib/admin";
+import {
+  AdminModule,
+  AdminTenantRow,
+  FALLBACK_MODULES,
+  FEATURE_FLAGS,
+  listModules,
+  moduleAdds,
+  updateFeatures,
+} from "@/lib/admin";
 import { Panel } from "@/components/Panel";
 
 /** Turn modules on or off for a live workspace. Only the flags that actually
@@ -22,6 +30,13 @@ export function ModulesEditor({
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [modules, setModules] = useState<AdminModule[]>(FALLBACK_MODULES);
+
+  useEffect(() => {
+    listModules()
+      .then((m) => setModules(m))
+      .catch(() => setModules(FALLBACK_MODULES));
+  }, []);
 
   const changed = FEATURE_FLAGS.filter((f) => flags[f.key] !== (tenant.features[f.key] === true));
 
@@ -41,7 +56,17 @@ export function ModulesEditor({
     }
   }
 
-  const withdrawn = changed.filter((f) => !flags[f.key]);
+  const withdrawn = modules.filter((m) =>
+    changed.some((f) => f.key === m.flag && !flags[f.key]),
+  );
+  // What happens to the workspace's projects, said in numbers: a module that
+  // supplies a kind leaves its projects in the list as general projects.
+  const fallbackNotes = withdrawn.flatMap((m) =>
+    m.kinds.map((k) => {
+      const n = tenant.project_counts?.[k.key] ?? 0;
+      return `${n} ${k.label.toLowerCase()}${n === 1 ? "" : "s"} will stay in the Projects list as general projects, with ${m.label} parts hidden`;
+    }),
+  );
 
   return (
     <Panel title={`Modules — ${tenant.name}`} onClose={onClose}>
@@ -50,22 +75,30 @@ export function ModulesEditor({
           <p className="rounded-card bg-danger-soft px-3 py-2 text-sm text-danger">{error}</p>
         )}
         <div className="flex flex-col gap-1.5">
-          {FEATURE_FLAGS.map((f) => (
-            <label key={f.key} className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={flags[f.key]}
-                onChange={(e) => setFlags({ ...flags, [f.key]: e.target.checked })}
-              />
-              {f.label}
-            </label>
-          ))}
+          {modules.map((m) => {
+            const adds = moduleAdds(m);
+            return (
+              <label key={m.flag} className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={flags[m.flag] ?? false}
+                  onChange={(e) => setFlags({ ...flags, [m.flag]: e.target.checked })}
+                />
+                <span>
+                  {m.label}
+                  {adds && <span className="block text-xs text-ink-muted">{adds}</span>}
+                </span>
+              </label>
+            );
+          })}
         </div>
         {withdrawn.length > 0 && (
           <p className="rounded-card bg-card px-3 py-2 text-sm text-ink-muted">
-            Switching off {withdrawn.map((f) => f.label).join(" and ")} hides it from the
-            workspace immediately. Nothing is deleted — their data returns if you switch it
-            back on.
+            Switching off {withdrawn.map((m) => m.label).join(" and ")} takes effect
+            immediately.{" "}
+            {fallbackNotes.length > 0 && <>{fallbackNotes.join("; ")}. </>}
+            Nothing is deleted — everything returns if you switch it back on.
           </p>
         )}
         <div className="mt-1 flex items-center gap-3">

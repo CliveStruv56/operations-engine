@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { api, ApiError } from "@/lib/api";
 import type { ClaimSummary } from "@/lib/claims";
+import { CORE_KINDS, parseProjectKinds, type ProjectKinds } from "@/lib/projects";
 
 export type Tenant = {
   id: string;
@@ -33,6 +34,14 @@ export type Project = {
   description: string | null;
   archived: boolean;
   document_count: number;
+  /** The stored project kind (lib/projects.ts). */
+  kind: string;
+  /** False while the kind's module is switched off — the project then behaves
+   *  as a general project. */
+  kind_available: boolean;
+  /** Development projects only. */
+  stage_current: string | null;
+  /** Kept by the API while screens move to `kind`; equals kind === "development". */
   is_development: boolean;
   has_plan: boolean;
   open_task_count: number;
@@ -58,6 +67,8 @@ export type WorkspaceState = {
   suspended: boolean;
   memberships: MembershipRef[] | null;
   projects: Project[];
+  /** The project kinds and add-ons this workspace can use. */
+  projectKinds: ProjectKinds;
   conversations: Conversation[];
   /** False until a /conversations fetch has succeeded — an empty list alone
    *  cannot tell "no chats" apart from "the fetch failed". */
@@ -72,7 +83,7 @@ export type WorkspaceState = {
   createProject: (
     name: string,
     opts?: {
-      kind?: "blank" | "planned";
+      withPlan?: boolean;
       tasks?: { title: string; due_date?: string | null; assignee_membership_id?: string | null }[];
     }
   ) => Promise<Project | null>;
@@ -101,6 +112,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
   const [suspended, setSuspended] = useState(false);
   const [memberships, setMemberships] = useState<MembershipRef[] | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [projectKinds, setProjectKinds] = useState<ProjectKinds>(CORE_KINDS);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [conversationsLoaded, setConversationsLoaded] = useState(false);
   const [claimSummary, setClaimSummary] = useState<ClaimSummary | null>(null);
@@ -114,6 +126,17 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       console.error("Failed to load projects", err);
       setError("Couldn't load your projects — refresh to try again.");
+    }
+  }, []);
+
+  // Quietly falls back to the core kind alone: without the list, the picker
+  // offers general projects and every project still opens — nothing is lost.
+  const loadProjectKinds = useCallback(async (tenantId: string) => {
+    try {
+      setProjectKinds(parseProjectKinds(await api<unknown>("/project-kinds", {}, tenantId)));
+    } catch (err) {
+      console.error("Failed to load project kinds", err);
+      setProjectKinds(CORE_KINDS);
     }
   }, []);
 
@@ -155,6 +178,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("tenantId", me.id);
         await Promise.all([
           loadProjects(me.id),
+          loadProjectKinds(me.id),
           loadConversations(me.id),
           loadClaimSummary(me.id),
         ]);
@@ -175,7 +199,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     },
-    [loadProjects, loadConversations, loadClaimSummary]
+    [loadProjects, loadProjectKinds, loadConversations, loadClaimSummary]
   );
 
   useEffect(() => {
@@ -190,7 +214,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
     async (
       name: string,
       opts?: {
-        kind?: "blank" | "planned";
+        withPlan?: boolean;
         tasks?: { title: string; due_date?: string | null; assignee_membership_id?: string | null }[];
       }
     ): Promise<Project | null> => {
@@ -202,7 +226,8 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
             method: "POST",
             body: JSON.stringify({
               name,
-              kind: opts?.kind ?? "blank",
+              kind: "general",
+              with_plan: opts?.withPlan ?? false,
               tasks: opts?.tasks ?? [],
             }),
           },
@@ -269,6 +294,7 @@ export function WorkspaceProvider({ children }: { children: React.ReactNode }) {
         suspended,
         memberships,
         projects,
+        projectKinds,
         conversations,
         conversationsLoaded,
         claimSummary,

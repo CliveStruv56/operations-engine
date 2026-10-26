@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { gw } from "@/lib/groundwork";
 import { Spinner } from "@/components/activity";
 import { useWorkspace } from "../../workspace";
@@ -30,11 +30,13 @@ const TOGGLES = [
 export default function NewProjectPage() {
   const router = useRouter();
   const ws = useWorkspace();
+  // The sidebar's new-project picker hands over the name already typed.
+  const initialName = useSearchParams().get("name") ?? "";
   const flagOn = useModuleEnabled("projects");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
-    name: "",
+    name: initialName,
     client_org: "",
     delivery_route: "",
     homes_planned: "",
