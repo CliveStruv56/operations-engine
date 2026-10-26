@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Spinner } from "@/components/activity";
 import { CatalogueRow, Funder, catalogueWarning, gr } from "@/lib/grants";
 import { GRANTS_DISABLED, ModuleDisabled, useModuleEnabled } from "../../module-gate";
@@ -13,6 +13,8 @@ export default function NewApplicationPage() {
   const router = useRouter();
   const ws = useWorkspace();
   const flagOn = useModuleEnabled("grants");
+  // A project's Grant applications tab links here with the project chosen.
+  const projectParam = useSearchParams().get("project");
   const [funders, setFunders] = useState<Funder[]>([]);
   const [catalogue, setCatalogue] = useState<CatalogueRow[]>([]);
   const [busy, setBusy] = useState(false);
@@ -21,7 +23,7 @@ export default function NewApplicationPage() {
     title: "",
     funder_id: "",
     programme_key: "",
-    project_id: "",
+    project_id: ws.projects.some((p) => p.id === projectParam) ? (projectParam ?? "") : "",
     amount_requested: "",
     deadline: "",
     restricted: true,

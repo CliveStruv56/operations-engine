@@ -45,6 +45,7 @@ export type Project = {
   is_development: boolean;
   has_plan: boolean;
   open_task_count: number;
+  updated_at: string;
 };
 
 export type Conversation = {
