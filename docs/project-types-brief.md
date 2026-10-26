@@ -1,8 +1,7 @@
 # One Projects list, with project kinds and add-on modules
 
-**Status: proposed, 26 Oct 2026. Revised the same day after the operator's
-review. Not approved and not built.** The decisions needed before work starts
-are listed in §10.
+**Status: decisions settled 26 Oct 2026 (§10). Approved for build; not built
+yet.** Revised the same day after the operator's review of the first draft.
 
 This follows on from the UI review merged in #11. That review found two project
 sections side by side in the sidebar. The operator asked for one list, with a
@@ -27,14 +26,16 @@ The kinds at launch:
 
 | Kind | Supplied by | Home when clicked | Adds |
 |---|---|---|---|
-| `standard` | Core (always available) | The project's scoped chat, as today | Nothing beyond the core capability |
+| `general` (label: *General project*) | Core (always available) | The project's scoped chat, as today | Nothing beyond the core capability |
 | `development` | The `projects` module (Groundwork) | The project room, `/app/projects/{id}` | Stages and gates, tasks, funding, budget, risks, conditions, stakeholders, and drafts |
 
 **"With a plan" stops being a type.** A plan is part of the core capability, so
-any standard project can add one, as it can today through
+any general project can add one, as it can today through
 `POST /projects/{id}/plan`. A development project has its own stage-based task
-list instead, and the two stay mutually exclusive (#51). The open question about
-grant funding is in §3.
+list instead, and the two stay mutually exclusive (#51).
+
+The add-ons at launch are **Contacts** and **Grant applications**. Both appear on
+every project, whatever its kind, when their module is on (§3, §5.1).
 
 ## 2. The problem being solved
 
@@ -53,40 +54,30 @@ grant funding is in §3.
   `chat.tsx`, `vault.tsx`, `routers/projects.py`, `project_plan.py` and
   `groundwork.py`. A new kind today would mean editing all of them.
 
-## 3. The grant-funding decision
+## 3. Grant funding is an add-on (decided)
 
 Today a grant application is a record of its own (`grant_applications`). It can
 optionally link to a project through `grant_applications.project_id`. If that
-project is deleted, the link is cleared and the application stays. ASSUMPTIONS #23 deliberately kept
-applications out of the projects list, because there are too many of them for
-the sidebar. Grant funding can join the project model in one of two ways.
+project is deleted, the link is cleared and the application stays. ASSUMPTIONS
+#23 deliberately kept applications out of the projects list, because there are
+too many of them for the sidebar. That stays true.
 
-**Option A: an add-on (recommended).** Grant funding becomes something any
-project can use, whatever its kind.
+**Decision: grant funding is an add-on, not a kind.** When the `grants` module is
+on, every project gets a **Grant applications** tab.
 
-- Every project gets a "Grant applications" tab listing the applications linked
-  to it, with a "New application for this project" button.
-- Applications without a project still work, as now.
-- This fits the most common real case. A development scheme is exactly what
-  people apply for grants for, and under Option B it could not also be a
-  grant-funding project.
-- The project picker can still offer a "Funding bid" starting point: a
-  standard project with the grant tab shown up front.
-- No change to #23 is needed.
+- The tab lists the applications linked to the project.
+- It has a "New application for this project" button, which pre-fills
+  `project_id`.
+- Applications without a project still work, and still appear in Grant
+  funding, as now.
+- A development scheme can have grant applications too. This is the most common
+  real case, and it is the main reason an add-on was chosen over a kind.
+- #23 is unchanged.
 
-**Option B: a kind.** A `grant` kind, supplied by the `grants` module.
-
-- The project's home becomes its funding room: its applications, funders and
-  reporting returns.
-- This suits an organisation whose project *is* the fundraising, such as a
-  programme raising money.
-- Kinds are exclusive, so a development scheme could never be a grant project
-  as well.
-- #23 would need revisiting, so that applications belong to a grant project
-  rather than standing alone.
-
-The registry in §4 supports both options. The choice only changes which list
-`grants` is registered in.
+**Considered and rejected: a `grant` kind.** Its home would have been a funding
+room. It was rejected because kinds are exclusive, so a development scheme
+could never also be a grant project, and because it would have meant reopening
+#23.
 
 ## 4. Design: a project-kind registry and a stored kind
 
@@ -113,9 +104,11 @@ class ProjectAddOn:
     module: str              # feature flag
 ```
 
-- **Kinds at launch:** `standard` (`upgrades_to=("development",)`) and
+- **Kinds at launch:** `general` (`upgrades_to=("development",)`) and
   `development` (`upgrades_to=()`).
-- **Add-ons at launch:** `contacts`. Under Option A, `grants` is added too.
+- **Add-ons at launch:** `contacts` (tab "Contacts", module `contacts`) and
+  `grants` (tab "Grant applications", module `grants`). Both apply to every
+  kind.
 - **Adding a kind later** takes:
   - one registry entry;
   - its module (extension tables, setup endpoint, room);
@@ -133,8 +126,8 @@ class ProjectAddOn:
 Migration `00xx_project_kind`:
 
 ```sql
-alter table projects add column kind text not null default 'standard'
-  check (kind in ('standard', 'development'));
+alter table projects add column kind text not null default 'general'
+  check (kind in ('general', 'development'));
 update projects p set kind = 'development'
   where exists (select 1 from proj_projects pp where pp.id = p.id);
 create index projects_tenant_kind on projects (tenant_id, kind);
@@ -168,12 +161,12 @@ create index projects_tenant_kind on projects (tenant_id, kind);
 
   The web picker and sidebar are built from this list. The web keeps only a
   small map from kind key to icon. A kind with no icon falls back to the
-  standard look, so a new kind degrades gracefully.
+  general look, so a new kind degrades gracefully.
 - `POST /projects` accepts `kind`, but only kinds whose `create` is `inline`. A
   module kind still goes through its own setup endpoint, which checks the flag.
 - Today's `POST /projects` field `kind: "blank" | "planned"` is renamed to
   `with_plan: bool`. That frees the name `kind` for the project kind, and a
-  standard project can still start with a plan.
+  general project can still start with a plan.
 
 ## 5. What users see
 
@@ -185,29 +178,52 @@ create index projects_tenant_kind on projects (tenant_id, kind);
 - Each row shows:
   - the kind's icon;
   - the name;
-  - a short status: open plan tasks or documents for standard projects, the
+  - a short status: open plan tasks or documents for general projects, the
     current stage for development projects.
 - The kind's label is in the row's accessible name and its tooltip, so the
   icon is never the only signal.
-- Clicking a row goes to the kind's home: chat for `standard`, the project room
+- Clicking a row goes to the kind's home: chat for `general`, the project room
   for `development`. The ↗ glyph is removed.
 - The room gets a "Chat about this project" button, so the chat is still one
   click away.
+
+### 5.1 One project page for every kind
+
+Add-on tabs need somewhere to live, and a general project's home is its chat.
+So `/app/projects/{id}`, today the development room, becomes **the project page
+for every kind**:
+
+- **The page itself is core.** Only the development tabs are gated by the
+  `projects` module; today the whole page is.
+- **Tabs, in order:**
+  1. *Overview*: the brief and plan for general projects, the current room
+     overview for development projects.
+  2. *Documents*.
+  3. The kind's own tabs: stages and gates, tasks, funding, budget, risks,
+     conditions and stakeholders for development projects.
+  4. The add-on tabs, *Contacts* and *Grant applications*, each shown only when
+     its module is on.
+- **Reaching it.**
+  - Development projects open straight onto it.
+  - General projects open their chat, as decided. The chat's project banner
+    gains a "Project page" link.
+- **The development module switched off.** A development project's page shows
+  only the core and add-on tabs.
 
 **Creating a project.** One "+ New project" button.
 
 1. **Step 1:** choose a kind. The cards come from `GET /project-kinds` and show
    only the kinds that are available.
 2. **Step 2:**
-   - a standard project uses the inline form, with "Add a plan" as an option;
+   - a general project uses the inline form, with "Add a plan" as an option;
    - a module kind goes to its setup page, with the name carried across.
 
 **Changing kind.** Phase 2 adds a "Change kind" menu item. It offers only the
-kind's `upgrades_to` list, which today is standard → development.
+kind's `upgrades_to` list, which today is general → development.
 
 **When a module is switched off.**
 
-- Its projects stay in the list as standard rows that open the chat. Their
+- Its projects stay in the list as general rows that open the chat. Their
   documents and chats are untouched.
 - Their kind-specific room and tabs are hidden, and the API returns 404, as
   now.
@@ -265,7 +281,7 @@ The roadmap (§2.4) plans more templates for built-environment firms, such as
 architecture, planning and ecology, as new `proj_ref_templates` rows *within*
 the development kind, not as new kinds. So the levels are:
 
-- **kind:** `standard` or `development`. This decides what the project can do.
+- **kind:** `general` or `development`. This decides what the project can do.
 - **template:** within `development`, for example *CLH new build*, and later
   *Architecture scheme*. This decides which stages, tasks and checklists are
   seeded.
@@ -280,10 +296,10 @@ template is shown as "Scheme type".
 | Migration | `00xx_project_kind`: the column, the CHECK constraint, the backfill and the index (§4.2). |
 | API | `app/projects/kinds.py` registry; `kind`, `kind_available` and `stage_current` on `ProjectOut`; `?kind=` filter; `GET /project-kinds`; `setup` sets `kind`; `GET /admin/modules`; project counts by kind in the admin views. |
 | API tests | Backfill and no-drift invariant; isolation assertion for `?kind=`; flag-off `kind_available`; the registry's startup check. |
-| Web | `Project.kind`; a single sidebar section built from the kinds list; the kind step in the new-project flow; development rows open the room; "Chat about this project" in the room; the operator console's module descriptions and switch-off copy; a "Your modules" list in settings. |
+| Web | `Project.kind`; a single sidebar section built from the kinds list; the kind step in the new-project flow; development rows open the room; "Chat about this project" in the room; the operator console's module descriptions and switch-off copy; a "Your modules" list in settings. Phase 2: `/app/projects/{id}` becomes the core project page with add-on tabs (§5.1), plus a "Project page" link in the chat banner. |
 | Web tests | Sidebar: one section, a kind label per row, the click target per kind, flag-off rows still shown. Picker: only available kinds appear. |
 | Export | `kind` column in `projects.csv`. |
-| Docs | ASSUMPTIONS #70: kinds, add-ons, the stored `kind`, and the `projects` flag key. It supersedes the presentation half of #15. Under Option B it also amends #23. Roadmap: a "module kit" line saying that a module may register kinds or add-ons. |
+| Docs | ASSUMPTIONS #70: kinds, add-ons, the stored `kind`, and the `projects` flag key. It supersedes the presentation half of #15. #23 is unchanged. Roadmap: a "module kit" line saying that a module may register kinds or add-ons. |
 
 ## 9. Phases
 
@@ -298,21 +314,22 @@ template is shown as "Scheme type".
    - the export column;
    - tests and #70.
 2. **Phase 2:**
-   - grant funding, as an add-on tab (Option A) or as a kind (Option B);
-   - the Contacts tab on standard projects too;
+   - the project page for every kind (§5.1);
+   - the add-on tabs: Grant applications and Contacts, on every project;
    - the "Change kind" menu;
    - a full "All projects" page filtered by kind;
    - a cap on sidebar length;
    - the "Your modules" list in settings.
 
-## 10. Decisions needed
+## 10. Decisions (settled by the operator, 26 Oct 2026)
 
-1. **Grant funding: an add-on (Option A, recommended) or a kind (Option B)?** See §3.
-2. **Should a development project open its project room or its chat?** The room
-   is recommended.
-3. **Kind names:** *Project* (standard) and *Development project*. The standard
-   kind's label could instead be "Standard project" or "General project".
-4. **Sidebar order:** most recently updated first (proposed), alphabetical, or
-   grouped by kind?
-5. **Should the Contacts tab appear on standard projects** too, making it a true
-   add-on, or stay in development rooms only?
+1. **The kind is stored** on each project (`projects.kind`), behind the code
+   registry (§4).
+2. **Grant funding is an add-on**, not a kind (§3).
+3. **A development project opens its project room.** A general project opens its
+   chat.
+4. **Kind names:** *General project* (key `general`) and *Development project*
+   (key `development`).
+5. **Sidebar order:** most recently updated first.
+6. **The Contacts tab appears on every project,** general projects included. It
+   is a true add-on (§5.1).
