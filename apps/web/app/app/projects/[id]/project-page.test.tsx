@@ -68,7 +68,11 @@ function mount(p: Project, projectKinds = kinds(true)) {
 }
 
 describe("the project page", () => {
-  beforeEach(() => gw.mockReset());
+  beforeEach(() => {
+    // A block body: an arrow that returns the mock would hand vitest a
+    // teardown to call, and the room test makes gw() hang forever.
+    gw.mockReset();
+  });
 
   it("gives a general project core tabs and the add-ons that are on", async () => {
     mount(project({}));
