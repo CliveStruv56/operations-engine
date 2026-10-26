@@ -157,7 +157,9 @@ export default function SidebarChats({
       </div>
       {chatGroups.length === 0 && (
         <p className="px-3 py-1 text-xs font-medium text-faint">
-          No chats in {projectName ?? "any project"} yet
+          {/* With teammates' chats listed just above, a bare "No chats"
+              would contradict them. */}
+          No chats {sharedChats.length > 0 && "of your own "}in {projectName ?? "any project"} yet
         </p>
       )}
       {chatGroups.map((g) => (

@@ -59,4 +59,11 @@ describe("the sidebar chat list's scope", () => {
     mount("p1", []);
     expect(screen.getByText("No chats in Milbrook Meadow yet")).toBeInTheDocument();
   });
+
+  it("does not deny the shared chats listed above it", () => {
+    mount("p1", [chat({ id: "c3", title: "Team notes", project_id: "p1", is_mine: false })]);
+    expect(
+      screen.getByText("No chats of your own in Milbrook Meadow yet")
+    ).toBeInTheDocument();
+  });
 });
