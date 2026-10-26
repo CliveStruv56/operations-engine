@@ -74,7 +74,7 @@ export default function SidebarProjects({
             href="/app/projects"
             aria-current={pathname === "/app/projects" ? "page" : undefined}
             aria-label={`${PRODUCT_LANGUAGE.groundwork.function} portfolio`}
-            className={`ml-auto text-xs font-bold normal-case tracking-normal ${
+            className={`ml-auto shrink-0 text-xs font-bold normal-case tracking-normal ${
               pathname === "/app/projects"
                 ? "text-electric-blue"
                 : "text-subtle hover:text-electric-blue"
@@ -83,14 +83,18 @@ export default function SidebarProjects({
             Portfolio
           </Link>
         )}
+        {/* "+ New", like the Chats heading — "+ New project" wrapped onto two
+            lines beside Portfolio. The label keeps the full name. */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             setAdding(true);
           }}
-          className={`${portfolioOn ? "ml-3" : "ml-auto"} text-xs font-bold normal-case tracking-normal text-electric-blue hover:underline`}
+          aria-label="New project"
+          title="New project"
+          className={`${portfolioOn ? "" : "ml-auto"} shrink-0 text-xs font-bold normal-case tracking-normal text-electric-blue hover:underline`}
         >
-          + New project
+          + New
         </button>
       </div>
       <Link
