@@ -159,11 +159,9 @@ async def enable_plan(
         await write_audit(
             conn, ctx.tenant_id, ctx.user_id, "project.update", "project", str(project_id)
         )
-    from app.routers.projects import fetch_project
+    from app.routers.projects import project_out
 
-    out = await fetch_project(conn, project_id)
-    assert out is not None
-    return dict(out)
+    return await project_out(conn, ctx, project_id)
 
 
 @router.post("/projects/{project_id}/plan-tasks", status_code=201, response_model=PlanTaskOut)

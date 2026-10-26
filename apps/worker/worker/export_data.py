@@ -192,7 +192,7 @@ def build_csvs(data: dict[str, Any]) -> dict[str, str]:
             community.get("statistics", []),
         ),
         "projects.csv": (
-            ["name", "description", "archived", "created_at"],
+            ["name", "kind", "description", "archived", "created_at"],
             data.get("projects", []),
         ),
         "grant-applications.csv": (
