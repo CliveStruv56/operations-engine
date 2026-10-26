@@ -128,9 +128,11 @@ export default function PortfolioPage() {
               {rows.map((r) => {
                 // due_date is a calendar date: compare it with today's local
                 // date, or a milestone reads "overdue" on the day it is due.
+                // Built by hand — locale date formats are not guaranteed.
+                const now = new Date();
+                const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
                 const overdue =
-                  r.next_milestone !== null &&
-                  r.next_milestone.due_date < new Date().toLocaleDateString("en-CA");
+                  r.next_milestone !== null && r.next_milestone.due_date < today;
                 return (
                   <tr
                     key={r.id}

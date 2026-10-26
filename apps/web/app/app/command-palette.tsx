@@ -186,7 +186,7 @@ export default function CommandPalette() {
           )}
           {!q.trim() && (
             <p className="px-3 py-2 text-sm text-faint">
-              Type to search your conversations and vault documents.
+              Type to search your conversations and documents.
             </p>
           )}
           {(["conversation", "document", "contact"] as const).map((kind) => {
