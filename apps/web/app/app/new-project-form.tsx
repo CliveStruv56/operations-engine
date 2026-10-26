@@ -10,9 +10,13 @@ import { useWorkspace } from "./workspace";
 export default function NewProjectForm({
   onCreated,
   onCancel,
+  onLeave,
 }: {
   onCreated: (projectId: string) => void;
   onCancel: () => void;
+  /** Called when the form hands over to another page (a setup kind), so the
+   *  mobile sidebar it sits in closes too. */
+  onLeave?: () => void;
 }) {
   const ws = useWorkspace();
   const router = useRouter();
@@ -59,6 +63,7 @@ export default function NewProjectForm({
       // A module kind is set up on its own page, which creates the project.
       router.push(`${SETUP_PATHS[kind.key]}?name=${encodeURIComponent(name)}`);
       onCancel();
+      onLeave?.();
       return;
     }
     setBusy(true);

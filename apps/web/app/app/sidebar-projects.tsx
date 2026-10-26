@@ -136,7 +136,13 @@ export default function SidebarProjects({
           </span>
         </Link>
       )}
-      {adding && <NewProjectForm onCreated={onCreated} onCancel={() => setAdding(false)} />}
+      {adding && (
+        <NewProjectForm
+          onCreated={onCreated}
+          onCancel={() => setAdding(false)}
+          onLeave={onClose}
+        />
+      )}
     </>
   );
 }
