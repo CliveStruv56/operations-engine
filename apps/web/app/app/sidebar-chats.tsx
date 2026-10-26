@@ -209,7 +209,8 @@ export default function SidebarChats({
                       aria-label={`Delete conversation ${c.title ?? "Untitled"}`}
                       // Invisible, not display:none — a hidden button can never
                       // take keyboard focus, so it could only be used by mouse.
-                      className="absolute top-1/2 right-1.5 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-card border border-edge-ui bg-card text-subtle opacity-0 group-hover:opacity-100 hover:text-danger focus-visible:opacity-100"
+                      // Touch screens cannot hover, so there it is always shown.
+                      className="absolute top-1/2 right-1.5 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-card border border-edge-ui bg-card text-subtle opacity-0 group-hover:opacity-100 hover:text-danger focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
                     >
                       ✕
                     </button>
