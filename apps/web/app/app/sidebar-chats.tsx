@@ -166,6 +166,9 @@ export default function SidebarChats({
                       Delete
                     </button>
                     <button
+                      // A delete already sent cannot be taken back, so "Keep"
+                      // waits for it rather than pretending to cancel it.
+                      disabled={deleting}
                       onClick={() => {
                         returnFocusTo.current = c.id;
                         setConfirmDeleteId(null);
@@ -196,6 +199,7 @@ export default function SidebarChats({
                   </Link>
                   {c.is_mine && (
                     <button
+                      disabled={deleting}
                       onClick={(e) => {
                         e.stopPropagation();
                         setConfirmDeleteId(c.id);
