@@ -85,7 +85,7 @@ export default function PortfolioPage() {
       <header className="mb-6 flex items-baseline justify-between">
         <div>
           <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">
-            {PRODUCT_LANGUAGE.groundwork.combined}
+            {PRODUCT_LANGUAGE.groundwork.function}
           </h1>
         </div>
         <Link
@@ -104,7 +104,7 @@ export default function PortfolioPage() {
             Track each development scheme from first meeting to occupied homes.
           </p>
           <p className="mt-1 text-sm text-ink-muted">
-            A new project starts with the full CLH stage plan, task list, document checklist and
+            A new project starts with the full community-led housing stage plan, task list, document checklist and
             risk register already in place.
           </p>
         </div>

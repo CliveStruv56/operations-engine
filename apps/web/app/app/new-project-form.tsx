@@ -94,7 +94,7 @@ export default function NewProjectForm({
         className="w-full rounded-card border border-edge bg-surface px-3 py-1.5 text-sm placeholder:text-faint focus:outline-none"
       />
       <div className="grid grid-cols-2 gap-1.5">
-        {card("blank", "Documents", "Vault and chat only")}
+        {card("blank", "Documents", "Documents and chat only")}
         {card("planned", "With a plan", "Tasks, people, dates")}
       </div>
       {kind === "planned" && (

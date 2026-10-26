@@ -4,8 +4,10 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
+  ChartIcon,
   ChatIcon,
   FormIcon,
+  GearIcon,
   GlobeIcon,
   GrantIcon,
   HomeIcon,
@@ -128,7 +130,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             className={`${item} ${onWorkspace && view === "vault" ? itemActive : itemRest}`}
           >
             <VaultIcon />
-            Vault
+            {PRODUCT_LANGUAGE.documents.navigation}
           </Link>
           {/* Unflagged: a workspace answering a funder's form may have any
               module, or none. */}
@@ -206,25 +208,23 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
               }`}
             >
               <GrantIcon />
-              {PRODUCT_LANGUAGE.grantwork.brand}
-              <span className="ml-auto text-xs font-semibold text-faint">
-                {PRODUCT_LANGUAGE.grantwork.function}
-              </span>
+              {PRODUCT_LANGUAGE.grantwork.function}
             </Link>
           )}
 
           {tenant.features?.projects === true && (
             <>
               <div className={navLabel}>
-                {PRODUCT_LANGUAGE.groundwork.brand}
+                {PRODUCT_LANGUAGE.groundwork.function}
                 <Link
                   href="/app/projects"
                   aria-current={pathname === "/app/projects" ? "page" : undefined}
-                  className={`ml-auto text-xs font-bold ${
-                    onDevPages ? "text-electric-blue" : "text-faint hover:text-electric-blue"
+                  aria-label={`See all ${PRODUCT_LANGUAGE.groundwork.function.toLowerCase()}`}
+                  className={`ml-auto text-xs font-bold normal-case tracking-normal ${
+                    onDevPages ? "text-electric-blue" : "text-subtle hover:text-electric-blue"
                   }`}
                 >
-                  {PRODUCT_LANGUAGE.groundwork.function} ↗
+                  See all
                 </Link>
               </div>
               {devProjects.length === 0 && (
@@ -278,7 +278,7 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
             className={`${item} mb-0.5 ${onWorkspace && projectId === null ? itemActive : itemRest}`}
           >
             <TargetIcon />
-            Everything
+            {PRODUCT_LANGUAGE.projects.all}
           </Link>
           {coreProjects.map((p) => (
             <Link
@@ -331,6 +331,33 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
           </div>
         )}
 
+        {/* Outside the scrolling nav so they stay in view however long the
+            chat list grows — they used to be 12px text links down here. */}
+        <nav aria-label="Workspace" className="border-t border-edge px-3.5 py-2">
+          <Link
+            href="/app/usage"
+            onClick={onClose}
+            aria-current={pathname.startsWith("/app/usage") ? "page" : undefined}
+            className={`${item} ${pathname.startsWith("/app/usage") ? itemActive : itemRest}`}
+          >
+            <ChartIcon />
+            Usage
+          </Link>
+          {(tenant.role === "admin" || tenant.role === "owner") && (
+            <Link
+              href="/app/settings"
+              onClick={onClose}
+              aria-current={pathname.startsWith("/app/settings") ? "page" : undefined}
+              className={`${item} mt-0.5 ${
+                pathname.startsWith("/app/settings") ? itemActive : itemRest
+              }`}
+            >
+              <GearIcon />
+              Settings
+            </Link>
+          )}
+        </nav>
+
         <div className="border-t border-edge px-5 py-3.5">
           <div className="flex items-center gap-2.5">
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-ink text-[13px] font-bold text-on-ink">
@@ -342,37 +369,9 @@ export default function Sidebar({ open, onClose }: { open: boolean; onClose: () 
                 {ws.email}
               </span>
             </span>
-          </div>
-          <div className="mt-2.5 flex items-center gap-3">
-            <Link
-              href="/app/usage"
-              onClick={onClose}
-              aria-current={pathname.startsWith("/app/usage") ? "page" : undefined}
-              className={`text-xs font-semibold ${
-                pathname.startsWith("/app/usage")
-                  ? "text-electric-blue"
-                  : "text-subtle hover:text-ink"
-              }`}
-            >
-              Usage
-            </Link>
-            {(tenant.role === "admin" || tenant.role === "owner") && (
-              <Link
-                href="/app/settings"
-                onClick={onClose}
-                aria-current={pathname.startsWith("/app/settings") ? "page" : undefined}
-                className={`text-xs font-semibold ${
-                  pathname.startsWith("/app/settings")
-                    ? "text-electric-blue"
-                    : "text-subtle hover:text-ink"
-                }`}
-              >
-                Settings
-              </Link>
-            )}
             <button
               onClick={ws.logout}
-              className="ml-auto text-xs font-semibold text-subtle hover:text-ink"
+              className="ml-auto min-h-6 shrink-0 text-xs font-semibold text-subtle underline decoration-mist underline-offset-2 hover:text-ink"
             >
               Sign out
             </button>

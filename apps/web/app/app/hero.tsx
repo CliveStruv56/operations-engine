@@ -176,10 +176,10 @@ export default function EmptyHero({
         <span className="inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[15px] py-[7px] text-xs font-bold text-grounded">
           <i className="h-[7px] w-[7px] rounded-full bg-grounded" />
           {docs === null
-            ? "Vault connected"
+            ? "Documents ready"
             : activeProject
               ? `${shorten(activeProject.name, 30)} — ${readyCount} document${readyCount === 1 ? "" : "s"} indexed`
-              : `Vault connected — ${readyCount} document${readyCount === 1 ? "" : "s"} indexed`}
+              : `Documents ready — ${readyCount} document${readyCount === 1 ? "" : "s"} indexed`}
         </span>
       )}
 
@@ -188,7 +188,7 @@ export default function EmptyHero({
       </h2>
       <p className="mt-2.5 max-w-[52ch] text-[15px] leading-relaxed text-subtle">
         {activeProject
-          ? `Ask about ${activeProject.name} — answers will prefer this project's documents, with the rest of your vault behind them.`
+          ? `Ask about ${activeProject.name} — answers will prefer this project's documents, with the rest of your documents behind them.`
           : "Ask anything about your business — policies, prices, procedures — or draft something new. Answers come with their sources attached."}
       </p>
 
@@ -213,7 +213,7 @@ export default function EmptyHero({
             <li>
               <Link href="/app?view=vault" className="block rounded-card border border-edge p-3 hover:border-electric-blue">
                 <span className="data text-faint uppercase">1 · Evidence</span>
-                <span className="mt-1 block text-[13px] font-semibold text-electric-blue">Add documents to the Vault →</span>
+                <span className="mt-1 block text-[13px] font-semibold text-electric-blue">Add your documents →</span>
               </Link>
             </li>
             <li>
@@ -230,16 +230,16 @@ export default function EmptyHero({
                 <span className="data text-faint uppercase">3 · Work</span>
                 <span className="mt-1 block text-[13px] font-semibold text-electric-blue">
                   {devProjectsEnabled
-                    ? `Open ${PRODUCT_LANGUAGE.groundwork.brand}`
+                    ? `Open ${PRODUCT_LANGUAGE.groundwork.function.toLowerCase()}`
                     : grantsEnabled
-                      ? `Open ${PRODUCT_LANGUAGE.grantwork.brand}`
+                      ? `Open ${PRODUCT_LANGUAGE.grantwork.function.toLowerCase()}`
                       : "Open a funder form"} →
                 </span>
               </Link>
             </li>
           </ol>
           <p className="mt-4 text-[12px] leading-relaxed text-faint">
-            {PRODUCT_LANGUAGE.organisation.navigation} stores confirmed facts in Flowgrid&rsquo;s {PRODUCT_LANGUAGE.organisation.model}.
+            {PRODUCT_LANGUAGE.organisation.navigation} holds the confirmed facts Flowgrid drafts from.
           </p>
         </section>
       )}

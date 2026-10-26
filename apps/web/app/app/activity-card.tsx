@@ -32,7 +32,7 @@ function phrase(i: ActivityItem): string | null {
   const title = i.target_title;
   switch (i.action) {
     case "document.complete":
-      return `added ${title ?? "a document"} to the vault`;
+      return `added ${title ?? "a document"} to documents`;
     case "document.delete":
       return "removed a document";
     case "project.create":

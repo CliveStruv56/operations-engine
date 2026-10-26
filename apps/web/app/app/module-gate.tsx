@@ -44,13 +44,13 @@ export function ModuleDisabled({ title, blurb }: { title: string; blurb: string 
 }
 
 export const GRANTS_DISABLED = {
-  title: `${PRODUCT_LANGUAGE.grantwork.combined} isn't switched on`,
+  title: `${PRODUCT_LANGUAGE.grantwork.function} isn't switched on`,
   blurb:
     "This workspace doesn't have the grant funding module. Ask whoever provides your workspace to enable it.",
 } as const;
 
 export const PROJECTS_DISABLED = {
-  title: `${PRODUCT_LANGUAGE.groundwork.combined} isn't switched on`,
+  title: `${PRODUCT_LANGUAGE.groundwork.function} isn't switched on`,
   blurb:
     "This workspace doesn't have the development projects module. Ask whoever provides your workspace to enable it.",
 } as const;

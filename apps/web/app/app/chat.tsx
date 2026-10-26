@@ -244,21 +244,21 @@ function AssistantMessageInner({
               disabled={saving}
               className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Save to Vault"}
+              {saving ? "Saving…" : "Save to documents"}
             </button>
           </>
         )}
         {m.model && (
           <span className="ml-auto text-xs font-semibold text-faint">
             {scope === "project" && "Drafted from project documents · "}
-            {scope === "vault" && "Drafted from your whole vault · "}
+            {scope === "vault" && "Drafted from all your documents · "}
             {m.model}
           </span>
         )}
       </div>
       {coverage === "none" && !readOnly && (
         <p className="mt-2.5 flex flex-wrap items-center gap-2.5 rounded-card bg-sidebar px-3 py-2 text-xs text-ink-muted">
-          <span>Your vault could not back this answer.</span>
+          <span>Your documents could not back this answer.</span>
           <button
             onClick={onAddDocument}
             className="font-medium text-electric-blue underline hover:text-ink"
@@ -537,7 +537,7 @@ export default function ChatPanel({
         });
         if (!put.ok) throw new Error(`Upload failed (${put.status})`);
         await api(`/documents/${id}/complete`, { method: "POST" }, tenantId);
-        toast({ message: `Saved to vault — “${title}” is indexing.` });
+        toast({ message: `Saved to documents — “${title}” is indexing.` });
         refreshDocs();
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
@@ -940,7 +940,7 @@ export default function ChatPanel({
               onClick={() => fileRef.current?.click()}
               disabled={uploadingCount > 0}
               aria-label="Attach a file to this chat"
-              title="Attach a file — it joins the vault and this chat reads it first"
+              title="Attach a file — it joins your documents and this chat reads it first"
               className="mb-1.5 flex-none rounded-lg p-1.5 text-subtle transition hover:bg-sidebar hover:text-ink disabled:opacity-50"
             >
               <ClipIcon className="h-[18px] w-[18px]" />

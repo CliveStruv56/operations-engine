@@ -138,7 +138,7 @@ export default function GrantsPage() {
       <div className="mx-auto max-w-6xl p-6">
         <header className="mb-6 flex items-baseline justify-between">
           <h1 className="mt-1 font-display text-[26px] font-medium tracking-[-0.01em]">
-            {PRODUCT_LANGUAGE.grantwork.combined}
+            {PRODUCT_LANGUAGE.grantwork.function}
           </h1>
           <Link
             href="/app/grants/new"

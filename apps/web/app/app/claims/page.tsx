@@ -132,7 +132,7 @@ function ClaimsPageInner() {
           <h1 className="text-xl font-medium">Your organisation</h1>
           <p className="mt-1 text-sm text-ink-muted">
             Confirmed organisational facts — registered details, trustees, finances,
-            policies and cover — live here in Flowgrid&rsquo;s claims register. Drafts read
+            policies and cover — live here. Drafts read
             from here, so a figure corrected once is corrected everywhere.
           </p>
         </div>

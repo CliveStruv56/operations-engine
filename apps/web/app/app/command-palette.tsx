@@ -233,7 +233,7 @@ export default function CommandPalette() {
                           ? "shared"
                           : "chat"
                         : row.kind === "document"
-                          ? "vault"
+                          ? "document"
                           : "contact"}
                     </span>
                   </button>
