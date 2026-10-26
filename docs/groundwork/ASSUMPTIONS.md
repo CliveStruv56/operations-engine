@@ -108,6 +108,10 @@ and every divergence is recorded here.
     from the core "Projects" list (`GET /projects` gained `is_development`
     via a `proj_projects` left join). Item 1's substance is unchanged: they
     remain core `projects` rows and still scope chat/vault.
+
+    *Superseded in part by #70 (26 Oct 2026): there is one Projects list
+    again, and each row carries its stored kind. Item 1's substance still
+    holds.*
 16. **Member emails.** `memberships.email` (migration 0007) caches the JWT
     email claim for the settings members list — the app DB cannot reach
     Supabase's `auth.users`. Written at bootstrap/invite-accept, self-healed
