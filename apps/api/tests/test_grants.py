@@ -589,13 +589,17 @@ async def test_portfolio_filters_by_project(client):
     """A project's Grant applications tab lists only that project's bids."""
     tenant, headers = await make_tenant(client, "byproj")
     linked = await create_application(client, headers, project_id=str(tenant.project_id))
-    await create_application(client, headers, title="Unlinked bid")
-    rows = (
-        await client.get(
-            f"/api/v1/grants/applications?project_id={tenant.project_id}", headers=headers
-        )
-    ).json()
-    assert [r["id"] for r in rows] == [linked]
+    unlinked = await create_application(client, headers, title="Unlinked bid")
+    url = "/api/v1/grants/applications"
+    everything = {r["id"] for r in (await client.get(url, headers=headers)).json()}
+    filtered = {
+        r["id"]
+        for r in (await client.get(f"{url}?project_id={tenant.project_id}", headers=headers)).json()
+    }
+    # seed_tenant links its own fixture application to this project too, so
+    # assert membership rather than an exact list.
+    assert linked in filtered and unlinked in everything
+    assert unlinked not in filtered
 
 
 async def test_cross_tenant_object_references_404(client):
