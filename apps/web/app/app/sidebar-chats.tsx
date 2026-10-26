@@ -23,13 +23,16 @@ export const item =
 export const itemRest = "text-subtle hover:bg-ink/[.045]";
 export const itemActive =
   "bg-accent-tint text-ink before:absolute before:-left-3.5 before:top-2 before:bottom-2 before:w-[3px] before:rounded before:bg-electric-blue before:content-['']";
-// Each section starts with a hairline divider so the groups (Development
-// projects / Projects / Shared with team / Recent — …) read as clearly
-// segmented blocks.
+// Each section starts with a hairline divider so the groups (Projects /
+// Shared in … / Chats in …) read as clearly segmented blocks.
 export const navLabel =
-  "mt-4 flex items-baseline border-t border-edge-strong px-3 pb-1.5 pt-3.5 text-xs font-bold uppercase tracking-[.1em] text-faint";
+  "mt-4 flex items-baseline gap-3 border-t border-edge-strong px-3 pb-1.5 pt-3.5 text-xs font-bold uppercase tracking-[.1em] text-faint";
 
-/** Bucket a conversation into a Recent group by its updated_at date. */
+// A date sub-label inside the Chats section — quieter than navLabel, so the
+// dates read as ordering, not as another filter.
+const dateLabel = "px-3 pt-2 pb-1 text-xs font-semibold text-faint";
+
+/** Bucket a conversation into a date group by its updated_at date. */
 function groupOf(c: Conversation): string {
   const day = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const diff = Math.round((day(new Date()) - day(new Date(c.updated_at))) / 86_400_000);
@@ -40,7 +43,9 @@ function groupOf(c: Conversation): string {
 }
 
 /** Chat lists for the sidebar: teammates' shared chats (read-only, no
- * delete), then the caller's own chats date-grouped with two-step delete. */
+ * delete), then the caller's own chats date-grouped with two-step delete.
+ * Both follow the selected project, and their headings name it — a silent
+ * filter read as "these are all my chats". */
 export default function SidebarChats({
   projectId,
   convId,
@@ -78,6 +83,19 @@ export default function SidebarChats({
   const chatGroups = ["Today", "Yesterday", "This week", "Earlier"]
     .map((label) => ({ label, chats: recentChats.filter((c) => groupOf(c) === label) }))
     .filter((g) => g.chats.length > 0);
+  const projectName = projectId
+    ? (ws.projects.find((p) => p.id === projectId)?.name ?? "this project")
+    : null;
+  // The scope keeps its own casing — an uppercased project name is a
+  // different-looking name.
+  const scope = (
+    <span
+      className="normal-case tracking-normal text-ink"
+      title={projectName ?? undefined}
+    >
+      {projectName ?? "all projects"}
+    </span>
+  );
 
   async function deleteConversation(id: string) {
     setDeleting(true);
@@ -100,7 +118,9 @@ export default function SidebarChats({
     <>
       {sharedChats.length > 0 && (
         <>
-          <div className={navLabel}>Shared with team</div>
+          <div className={navLabel}>
+            <span className="min-w-0 truncate">Shared in {scope}</span>
+          </div>
           {sharedChats.map((c) => (
             <Link
               key={c.id}
@@ -125,26 +145,26 @@ export default function SidebarChats({
         </>
       )}
 
+      <div className={navLabel}>
+        <span className="min-w-0 truncate">Chats in {scope}</span>
+        <Link
+          href={href({ project: projectId })}
+          className="ml-auto shrink-0 text-xs font-bold normal-case tracking-normal text-electric-blue hover:underline"
+          title="Start a new conversation"
+        >
+          + New
+        </Link>
+      </div>
       {chatGroups.length === 0 && (
-        <>
-          <div className={navLabel}>Recent</div>
-          <p className="px-3 py-1 text-xs font-medium text-faint">No conversations yet</p>
-        </>
+        <p className="px-3 py-1 text-xs font-medium text-faint">
+          {/* With teammates' chats listed just above, a bare "No chats"
+              would contradict them. */}
+          No chats {sharedChats.length > 0 && "of your own "}in {projectName ?? "any project"} yet
+        </p>
       )}
       {chatGroups.map((g) => (
         <div key={g.label}>
-          <div className={navLabel}>
-            Recent — {g.label}
-            {g.label === chatGroups[0].label && (
-              <Link
-                href={href({ project: projectId })}
-                className="ml-auto text-xs font-bold text-electric-blue hover:underline"
-                title="Start a new conversation"
-              >
-                + New
-              </Link>
-            )}
-          </div>
+          <div className={dateLabel}>{g.label}</div>
           {g.chats.map((c) => (
             <div key={c.id} className="group relative">
               {confirmDeleteId === c.id ? (
