@@ -129,7 +129,7 @@ def customer_deck():
         "One workspace connects your source documents, confirmed facts and live projects.",
         "Answers cite the document and page, and say so plainly when your documents don't hold the answer.",
         "Confirm a fact once and every draft reuses it.",
-        "Every project comes with scoped chat, its documents and a plan of owned tasks; modules add stage gates, budgets and risks, or grant records.",
+        "Every project comes with scoped chat, its documents and an optional plan of owned tasks; modules add stage gates, budgets and risks, or grant records.",
         "Branded PDF and editable PowerPoint outputs. You review everything; Flowgrid never sends on your behalf.",
     ])
 
@@ -141,7 +141,7 @@ def customer_deck():
             "Cited answers: every answer links to its document and page",
             "Documents (PDF, Word, Excel), searchable",
             "Confirmed facts: review once, reuse in every draft",
-            "Projects and plans: chat, documents and owned tasks on every project",
+            "Projects and plans: chat and documents on every project, with an optional plan of owned tasks",
             "Branded exports: PDF and editable PowerPoint",
         ],
         [
@@ -202,7 +202,7 @@ def partner_deck():
         "Brand layer: client logo, colours and branded outputs.",
         "Model router — cost-routed open weights with automatic fallbacks.",
         "Documents & confirmed facts: cited answers, with each client isolated at the database level.",
-        "Projects: every project has chat, documents and a plan of owned tasks, plus branded exports.",
+        "Projects: every project has chat, documents and an optional plan of owned tasks, plus branded exports.",
         "Sector modules, switched on per client: Groundwork · Development projects and Grantwork · Grant funding (available in pilot), and Contacts as a tab on any project.",
     ], footer_text="flowgridos.co.uk")
 

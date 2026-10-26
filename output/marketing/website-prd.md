@@ -100,7 +100,7 @@ Three concise before/after pairs:
 ### How it works
 
 1. **Bring the evidence together.** Add documents and connect the facts your organisation relies on.
-2. **Keep work structured.** Every project comes with scoped chat, its documents and a plan of owned tasks. Work in projects instead of rebuilding context in each chat.
+2. **Keep work structured.** Every project comes with scoped chat, its documents and an optional plan of owned tasks. Work in projects instead of rebuilding context in each chat.
 3. **Produce and review.** Draft from evidence, check citations and export a useful deliverable.
 
 ### Product proof
@@ -109,16 +109,16 @@ Use four outcome cards, each paired with a real interface crop or short silent v
 
 - Ask your documents; open the cited page.
 - Confirm a fact once; reuse it across drafts.
-- Turn a project into a plan with owned tasks (every project has chat, documents and a plan; modules add stages, budgets and risks).
+- Turn a project into a plan with owned tasks (every project has chat, documents and an optional plan; modules add stages, budgets and risks).
 - Export a conversation to PDF or a response to editable PowerPoint.
 
 ### Solutions
 
-Lead with the project model in plain English: *Every project comes with scoped chat, its documents and a plan of owned tasks. Switch on a module and projects gain what your sector needs: stage gates, budgets, funding and risks for development schemes; grant records and contacts as tabs on any project.*
+Lead with the project model in plain English: *Every project comes with scoped chat, its documents and an optional plan of owned tasks. Switch on a module and projects gain what your sector needs: stage gates, budgets, funding and risks for development schemes; grant records and contacts as tabs on any project.*
 
 - **Groundwork · Development projects:** keep community-led development projects moving through stage gates, funding, budget, risks and client reporting.
 - **Grantwork · Grant funding:** manage applications, award conditions, impact evidence and monitoring returns, as a tab on any project.
-- **Core platform — documents, confirmed facts and projects:** for teams that need cited answers, confirmed facts and projects with chat, documents and a plan, without a sector module.
+- **Core platform — documents, confirmed facts and projects:** for teams that need cited answers, confirmed facts and projects with chat, documents and an optional plan, without a sector module.
 
 Naming (ASSUMPTIONS #69 and #71): marketing keeps the brand names Groundwork and Grantwork in headlines and pairs each with its in-app name on first mention in body copy. "Vault" and "claims register" are retired from marketing; say "documents" and "confirmed (organisational) facts", as the workspace does.
 

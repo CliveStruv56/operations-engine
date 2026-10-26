@@ -67,7 +67,7 @@ const content: SolutionContent = {
   ],
   workspace: [
     "A portfolio of development projects, each with five stage gates",
-    "Every project's own chat, documents and plan of owned tasks, as standard",
+    "Every project's own chat and documents, with an optional plan of owned tasks, as standard",
     "Budget lines, funding sources and a risk register per project",
     "Your documents: feasibility work, surveys, minutes and correspondence, all citable",
     "Confirmed organisational facts shared across every draft",

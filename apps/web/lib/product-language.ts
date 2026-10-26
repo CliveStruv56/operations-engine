@@ -21,7 +21,7 @@ export const PRODUCT_LANGUAGE = {
     label: "Core platform",
     triplet: "documents, confirmed facts and projects",
     everyProject:
-      "Every project comes with scoped chat, its documents and a plan of owned tasks.",
+      "Every project comes with scoped chat, its documents and an optional plan of owned tasks.",
     modulesAdd:
       "Switch on a module and projects gain what your sector needs: stage gates, budgets, funding and risks for development schemes; grant records and contacts as tabs on any project.",
   },

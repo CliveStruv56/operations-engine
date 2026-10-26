@@ -1282,7 +1282,7 @@ discussion behind them.
       unchanged.
     - **The project model is described in plain English**, never as
       "kinds" and "add-ons": *Every project comes with scoped chat, its
-      documents and a plan of owned tasks. Switch on a module and projects
+      documents and an optional plan of owned tasks. Switch on a module and projects
       gain what your sector needs: stage gates, budgets, funding and risks
       for development schemes; grant records and contacts as tabs on any
       project.* The sentence lives in `PRODUCT_LANGUAGE.core` and is used

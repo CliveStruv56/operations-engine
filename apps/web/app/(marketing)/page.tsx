@@ -94,7 +94,7 @@ const PROOF: { title: string; body: string; spot: SpotName }[] = [
   },
   {
     title: "Turn a project into a plan with owned tasks",
-    body: "Every project has its own chat, documents and plan. Switch on a module and it also carries stages, budgets and risks, so plans come from live records rather than a blank page.",
+    body: "Every project has its own chat and documents, and can carry a plan. Switch on a module and it also carries stages, budgets and risks, so plans come from live records rather than a blank page.",
     spot: "plan",
   },
   {
@@ -278,7 +278,7 @@ export default function HomePage() {
             />
             <p className="mt-4 flex-1 text-[16px] leading-[1.45] text-slate">
               For teams that need cited answers, confirmed facts and
-              projects with chat, documents and a plan — without a sector
+              projects with chat, documents and an optional plan — without a sector
               module.
             </p>
             <Link href="/platform" className={`${ctaOutline} mt-4 self-start`}>
