@@ -40,7 +40,7 @@ const STEPS: { label: string; title: string; body: string; spot: SpotName }[] = 
   {
     label: "Step 2 · The structure",
     title: "Keep work structured",
-    body: "Use projects, plans and specialist registers instead of rebuilding context in every chat. The workspace remembers, so your team doesn't have to.",
+    body: `${PRODUCT_LANGUAGE.core.everyProject} Work in projects instead of rebuilding context in every chat: the workspace remembers, so your team doesn't have to.`,
     spot: "structure",
   },
   {
@@ -53,7 +53,7 @@ const STEPS: { label: string; title: string; body: string; spot: SpotName }[] = 
 
 const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
   ariaLabel:
-    "Documents from the vault and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and every output cites its source for you to review before anything leaves.",
+    "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and every output cites its source for you to review before anything leaves.",
   vault: {
     caption: "policies · minutes · reports",
     arrowLabel: "cited by page",
@@ -67,7 +67,7 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
     gatesDone: 3,
     gatesTotal: 5,
     spineLabel: "projects, plans & registers",
-    chips: ["projects", "claims", "registers"],
+    chips: ["projects", "facts", "registers"],
     footnote: "the workspace remembers",
   },
   outputs: [
@@ -83,18 +83,18 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
 
 const PROOF: { title: string; body: string; spot: SpotName }[] = [
   {
-    title: "Ask the vault; open the cited page",
-    body: "Answers link back to the exact document and page they came from — and say plainly when the vault has nothing.",
+    title: "Ask your documents; open the cited page",
+    body: "Answers link back to the exact document and page they came from — and say plainly when your documents don't hold the answer.",
     spot: "citation",
   },
   {
-    title: "Confirm a claim once; reuse it everywhere",
+    title: "Confirm a fact once; reuse it everywhere",
     body: "Charity numbers, policies, insurance dates: review a fact once and every draft draws on the confirmed version.",
     spot: "claim",
   },
   {
     title: "Turn a project into a plan with owned tasks",
-    body: "Projects carry stages, budgets and risks, so plans come from live records rather than a blank page.",
+    body: "Every project has its own chat and documents, and can carry a plan. Switch on a module and it also carries stages, budgets and risks, so plans come from live records rather than a blank page.",
     spot: "plan",
   },
   {
@@ -233,6 +233,9 @@ export default function HomePage() {
 
       {/* Solutions */}
       <Section kicker="Solutions" title="Start from your workflow, not a blank tool">
+        <p className="mb-10 max-w-2xl text-[18px] leading-[1.42] text-slate">
+          {PRODUCT_LANGUAGE.core.everyProject} {PRODUCT_LANGUAGE.core.modulesAdd}
+        </p>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="flex flex-col">
             <StatusCard
@@ -242,8 +245,9 @@ export default function HomePage() {
               tags={["Stage gates", "Funding", "Client reporting"]}
             />
             <p className="mt-4 flex-1 text-[16px] leading-[1.45] text-slate">
-              Keep community-led development projects moving through stage
-              gates, funding, budget, risks and client reporting.
+              {PRODUCT_LANGUAGE.groundwork.combined}: keep community-led
+              development projects moving through stage gates, funding, budget,
+              risks and client reporting.
             </p>
             <Link href="/solutions/groundwork" className={`${ctaOutline} mt-4 self-start`}>
               Explore Groundwork
@@ -257,8 +261,9 @@ export default function HomePage() {
               tags={["Applications", "Conditions", "Impact evidence"]}
             />
             <p className="mt-4 flex-1 text-[16px] leading-[1.45] text-slate">
-              Manage applications, award conditions, impact evidence and
-              monitoring returns in one workflow.
+              {PRODUCT_LANGUAGE.grantwork.combined}: manage applications, award
+              conditions, impact evidence and monitoring returns, as a tab on
+              any project.
             </p>
             <Link href="/solutions/grantwork" className={`${ctaOutline} mt-4 self-start`}>
               Explore Grantwork
@@ -268,12 +273,13 @@ export default function HomePage() {
             <StatusCard
               tone="neutral"
               label="Core · Always included"
-              title="Core platform — vault, claims and projects"
-              tags={["Cited answers", "Claims", "Exports"]}
+              title={`${PRODUCT_LANGUAGE.core.label} — ${PRODUCT_LANGUAGE.core.triplet}`}
+              tags={["Cited answers", "Confirmed facts", "Exports"]}
             />
             <p className="mt-4 flex-1 text-[16px] leading-[1.45] text-slate">
-              For teams that need cited knowledge, controlled facts and
-              repeatable project work without a sector module.
+              For teams that need cited answers, confirmed facts and
+              projects with chat, documents and an optional plan — without a sector
+              module.
             </p>
             <Link href="/platform" className={`${ctaOutline} mt-4 self-start`}>
               Explore the platform

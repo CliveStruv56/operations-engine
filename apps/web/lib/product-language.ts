@@ -16,6 +16,15 @@ export const PRODUCT_LANGUAGE = {
   projects: {
     all: "All projects",
   },
+  /** Marketing-only phrasing of the core platform (ASSUMPTIONS #71). */
+  core: {
+    label: "Core platform",
+    triplet: "documents, confirmed facts and projects",
+    everyProject:
+      "Every project comes with scoped chat, its documents and an optional plan of owned tasks.",
+    modulesAdd:
+      "Switch on a module and projects gain what your sector needs: stage gates, budgets, funding and risks for development schemes; grant records and contacts as tabs on any project.",
+  },
   groundwork: {
     brand: "Groundwork",
     function: "Development projects",

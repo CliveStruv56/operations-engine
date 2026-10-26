@@ -127,8 +127,9 @@ def customer_deck():
 
     section_slide(prs, "The solution", [
         "One workspace connects your source documents, confirmed facts and live projects.",
-        "Answers cite the document and page, and say so plainly when the vault has nothing.",
-        "Confirm a fact once and every draft reuses it; projects carry stages, budgets and risks.",
+        "Answers cite the document and page, and say so plainly when your documents don't hold the answer.",
+        "Confirm a fact once and every draft reuses it.",
+        "Every project comes with scoped chat, its documents and an optional plan of owned tasks; modules add stage gates, budgets and risks, or grant records.",
         "Branded PDF and editable PowerPoint outputs. You review everything; Flowgrid never sends on your behalf.",
     ])
 
@@ -138,20 +139,28 @@ def customer_deck():
         slide, MARGIN, Inches(1.5), SLIDE_W - MARGIN * 2, Inches(5.4),
         [
             "Cited answers: every answer links to its document and page",
-            "Document vault (PDF, Word, Excel), searchable",
+            "Documents (PDF, Word, Excel), searchable",
             "Confirmed facts: review once, reuse in every draft",
-            "Projects and plans with stages, budgets and risks",
+            "Projects and plans: chat and documents on every project, with an optional plan of owned tasks",
             "Branded exports: PDF and editable PowerPoint",
         ],
         [
             "Research mode: reads the web pages, not just the links, and cites each source",
-            "Contact book with spreadsheet import",
+            "Contacts with spreadsheet import, as a tab on any project",
             "Usage and cost recorded on every AI call",
             "Coming: email & calendar sync, meeting intelligence",
         ],
         size=19,
     )
     add_footer(slide)
+
+    section_slide(prs, "Built for your sector", [
+        "The core platform (documents, confirmed facts and projects) is always included.",
+        "Switch on a module and projects gain what your sector needs.",
+        "Groundwork · Development projects: stage gates, funding, budget, risk and planning records, with client reports drafted from live records. Available in pilot.",
+        "Grantwork · Grant funding: applications, award conditions, impact evidence and monitoring returns, as a tab on any project. Available in pilot.",
+        "Contacts: organisations and people linked to any project.",
+    ])
 
     section_slide(prs, "Privacy & trust", [
         "Your workspace is isolated from every other customer at the database level, not only by application code.",
@@ -192,14 +201,15 @@ def partner_deck():
     section_slide(prs, "The platform you resell", [
         "Brand layer: client logo, colours and branded outputs.",
         "Model router — cost-routed open weights with automatic fallbacks.",
-        "Vault & confirmed facts: cited answers, with each client isolated at the database level.",
-        "Modules: projects, exports and sector modules (Groundwork and Grantwork, available in pilot).",
+        "Documents & confirmed facts: cited answers, with each client isolated at the database level.",
+        "Projects: every project has chat, documents and an optional plan of owned tasks, plus branded exports.",
+        "Sector modules, switched on per client: Groundwork · Development projects and Grantwork · Grant funding (available in pilot), and Contacts as a tab on any project.",
     ], footer_text="flowgridos.co.uk")
 
     section_slide(prs, "Why partner", [
         "Recurring revenue: per-seat subscriptions with margin you keep. Economics are shared on a partner call.",
         "Zero licensing overhang: MIT/Apache stack end-to-end.",
-        "Sticky clients: vault, projects and usage data increase switching costs.",
+        "Sticky clients: documents, projects and usage data increase switching costs.",
         "Fast to deploy: new branded workspaces provisioned in minutes.",
         "Pilot first: we are onboarding in small pilot groups, so places are limited.",
     ], footer_text="flowgridos.co.uk")

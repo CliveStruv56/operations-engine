@@ -1,10 +1,13 @@
 # Flowgrid OS — agent guide
 
 Flowgrid OS (codename "Operations Engine" until Aug 2026) — white-label, multi-tenant AI operations SaaS for UK SMBs. One branded workspace
-per client: chat workspace, cited knowledge vault (RAG), cost-routed open-weight
-models via cloud APIs only. Per-tenant modules gate on `tenants.features` jsonb
-(`projects`, `contacts`, `web_search`); client workspaces are created by the
-platform operator via `/admin` (see `PLATFORM_ADMIN_EMAILS` / `OPEN_SIGNUP`).
+per client: chat workspace, cited documents (RAG; the spec's "knowledge
+vault", shown as "Documents"), cost-routed open-weight models via cloud APIs
+only. Every project has a stored kind; modules supply kinds or add-on tabs
+(`app/projects/kinds.py`). Per-tenant modules gate on `tenants.features`
+jsonb (`projects`, `grants`, `contacts`, `community`, `web_search`); client
+workspaces are created by the platform operator via `/admin` (see
+`PLATFORM_ADMIN_EMAILS` / `OPEN_SIGNUP`).
 
 ## Hard constraints (non-negotiable)
 

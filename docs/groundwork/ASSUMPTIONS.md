@@ -1262,3 +1262,34 @@ discussion behind them.
       catalogue with an `enabled` flag, for the read-only "Your modules"
       list in settings. It is read-only: switching stays with the operator
       (#22).
+
+71. **Marketing pairs the brand names with the plain names; "vault" and
+    "claims register" retire there too** (operator decisions, 26 Oct 2026).
+    #69 kept Groundwork and Grantwork for the marketing site. This settles
+    how the site and the sales collateral (one-pagers, decks, the website
+    brief in `output/marketing/`) read after #69 and #70:
+
+    - **Brand in headlines, plain name on first mention.** Headlines, nav
+      and card titles keep "Groundwork" and "Grantwork"; body copy pairs
+      each with its in-app name on first mention per page or section —
+      "Groundwork · Development projects", "Grantwork · Grant funding"
+      (the `combined` strings in `lib/product-language.ts`) — so a buyer
+      who sees a demo recognises the sidebar.
+    - **No "vault" or "claims register" in marketing.** The site, one-pagers
+      and decks say "your documents" / "Documents" and "confirmed
+      (organisational) facts", as the workspace does. Code identifiers
+      (`content.vault`, `ClaimsRegisterVignette`, `spot: "claim"`) are
+      unchanged.
+    - **The project model is described in plain English**, never as
+      "kinds" and "add-ons": *Every project comes with scoped chat, its
+      documents and an optional plan of owned tasks. Switch on a module and projects
+      gain what your sector needs: stage gates, budgets, funding and risks
+      for development schemes; grant records and contacts as tabs on any
+      project.* The sentence lives in `PRODUCT_LANGUAGE.core` and is used
+      verbatim on the home and platform pages.
+    - **Projects are core, not a module**, in every list of what the
+      platform includes ("documents, confirmed facts and projects").
+      Contacts is described as a tab on any project.
+    - **Out of scope.** `docs/investor-partner-product-plan.*` and the
+      Hearth design concepts are historical and still say "Operations
+      Engine"; they are not maintained.

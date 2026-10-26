@@ -139,12 +139,12 @@ export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }
           </marker>
         </defs>
 
-        {/* The vault: a stack of documents */}
+        {/* Your documents: a stack of documents */}
         <rect x="30" y="88" width="150" height="46" rx="6" fill="var(--canvas)" stroke={FAINT} />
         <rect x="38" y="80" width="150" height="46" rx="6" fill="var(--canvas)" stroke={FAINT} />
         <rect x="46" y="72" width="150" height="46" rx="6" fill="var(--canvas)" stroke={INK} />
         <text x="121" y="99" textAnchor="middle" fontSize="12.5" fill={INK}>
-          The vault
+          Your documents
         </text>
         <text x="121" y="152" textAnchor="middle" fontSize="11" fill={SOFT}>
           {content.vault.caption}

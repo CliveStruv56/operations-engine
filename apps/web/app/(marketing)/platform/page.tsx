@@ -2,23 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ctaGhost, DemoCta, Kicker, Section, TagPill } from "../ui";
 import { ClaimsRegisterVignette } from "../vignettes";
+import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 
 export const metadata: Metadata = {
-  title: "Platform — vault, claims, projects and outputs",
+  title: "Platform — documents, confirmed facts, projects and outputs",
   description:
-    "The Flowgrid core platform: a cited knowledge vault, a claims register of confirmed facts, structured projects and finished branded outputs — with governance built in.",
+    "The Flowgrid core platform: cited answers from your documents, confirmed organisational facts, structured projects and finished branded outputs — with governance built in.",
   alternates: { canonical: "/platform" },
 };
 
 const PILLARS = [
   {
-    kicker: "The vault",
+    kicker: "Documents",
     title: "Knowledge that shows its sources",
-    body: "Upload the documents your organisation runs on — policies, minutes, bids, accounts, surveys. Ask in plain English and get an answer with a citation that opens the exact page it came from. When the vault has nothing, Flowgrid says so instead of guessing. Need something it doesn't hold? Research mode, switched on per workspace, is more than a Google search: it reads the pages behind the results and cites each passage it uses.",
+    body: "Upload the documents your organisation runs on — policies, minutes, bids, accounts, surveys. Ask in plain English and get an answer with a citation that opens the exact page it came from. When your documents don't hold the answer, Flowgrid says so instead of guessing. Need something it doesn't hold? Research mode, switched on per workspace, is more than a Google search: it reads the pages behind the results and cites each passage it uses.",
     tags: ["Cited answers", "Page-level sources", "Honest 'not found'", "Research mode (optional)"],
   },
   {
-    kicker: "The claims register",
+    kicker: "Confirmed facts",
     title: "One true place for what you assert about yourselves",
     body: "Charity number, insurance dates, safeguarding policy version, headline outcomes: facts your team re-keys constantly. Review each one once, and every draft across the workspace reuses the confirmed version — so documents stop disagreeing with each other.",
     tags: ["Reviewed once", "Reused everywhere", "Visible status"],
@@ -26,8 +27,8 @@ const PILLARS = [
   {
     kicker: "Projects",
     title: "Structured work, not disposable chats",
-    body: "Projects hold plans, tasks with owners, and the records your modules add — stage gates, budgets, risks, grant conditions. Context lives with the work, so nobody rebuilds it in a new conversation every Monday.",
-    tags: ["Plans & owned tasks", "Live records", "Module registers"],
+    body: `${PRODUCT_LANGUAGE.core.everyProject} ${PRODUCT_LANGUAGE.core.modulesAdd} Context lives with the work, so nobody rebuilds it in a new conversation every Monday.`,
+    tags: ["Chat, documents & a plan", "Owned tasks", "Sector records"],
   },
   {
     kicker: "Outputs",
@@ -54,8 +55,9 @@ export default function PlatformPage() {
             A workspace built on evidence, not vibes.
           </h1>
           <p className="mt-6 max-w-2xl text-[18px] leading-[1.42] tracking-[-0.14px] text-slate">
-            Four pieces work together: a vault of cited knowledge, a register of
-            confirmed facts, structured projects and finished outputs. Each one
+            Four pieces work together: your documents with cited answers, a
+            register of confirmed facts, structured projects and finished
+            outputs. Each one
             makes the others more useful — that&rsquo;s the point of a platform
             rather than a pile of tools.
           </p>
@@ -112,15 +114,16 @@ export default function PlatformPage() {
         <p className="max-w-2xl text-[18px] leading-[1.42] text-slate">
           The core platform carries every workspace. Sector modules —{" "}
           <Link href="/solutions/groundwork" className="text-deep-violet underline underline-offset-4">
-            Groundwork
+            {PRODUCT_LANGUAGE.groundwork.combined}
           </Link>{" "}
           for community-led development and{" "}
           <Link href="/solutions/grantwork" className="text-deep-violet underline underline-offset-4">
-            Grantwork
+            {PRODUCT_LANGUAGE.grantwork.combined}
           </Link>{" "}
-          for grant-funded organisations — add specialist registers and
+          for grant-funded organisations — add specialist records and
           deliverables on top, enabled per workspace so your team only sees
-          what it uses.
+          what it uses. Contacts switch on the same way, as a tab on any
+          project.
         </p>
         <div className="mt-10 flex flex-wrap items-center gap-5">
           <DemoCta label="Book a 20-minute demo" />

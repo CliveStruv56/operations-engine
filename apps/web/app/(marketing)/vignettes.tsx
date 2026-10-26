@@ -71,8 +71,8 @@ export function ClaimsRegisterVignette() {
   ];
   return (
     <Frame
-      ariaLabel="Representative claims register showing confirmed facts with their sources, one fact due for review and one imported proposal awaiting a person"
-      caption="Illustration of the claims register: confirmed facts carry their source and date, a fact can fall due for review, and imported facts wait as proposals until someone confirms them."
+      ariaLabel="Representative view of confirmed organisational facts with their sources, one fact due for review and one imported proposal awaiting a person"
+      caption="Illustration of confirmed organisational facts: each carries its source and date, a fact can fall due for review, and imported facts wait as proposals until someone confirms them."
     >
       <div className="mt-4 flex flex-col">
         {rows.map((row, i) => (
