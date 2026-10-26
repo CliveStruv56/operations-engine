@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,7 +13,7 @@ vi.mock("@/lib/groundwork", async (importOriginal) => ({
 // The plan panel fetches on mount; its own behaviour is tested elsewhere.
 vi.mock("../../project-plan", () => ({ default: () => <div>Plan panel</div> }));
 
-const { default: ProjectPage } = await import("./page");
+const { default: ProjectPage } = await import("./project-page");
 
 const TENANT = {
   id: "t1",
@@ -62,9 +61,7 @@ const project = (over: Partial<Project>): Project =>
 function mount(p: Project, projectKinds = kinds(true)) {
   render(
     withWorkspace(
-      <Suspense fallback={null}>
-        <ProjectPage params={Promise.resolve({ id: p.id })} />
-      </Suspense>,
+      <ProjectPage id={p.id} />,
       { tenant: TENANT, projects: [p], projectKinds }
     )
   );
