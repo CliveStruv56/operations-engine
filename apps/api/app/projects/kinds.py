@@ -17,7 +17,7 @@ a development scheme is exactly the thing people apply for grants for.
 """
 
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
 from app.modules import FEATURE_FLAGS, MODULES
 
@@ -108,7 +108,7 @@ def kind_available(kind: str, features: dict[str, object]) -> bool:
     return spec.module is None or features.get(spec.module) is True
 
 
-def module_catalogue() -> list[dict[str, object]]:
+def module_catalogue() -> list[dict[str, Any]]:
     """Every module with the kinds and add-ons it supplies — what the operator
     console's checkboxes and a workspace's "Your modules" list both show."""
     return [
