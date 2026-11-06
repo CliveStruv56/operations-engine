@@ -77,7 +77,74 @@ item below):
 - **Code health:** `chat.tsx` is 1,064 lines → F4. Legacy colour aliases → P8.
 - **Smaller:** "Scheme type" label; change kind only general → development;
   custom project labels (Client, Internal, Bid) — backlog.
-- **Never done:** a visual check of the running app → F1.
+- **Visual check of the running app:** done in F1 (6 Nov 2026) — findings below,
+  new work in P10 and P11.
+
+## F1 visual pass findings (6 Nov 2026)
+
+How it was run: `apps/web/e2e/visual-pass.spec.ts` (opt-in:
+`VISUAL_PASS=1 pnpm test:e2e e2e/visual-pass.spec.ts`) screenshots 21 screens
+at 1280×800 and 390×844, plus the phone drawer, against a mocked backend
+seeded as a fictional development trust (3 projects, 4 chats, 5 documents,
+6 facts, 3 members). It also checks each screen for horizontal overflow, text
+under 12px, H1 and `<main>`, and console errors. Screens it could not fill
+with realistic data (operator workspaces, funder catalogue, grant stages,
+development-room registers) were judged on their empty state only. Not yet
+seen: staging with real data, Safari/iOS, a tablet width, dark or high-contrast
+modes, the command palette and modals.
+
+Automatic checks: no app screen has text under 12px (the marketing home's
+product mock-up does: 10.5–11px labels — P8); Chat and Documents still have no
+H1 or `<main>` (already in P6); Settings overflows sideways by 47px on a phone;
+no console errors from the app itself.
+
+**Phone width (390px) — new item P10.** The workspace is not usable on a phone
+yet, which matters before R4 (installable app):
+- **Documents rows collapse** (`vault.tsx`): the title column is squeezed to
+  nothing, the status chip sits on top of "Added …", and ★/Delete are off-screen.
+  The worst screen found.
+- **Tables clip their columns** with no scroll cue: Grant funding (only
+  Application/Funder/Status show), Contacts (email cut), Settings → People
+  (third column cut; this is the 47px overflow), Development projects.
+- **Project and grant headers overflow:** on the development room the
+  "Chat about this project" pill squeezes into a four-line circle and the stage
+  strip runs off the edge (no LIVE); on a grant application MONITOR, EVALUATE,
+  the status select and Edit are off-screen. Both tab strips wrap to 2–4 rows.
+- **Chat composer:** mode tabs clipped at "Slid…" with no scroll cue; the
+  placeholder is cut mid-word; the composer covers the last hero card.
+- Settings → invite field shows "colleague@(" — too narrow; the drawer shows a
+  ⌘K hint on a touch device.
+
+**Laptop width (1280×800):**
+- **Chats are below the sidebar's fold** (`sidebar.tsx` nav): at 800px tall
+  only the "Chats in …" heading peeks out; the list everyone uses most needs a
+  scroll inside the sidebar. Give chats the flexible space, or cap the nav
+  above it → P6.
+- **The plan panel in a project chat crushes task titles** to one word
+  ("Confirm", "Draft th"): the chat column is too narrow for date, assignee,
+  arrows, Note and Remove on one line → P11.
+- **Operator console:** the Funder forms section sits outside the centred
+  container, flush to the window's left edge (`app/admin/page.tsx:289`); the
+  empty workspace table shows headers and no "no workspaces yet" row → P11.
+- **One module, three names:** sidebar "Grant funding", add-on tab
+  "Grant applications", development-room tab "Funding" — the room shows both
+  "Funding" and "Grant applications" side by side → P6.
+- **Development room tabs** (11 with add-ons) wrap onto a second line at 1280px → P11.
+- **Two amber primaries** seen on: development room overview (Draft monthly
+  report + Health card), Your organisation (Look up a register + That's right),
+  Community empty state (Add a figure + Describe the place) → P7.
+- **Mixed date formats:** 04/11/2026 on Documents, Projects and grant headers;
+  "1 Apr 2027" on facts → P8 (pick one: "4 Nov 2026").
+- **Chat hero copy is for a generic business** ("policies, prices,
+  procedures"; suggestion "Draft a letter quoting for a new client") — wrong for
+  charities and development trusts → P9.
+- **Smaller:** grant "Stages & gates" is blank when there are no stages (no
+  empty or loading message); native "Choose File / No file chosen" inputs in
+  Settings; "Secured £0" shown in amber; Usage shows pence to four places
+  (£0.9480) and uses a narrower column than other pages; "Reporting Calendar"
+  in title case; Documents rows carry five controls each and "Refresh" does
+  not say it re-reads the file → P11.
+
 
 ## Stage 1: foundations (weeks 1–2)
 
@@ -90,7 +157,7 @@ item below):
 | F5 | Claude alias and model test | Claude added behind LiteLLM as alias `agent` on a zero-retention UK/EU endpoint (see #73). ~10 funder forms, ~20 cited questions and ~15 tool-call scenarios run on current aliases and on Claude; quality and cost per task recorded; routing rule for tool turns and final drafts set from the results | `infra/litellm/config.yaml`, `app/routing.py`, `infra/promptfoo/` | 3 |
 | F6 | Card component | One `<ActionCard>` with confirm, edit and reject; first used by P1 | `apps/web/components/` | 2 |
 
-- [ ] F1 · [ ] F2 · [ ] F3 · [ ] F4 · [ ] F5 · [ ] F6
+- [x] F1 (visual-pass spec + findings above, PR: F1) · [ ] F2 · [ ] F3 · [ ] F4 · [ ] F5 · [ ] F6
 
 ## Stage 2: first hour and finish (weeks 3–8)
 
@@ -105,8 +172,10 @@ item below):
 | P7 | Accessibility finish | Live region for streamed answers; citation [n] opens source n; words beside RAG dots, claims badge and ★ (`aria-pressed`); palette focus trap and listbox; drawer Escape and `aria-expanded`; hand-rolled buttons on the shared Button | chat parts, components | 4 |
 | P8 | Type scale and capitals sweep | Scale 12/13/14/16/18/22/29/44; lint rule against `text-[\d`; spaced capitals for stamps only; lighter chrome weights; answers capped at 68ch; darker bone hairline; legacy alias codemod | `globals.css`, every screen | 4 |
 | P9 | Chat polish | Example prompts on first use; a next step in every empty state; friendly model name and cost under each answer; neutral badge for web-only answers; "0 documents" not green | chat parts | 2 |
+| P10 | Phone layout | Every main screen usable at 390px with no sideways scroll: Documents rows stack (title first, actions in a menu); tables become cards or scroll with a visible cue; project and grant headers wrap (stage strip scrolls, actions below the title); composer mode tabs scroll with a cue; the visual-pass spec reports 0px overflow on every phone screen | `vault.tsx`, tables, `development-room.tsx`, grant page, composer | 3 |
+| P11 | Visual-pass fixes | The laptop findings from F1 not covered by P6–P9: plan panel rows wrap in the chat column; operator console sections share one container and the empty table has a row; development-room tabs fit or scroll; empty state for grant stages; styled file inputs; neutral colour for £0; pence to two places; one page width; sentence-case tab labels; Documents row actions grouped | listed in "F1 visual pass findings" | 2 |
 
-- [ ] P1 · [ ] P2 · [ ] P3 · [ ] P4 · [ ] P5 · [ ] P6 · [ ] P7 · [ ] P8 · [ ] P9
+- [ ] P1 · [ ] P2 · [ ] P3 · [ ] P4 · [ ] P5 · [ ] P6 · [ ] P7 · [ ] P8 · [ ] P9 · [ ] P10 · [ ] P11
 
 ## Stage 3: the action loop (weeks 9–14)
 
