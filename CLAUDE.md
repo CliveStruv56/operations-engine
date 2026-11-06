@@ -2,8 +2,9 @@
 
 Flowgrid OS (codename "Operations Engine" until Aug 2026) — white-label, multi-tenant AI operations SaaS for UK SMBs. One branded workspace
 per client: chat workspace, cited documents (RAG; the spec's "knowledge
-vault", shown as "Documents"), cost-routed open-weight models via cloud APIs
-only. Every project has a stored kind; modules supply kinds or add-on tabs
+vault", shown as "Documents"), cost-routed models via cloud APIs
+only (open-weight by default; Claude for tool turns and final drafts once
+plan item F5 lands — `docs/groundwork/ASSUMPTIONS.md` #73). Every project has a stored kind; modules supply kinds or add-on tabs
 (`app/projects/kinds.py`). Per-tenant modules gate on `tenants.features`
 jsonb (`projects`, `grants`, `contacts`, `community`, `web_search`); client
 workspaces are created by the platform operator via `/admin` (see
@@ -98,6 +99,8 @@ relevant app's commands pass locally.
 | `docs/review-context-handoff.md` | Session-resume context |
 | `docs/code-review-sep-2026.md` | Full security/health review, 2–3 Sep 2026 — read §1 for the ranked action list and §4 for the checks only the operator can run |
 | `docs/review-report.md` | Earlier full project review (Aug 2026) |
+| `docs/enhancement-plan-nov-2026.md` | **Current build plan** (approved 6 Nov 2026): four stages, item IDs F1–F6, P1–P9, A1–A4, R1–R4, with "done when" criteria and decisions. Start every build session here |
+| `docs/kylon-comparison.md` | Competitor lessons behind the plan (Kylon, 6 Nov 2026) |
 
 ## Working conventions
 

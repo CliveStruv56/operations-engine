@@ -119,7 +119,7 @@ Stripe: Core £29/seat, Pro £49/seat, quantity = seats; Managed manually invoic
 1. **CI-blocking cross-tenant isolation suite** (two seeded tenants; every read endpoint + direct-object-reference attacks; SQL-level RLS check).
 2. Secrets env-only; LiteLLM + worker internal; service-role key confined to API/worker.
 3. Presigned uploads validated server-side; private bucket; short-lived GET links.
-4. Vault chunks delimited as data (prompt-injection baseline); no agent tools in Phase 1 (caps blast radius).
+4. Vault chunks delimited as data (prompt-injection baseline); no agent tools in Phase 1 (caps blast radius). *(Lifted 6 Nov 2026 for draft-first tools only — see `docs/groundwork/ASSUMPTIONS.md` #72.)*
 5. All default routes US ZDR; no client content in logs (ids + counts only, Sentry scrubbing on).
 6. Supabase PITR + R2 versioning; restore runbook tested once. GDPR groundwork: doc delete cascades; tenant-delete stub logged.
 
