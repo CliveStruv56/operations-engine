@@ -1,301 +1,23 @@
 "use client";
 
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { api, apiStream } from "@/lib/api";
-import { openPresigned } from "@/lib/groundwork";
-import { projectPagePath } from "@/lib/projects";
-import { ACCEPT, uploadMime } from "@/lib/uploads";
-import { PulsingDots, Spinner } from "@/components/activity";
-import {
-  ArrowUpIcon,
-  ClipIcon,
-  CopyIcon,
-  DocIcon,
-  GlobeIcon,
-  StopIcon,
-} from "@/components/icons";
-import { AnswerMarkdown, stripCiteMarkers } from "@/components/markdown";
-import { useToast } from "@/components/toast";
+import { uploadMime } from "@/lib/uploads";
 import EmptyHero, { type DocMeta, type Suggestion } from "./hero";
 import ProjectPlanPanel from "./project-plan";
 import ShareBar from "./share-bar";
 import { useWorkspace } from "./workspace";
+import Composer, { ReadOnlyNotice } from "./_chat/composer";
+import MessageList from "./_chat/message-list";
+import ScopeBanner from "./_chat/scope-banner";
+import type { Message } from "./_chat/types";
+import { useDeltaBuffer } from "./_chat/use-delta-buffer";
+import { uploadDocument, useMessageActions } from "./_chat/use-message-actions";
 
-type Citation = {
-  n: number;
-  chunk_id: string;
-  document_id: string;
-  title: string;
-  page_start: number | null;
-  page_end: number | null;
-  snippet: string;
-  url?: string | null;
-  source_type?: string;
-};
-
-type Message = {
-  id: string;
-  role: "user" | "assistant" | "system";
-  content: string;
-  citations: Citation[];
-  model: string | null;
-  cost_usd: number | null;
-};
-
-const MODES: { key: string; label: string }[] = [
-  { key: "chat", label: "Chat" },
-  { key: "analyse", label: "Analyse" },
-  { key: "report", label: "Report" },
-  { key: "financial", label: "Financial" },
-  { key: "slides", label: "Slide deck" },
-  { key: "research", label: "Research" },
-];
-
-// Matches the "## Slide N — title" shape the slides task prompt enforces.
-function isSlideDeck(content: string): boolean {
-  return /^##\s*slide\s*\d/im.test(content);
-}
-
-function domainOf(url: string | null | undefined): string | null {
-  if (!url) return null;
-  try {
-    return new URL(url).hostname.replace(/^www\./, "");
-  } catch {
-    return null;
-  }
-}
-
-/** Cite renderer for AnswerMarkdown: [n] markers that match a real citation
- * become buttons; anything else stays literal text. */
-function citeButton(
-  citations: Citation[],
-  onCite: (n: number) => void
-): (n: number) => React.ReactNode {
-  const nums = new Set(citations.map((c) => c.n));
-  // Returns nodes, not a component — the display-name rule misfires here.
-  // eslint-disable-next-line react/display-name
-  return (n) =>
-    nums.has(n) ? (
-      <button
-        onClick={() => onCite(n)}
-        className="mx-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-accent-tint px-1 align-[2px] text-xs font-extrabold text-electric-blue hover:bg-deep-violet hover:text-white"
-        aria-label={`Source ${n}`}
-      >
-        {n}
-      </button>
-    ) : (
-      `[${n}]`
-    );
-}
-
-function SourceCard({ c }: { c: Citation }) {
-  const web = c.source_type === "web";
-  return (
-    <div id={`src-${c.chunk_id}`} className="rounded-[11px] border border-edge bg-canvas p-3">
-      <div className="flex items-center gap-2 text-xs font-bold">
-        <span className="mr-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-[5px] bg-accent-tint px-1 text-xs font-extrabold text-electric-blue">
-          {c.n}
-        </span>
-        {web ? (
-          <GlobeIcon className="h-3 w-3 text-electric-blue" />
-        ) : (
-          <DocIcon className="h-3 w-3 text-electric-blue" />
-        )}
-        <span className="min-w-0 truncate">{c.title}</span>
-        <em className="ml-auto shrink-0 text-xs font-semibold not-italic text-faint">
-          {web
-            ? domainOf(c.url)
-            : c.page_start != null
-              ? `p. ${c.page_start}${
-                  c.page_end != null && c.page_end !== c.page_start ? `–${c.page_end}` : ""
-                }`
-              : ""}
-        </em>
-      </div>
-      <p className="mt-1.5 line-clamp-4 text-xs leading-relaxed text-subtle italic">
-        &ldquo;{c.snippet}&rdquo;
-      </p>
-      {web && c.url && (
-        <a
-          href={c.url}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-1.5 block truncate text-xs font-bold text-electric-blue hover:underline"
-        >
-          Open source ↗
-        </a>
-      )}
-    </div>
-  );
-}
-
-/** Wrapped in `memo` below — see the note there before changing these props. */
-function AssistantMessageInner({
-  m,
-  scope,
-  onExport,
-  exporting,
-  onSaveToVault,
-  saving,
-  onPdf,
-  pdfBusy,
-  coverage,
-  onAddDocument,
-  onAssertFact,
-  readOnly,
-}: {
-  m: Message;
-  scope: string | undefined;
-  /** Takes the message id rather than closing over it, so the parent can pass
-   *  one stable callback instead of a fresh arrow per render (which would
-   *  defeat the memo). */
-  onExport: (id: string) => void;
-  exporting: boolean;
-  onSaveToVault: (id: string) => void;
-  saving: boolean;
-  onPdf: (id: string) => void;
-  pdfBusy: boolean;
-  /** "none" when the vault was asked and could not back the answer. */
-  coverage: string | undefined;
-  onAddDocument: () => void;
-  onAssertFact: (id: string) => void;
-  readOnly: boolean;
-}) {
-  const [showAllSources, setShowAllSources] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const cites = m.citations ?? [];
-  const docCount = new Set(
-    cites.filter((c) => c.source_type !== "web").map((c) => c.document_id)
-  ).size;
-  const webCount = new Set(cites.filter((c) => c.source_type === "web").map((c) => c.url)).size;
-  const visible = showAllSources ? cites : cites.slice(0, 3);
-
-  function copy() {
-    navigator.clipboard?.writeText(m.content).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }
-
-  return (
-    <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
-      {cites.length > 0 && (
-        <span className="mb-3 inline-flex items-center gap-2 rounded-full bg-grounded-tint px-[13px] py-1.5 text-xs font-bold text-grounded">
-          <i className="h-1.5 w-1.5 rounded-full bg-grounded" />
-          {docCount > 0 && `Grounded in ${docCount} of your documents`}
-          {docCount > 0 && webCount > 0 && " · "}
-          {webCount > 0 && `${webCount} web source${webCount === 1 ? "" : "s"}`}
-        </span>
-      )}
-      {/* Stored answers arrive already resolved — _resolve_citations turns
-          [c:<id>] into [n] before the row is written. Strip anyway: rows
-          written before a marker shape was recognised (the fullwidth 【…】 and
-          prefix-less forms both post-date August's conversations) still carry
-          raw ids, and no backend fix rewrites what is already on disk. Only
-          markers are removed, so the [n] the cite buttons need survive. */}
-      <AnswerMarkdown
-        content={stripCiteMarkers(m.content)}
-        cite={cites.length > 0 ? citeButton(cites, () => setShowAllSources(true)) : undefined}
-      />
-      {cites.length > 0 && (
-        <div className="mt-3 grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-          {visible.map((c) => (
-            <SourceCard key={c.chunk_id} c={c} />
-          ))}
-        </div>
-      )}
-      <div className="mt-3.5 flex flex-wrap items-center gap-2 border-t border-edge pt-3">
-        <button
-          onClick={copy}
-          aria-label="Copy answer"
-          title="Copy answer"
-          className="grid h-7 w-7 place-items-center rounded-lg border border-edge text-subtle hover:bg-sidebar hover:text-ink"
-        >
-          {copied ? <span className="text-[10px] font-bold">✓</span> : <CopyIcon className="h-3.5 w-3.5" />}
-        </button>
-        {cites.length > 3 && (
-          <button
-            onClick={() => setShowAllSources((v) => !v)}
-            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white"
-          >
-            {showAllSources ? "Show fewer sources" : `Show all ${cites.length} sources`}
-          </button>
-        )}
-        {!readOnly && isSlideDeck(m.content) && !m.id.startsWith("local-") && (
-          <button
-            onClick={() => onExport(m.id)}
-            disabled={exporting}
-            className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
-          >
-            {exporting ? "Building deck…" : "Download .pptx"}
-          </button>
-        )}
-        {!readOnly && !m.id.startsWith("local-") && (
-          <>
-            <button
-              onClick={() => onPdf(m.id)}
-              disabled={pdfBusy}
-              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
-            >
-              {pdfBusy ? "Building PDF…" : "Download as PDF"}
-            </button>
-            <button
-              onClick={() => onSaveToVault(m.id)}
-              disabled={saving}
-              className="rounded-full bg-accent-tint px-[13px] py-1.5 text-xs font-bold text-electric-blue hover:bg-deep-violet hover:text-white disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Save to documents"}
-            </button>
-          </>
-        )}
-        {m.model && (
-          <span className="ml-auto text-xs font-semibold text-faint">
-            {scope === "project" && "Drafted from project documents · "}
-            {scope === "vault" && "Drafted from all your documents · "}
-            {m.model}
-          </span>
-        )}
-      </div>
-      {coverage === "none" && !readOnly && (
-        <p className="mt-2.5 flex flex-wrap items-center gap-2.5 rounded-card bg-sidebar px-3 py-2 text-xs text-ink-muted">
-          <span>Your documents could not back this answer.</span>
-          <button
-            onClick={onAddDocument}
-            className="font-medium text-electric-blue underline hover:text-ink"
-          >
-            Add a document
-          </button>
-          <button
-            onClick={() => onAssertFact(m.id)}
-            className="font-medium text-electric-blue underline hover:text-ink"
-          >
-            Assert it as a fact
-          </button>
-        </p>
-      )}
-    </article>
-  );
-}
-
-/** Settled messages never change, but the panel re-renders on every streamed
- *  frame — and each of these runs a full `ReactMarkdown` parse plus the
- *  recursive `injectCites` walk. Unmemoized, a ten-message conversation
- *  re-parsed all ten answers on every delta of the eleventh, which is what
- *  made long replies stutter. Keep every prop here primitive or referentially
- *  stable or this silently stops working. */
-const AssistantMessage = memo(AssistantMessageInner);
-
-/** A vault title for a saved answer: its first heading or line, else dated. */
-function vaultTitle(content: string): string {
-  const line = content
-    .split("\n")
-    .map((l) => l.replace(/^#+\s*/, "").replace(/\*\*/g, "").trim())
-    .find(Boolean);
-  return (line ?? `Chat answer — ${new Date().toLocaleDateString("en-GB")}`).slice(0, 120);
-}
-
+// The chat panel: conversation state, streaming and ownership. Its parts —
+// message list, sources, composer, scope banner, and the per-answer actions —
+// live in ./_chat (a private folder, so not a route).
 export default function ChatPanel({
   activeProjectId,
   activeConversationId,
@@ -315,7 +37,6 @@ export default function ChatPanel({
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [createdHereIds, setCreatedHereIds] = useState<string[]>([]);
-  const [streamText, setStreamText] = useState<string | null>(null);
   const [softCap, setSoftCap] = useState(false);
   const [useVault, setUseVault] = useState(true);
   // "Include company data": the claims register plus the community-profile
@@ -331,52 +52,13 @@ export default function ChatPanel({
   const [docs, setDocs] = useState<DocMeta[] | null>(null);
   const [uploadingCount, setUploadingCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [exportingId, setExportingId] = useState<string | null>(null);
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [pdfId, setPdfId] = useState<string | null>(null);
-  const toast = useToast();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Set when this panel just created the conversation itself: the URL update
   // that follows must not refetch (and clobber) the in-flight local state.
   const justCreatedRef = useRef<string | null>(null);
-  // Streamed deltas are coalesced and applied once per animation frame rather
-  // than once per token. A token-per-setState re-parsed the whole accumulated
-  // answer through ReactMarkdown every time — quadratic work over a reply,
-  // which made the stream *look* slower than it arrived. A frame is the
-  // fastest cadence a display can show anyway, so nothing is lost, and the
-  // scroll effect below drops to frame rate with it.
-  const pendingRef = useRef("");
-  const frameRef = useRef<number | null>(null);
-
-  const flushDeltas = useCallback(() => {
-    frameRef.current = null;
-    const pending = pendingRef.current;
-    if (!pending) return;
-    pendingRef.current = "";
-    setStreamText((t) => (t ?? "") + pending);
-  }, []);
-
-  const pushDelta = useCallback(
-    (delta: string) => {
-      pendingRef.current += delta;
-      frameRef.current ??= requestAnimationFrame(flushDeltas);
-    },
-    [flushDeltas]
-  );
-
-  // Drop anything buffered without applying it. Every stream ending clears
-  // streamText, so a queued frame would otherwise fire afterwards and revive
-  // the bubble with a stray fragment of the reply that just finished.
-  const discardDeltas = useCallback(() => {
-    if (frameRef.current !== null) cancelAnimationFrame(frameRef.current);
-    frameRef.current = null;
-    pendingRef.current = "";
-  }, []);
-
-  useEffect(() => discardDeltas, [discardDeltas]);
+  const { streamText, setStreamText, pushDelta, discardDeltas } = useDeltaBuffer();
 
   /** Workspace URL, with or without an open conversation. Omitting `convId`
    *  is what returns someone to a usable, empty composer. Declared above the
@@ -400,7 +82,8 @@ export default function ChatPanel({
   // and silently discard whatever was typed into it. createdHereIds keeps the
   // ids this panel made — ws.conversations lags a create by one refresh, and
   // writability must not blink off under a reply that is still streaming.
-  const createdHere = activeConversationId !== null && createdHereIds.includes(activeConversationId);
+  const createdHere =
+    activeConversationId !== null && createdHereIds.includes(activeConversationId);
   const unknownConversation = activeConversationId !== null && !createdHere && activeConv === null;
   // Absent from a list that *loaded successfully* means the conversation is
   // gone — deleted here, or in another tab. Note the distinction from
@@ -479,133 +162,14 @@ export default function ChatPanel({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
   }, [messages, streamText]);
 
-  // useCallback so AssistantMessage's memo actually holds: a fresh arrow here
-  // would change on every streamed frame and re-render every settled message.
-  const exportSlides = useCallback(
-    async (messageId: string) => {
-      if (!conversationId) return;
-      setExportingId(messageId);
-      setError(null);
-      try {
-        const out = await api<{ download_url: string }>(
-          `/conversations/${conversationId}/messages/${messageId}/slides`,
-          { method: "POST" },
-          tenantId
-        );
-        openPresigned(out.download_url);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setExportingId(null);
-      }
-    },
-    [conversationId, tenantId]
-  );
-
-  // The save/pdf callbacks read messages through a ref so their identity
-  // stays stable and AssistantMessage's memo keeps holding.
-  const messagesRef = useRef<Message[]>([]);
-  useEffect(() => {
-    messagesRef.current = messages;
-  }, [messages]);
-
-  const saveToVault = useCallback(
-    async (messageId: string) => {
-      const msg = messagesRef.current.find((x) => x.id === messageId);
-      if (!msg || !conversationId) return;
-      setSavingId(messageId);
-      setError(null);
-      try {
-        const title = vaultTitle(msg.content);
-        const body = new Blob([msg.content], { type: "text/markdown" });
-        const { id, upload_url } = await api<{ id: string; upload_url: string }>(
-          "/documents",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              title,
-              mime: "text/markdown",
-              size_bytes: body.size,
-              project_id: activeProjectId,
-              conversation_id: conversationId,
-            }),
-          },
-          tenantId
-        );
-        const put = await fetch(upload_url, {
-          method: "PUT",
-          headers: { "Content-Type": "text/markdown" },
-          body,
-        });
-        if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-        await api(`/documents/${id}/complete`, { method: "POST" }, tenantId);
-        toast({ message: `Saved to documents — “${title}” is indexing.` });
-        refreshDocs();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setSavingId(null);
-      }
-    },
-    [conversationId, tenantId, activeProjectId, toast, refreshDocs]
-  );
-
-  const exportPdf = useCallback(
-    async (messageId: string) => {
-      if (!conversationId) return;
-      setPdfId(messageId);
-      setError(null);
-      try {
-        const job = await api<{ id: string }>(
-          `/conversations/${conversationId}/messages/${messageId}/pdf`,
-          { method: "POST" },
-          tenantId
-        );
-        // Same shape as the health-card poll: the worker renders, we wait.
-        for (;;) {
-          await new Promise((r) => setTimeout(r, 2000));
-          const j = await api<{ status: string; error: string | null; download_url: string | null }>(
-            `/conversations/exports/${job.id}`,
-            {},
-            tenantId
-          );
-          if (j.status === "succeeded" && j.download_url) {
-            openPresigned(j.download_url);
-            break;
-          }
-          if (j.status === "failed") throw new Error(j.error ?? "The PDF could not be built");
-        }
-      } catch (err) {
-        setError(err instanceof Error ? err.message : String(err));
-      } finally {
-        setPdfId(null);
-      }
-    },
-    [conversationId, tenantId]
-  );
-
-  // Recovery from "the vault does not contain X": put the missing thing in.
-  const addDocument = useCallback(() => {
-    const q = new URLSearchParams({ view: "vault", upload: "1" });
-    if (activeProjectId) q.set("project", activeProjectId);
-    router.push(`/app?${q}`);
-  }, [router, activeProjectId]);
-
-  const assertFact = useCallback(
-    (messageId: string) => {
-      // The thing that was missing is what the person asked — the user
-      // message just before this answer.
-      const list = messagesRef.current;
-      const i = list.findIndex((x) => x.id === messageId);
-      const asked = list
-        .slice(0, Math.max(i, 0))
-        .reverse()
-        .find((x) => x.role === "user")?.content;
-      const topic = (asked ?? "").slice(0, 200);
-      router.push(`/app/claims?add=1${topic ? `&topic=${encodeURIComponent(topic)}` : ""}`);
-    },
-    [router]
-  );
+  const actions = useMessageActions({
+    conversationId,
+    tenantId,
+    activeProjectId,
+    messages,
+    refreshDocs,
+    setError,
+  });
 
   function stopStreaming() {
     abortRef.current?.abort();
@@ -655,27 +219,12 @@ export default function ChatPanel({
       if (!convId) return;
       setUploadingCount((n) => n + 1);
       try {
-        const { id, upload_url } = await api<{ id: string; upload_url: string }>(
-          "/documents",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              title: file.name,
-              mime,
-              size_bytes: file.size,
-              project_id: activeProjectId,
-              conversation_id: convId,
-            }),
-          },
-          tenantId
-        );
-        const put = await fetch(upload_url, {
-          method: "PUT",
-          headers: { "Content-Type": mime },
-          body: file,
+        await uploadDocument(tenantId, file, {
+          title: file.name,
+          mime,
+          project_id: activeProjectId,
+          conversation_id: convId,
         });
-        if (!put.ok) throw new Error(`Upload failed (${put.status})`);
-        await api(`/documents/${id}/complete`, { method: "POST" }, tenantId);
       } catch (err) {
         setError(`${file.name}: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
@@ -717,7 +266,12 @@ export default function ChatPanel({
     try {
       await apiStream(
         `/conversations/${convId}/messages`,
-        { content, use_vault: useVault, use_company: useCompany, task_kind: mode },
+        {
+          content,
+          use_vault: useVault,
+          use_company: useCompany,
+          task_kind: mode,
+        },
         tenantId,
         {
           onDelta: pushDelta,
@@ -771,25 +325,12 @@ export default function ChatPanel({
   }
 
   const empty = messages.length === 0 && streamText === null;
-  const availableModes = MODES.filter((m) => m.key !== "research" || webSearchEnabled);
 
   return (
     <section className="flex min-h-0 flex-1 flex-col bg-canvas">
       {/* The empty-state hero carries the project context; the banner only
           needs to keep the scope visible once a conversation is underway. */}
-      {activeProject && !empty && (
-        <p className="flex items-center gap-3 border-b border-edge bg-sidebar px-6 py-1.5 text-xs font-bold text-subtle">
-          <span className="min-w-0 truncate">
-            Project: {activeProject.name} — answers prefer this project&apos;s documents
-          </span>
-          <Link
-            href={projectPagePath(activeProject.id)}
-            className="ml-auto shrink-0 text-electric-blue hover:underline"
-          >
-            Project page
-          </Link>
-        </p>
-      )}
+      {activeProject && !empty && <ScopeBanner project={activeProject} />}
       {activeConv?.is_mine && !empty && <ShareBar conversation={activeConv} onError={setError} />}
       {softCap && (
         <p className="border-b border-edge bg-warn-soft px-6 py-2 text-sm font-semibold text-warn">
@@ -801,59 +342,28 @@ export default function ChatPanel({
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6">
         <div className="mx-auto flex min-h-full w-full max-w-[720px] flex-col">
           {empty ? (
-              <EmptyHero
-                activeProject={activeProject}
-                docs={docs}
-                devProjectsEnabled={devProjectsEnabled}
-                grantsEnabled={grantsEnabled}
-                firstUse={
-                  docs !== null &&
-                  docs.length === 0 &&
-                  ws.projects.length === 0 &&
-                  ws.conversations.length === 0
-                }
-                onPick={pickSuggestion}
+            <EmptyHero
+              activeProject={activeProject}
+              docs={docs}
+              devProjectsEnabled={devProjectsEnabled}
+              grantsEnabled={grantsEnabled}
+              firstUse={
+                docs !== null &&
+                docs.length === 0 &&
+                ws.projects.length === 0 &&
+                ws.conversations.length === 0
+              }
+              onPick={pickSuggestion}
             />
           ) : (
-            <div className="space-y-4">
-              {messages.map((m) =>
-                m.role === "user" ? (
-                  <div key={m.id} className="flex justify-end">
-                    <div className="max-w-[85%] rounded-2xl rounded-br-[4px] bg-accent-tint px-[18px] py-[13px] text-[14.5px] font-semibold whitespace-pre-wrap sm:max-w-[420px]">
-                      {m.content}
-                    </div>
-                  </div>
-                ) : (
-                  <AssistantMessage
-                    key={m.id}
-                    m={m}
-                    scope={scopes[m.id]}
-                    onExport={exportSlides}
-                    exporting={exportingId === m.id}
-                    onSaveToVault={saveToVault}
-                    saving={savingId === m.id}
-                    onPdf={exportPdf}
-                    pdfBusy={pdfId === m.id}
-                    coverage={coverages[m.id]}
-                    onAddDocument={addDocument}
-                    onAssertFact={assertFact}
-                    readOnly={readOnly}
-                  />
-                )
-              )}
-              {streamText !== null && (
-                <article className="max-w-full rounded-2xl border border-edge bg-card px-5 py-4 shadow-card sm:px-6 sm:py-5">
-                  {streamText ? (
-                    <>
-                      <AnswerMarkdown content={stripCiteMarkers(streamText)} />
-                      <PulsingDots className="mt-1.5" />
-                    </>
-                  ) : (
-                    <PulsingDots className="py-1" />
-                  )}
-                </article>
-              )}
-            </div>
+            <MessageList
+              messages={messages}
+              streamText={streamText}
+              scopes={scopes}
+              coverages={coverages}
+              actions={actions}
+              readOnly={readOnly}
+            />
           )}
         </div>
       </div>
@@ -880,184 +390,31 @@ export default function ChatPanel({
       )}
 
       {readOnly ? (
-        <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
-          <p className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge bg-sidebar px-5 py-3.5 text-center text-[13px] font-semibold text-subtle">
-            {unknownConversation
-              ? // Reachable only when the list itself failed to load — a
-                // deleted chat no longer lands here at all, it opens an empty
-                // composer instead.
-                "Couldn't check who owns this chat — refresh to reply"
-              : `Shared by ${activeConv?.owner_email ?? "a teammate"} — read only`}
-          </p>
-        </div>
+        <ReadOnlyNotice
+          // Reachable only when the list itself failed to load — a deleted
+          // chat no longer lands here at all, it opens an empty composer.
+          ownerUnknown={unknownConversation}
+          ownerEmail={activeConv?.owner_email ?? null}
+        />
       ) : (
-      <div className="px-4 pt-2 pb-4 sm:px-6 sm:pb-6">
-        <form
-          onSubmit={send}
-          className="mx-auto w-full max-w-[720px] rounded-[18px] border border-edge-strong bg-card p-3 shadow-card"
-        >
-          <div
-            role="radiogroup"
-            aria-label="Mode"
-            className="flex gap-1.5 overflow-x-auto px-0.5 pb-2.5 [scrollbar-width:none]"
-          >
-            {availableModes.map((m) => (
-              <button
-                key={m.key}
-                type="button"
-                role="radio"
-                aria-checked={mode === m.key}
-                onClick={() => setModes((s) => ({ ...s, [modeKey]: m.key }))}
-                className={`shrink-0 rounded-full px-[13px] py-1.5 text-xs font-bold whitespace-nowrap transition ${
-                  mode === m.key
-                    ? "bg-deep-violet text-white"
-                    : "text-subtle hover:bg-sidebar"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-          {(attachments.length > 0 || uploadingCount > 0) && (
-            <div className="flex flex-wrap gap-1.5 px-0.5 pb-2">
-              {attachments.map((d) => (
-                <span
-                  key={d.id}
-                  className={`flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1 text-xs font-semibold ${
-                    d.status === "failed" ? "bg-danger-soft text-danger" : "bg-sidebar text-subtle"
-                  }`}
-                  title={d.status === "failed" ? (d.error ?? "Failed to read") : d.title}
-                >
-                  <ClipIcon className="h-3 w-3" />
-                  <span className="max-w-44 truncate">{d.title}</span>
-                  {d.status !== "ready" && (
-                    <span className="text-xs font-bold uppercase">
-                      {d.status === "failed" ? "failed" : "reading…"}
-                    </span>
-                  )}
-                </span>
-              ))}
-              {uploadingCount > 0 && (
-                <span className="flex items-center gap-1.5 rounded-full border border-edge bg-sidebar px-2.5 py-1 text-xs font-semibold text-subtle">
-                  <Spinner className="h-3 w-3" /> Uploading…
-                </span>
-              )}
-            </div>
-          )}
-          <div className="flex items-end gap-2.5">
-            <button
-              type="button"
-              onClick={() => fileRef.current?.click()}
-              disabled={uploadingCount > 0}
-              aria-label="Attach a file to this chat"
-              title="Attach a file — it joins your documents and this chat reads it first"
-              className="mb-1.5 flex-none rounded-lg p-1.5 text-subtle transition hover:bg-sidebar hover:text-ink disabled:opacity-50"
-            >
-              <ClipIcon className="h-[18px] w-[18px]" />
-            </button>
-            <input
-              ref={fileRef}
-              type="file"
-              multiple
-              accept={ACCEPT}
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files?.length) attach(e.target.files);
-                // Same file again (a failed upload, a corrected copy) must
-                // still fire a change event.
-                e.target.value = "";
-              }}
-            />
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={draft}
-              onChange={(e) => {
-                setDraft(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height = `${Math.min(e.target.scrollHeight, 200)}px`;
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                  e.preventDefault();
-                  send();
-                }
-              }}
-              aria-label="Message"
-              placeholder={
-                mode === "research"
-                  ? "Research a question across the web…"
-                  : useVault
-                    ? "Ask about your documents — or draft something new…"
-                    : "Ask anything…"
-              }
-              className="max-h-[200px] w-full resize-none bg-transparent px-0.5 py-2 text-base leading-normal text-ink placeholder:text-faint focus:outline-none sm:text-[15px]"
-            />
-            {streamText !== null ? (
-              <button
-                type="button"
-                onClick={stopStreaming}
-                className="inline-flex flex-none items-center gap-2 rounded-btn bg-ink px-[18px] py-[9px] text-[13.5px] font-medium text-on-ink hover:bg-stone"
-              >
-                <StopIcon className="h-3.5 w-3.5" />
-                Stop
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={!draft.trim()}
-                className="inline-flex flex-none items-center gap-2 rounded-btn bg-accent px-[18px] py-[9px] text-[13.5px] font-medium text-accent-ink transition hover:bg-accent-deep disabled:cursor-not-allowed disabled:bg-edge disabled:text-subtle"
-              >
-                Send
-                <ArrowUpIcon className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 border-t border-edge px-1 pt-[11px]">
-            {/* The two retrieval sources: the shared document vault, and the
-                workspace's own records (claims register, community profile,
-                contact book). Both default on; both cover the whole
-                workspace, not just this user's uploads. */}
-            <span className="flex items-center gap-2.5">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={useVault}
-                aria-label="Include workspace documents"
-                onClick={() => setUseVault((v) => !v)}
-                className={`relative h-[18px] w-8 flex-none rounded-full transition after:absolute after:top-0.5 after:left-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition after:content-[''] ${
-                  useVault ? "bg-grounded after:translate-x-[14px]" : "bg-edge-strong"
-                }`}
-              />
-              <span className="text-xs font-semibold text-subtle">Include workspace documents</span>
-            </span>
-            <span className="flex items-center gap-2.5">
-              <button
-                type="button"
-                role="switch"
-                aria-checked={useCompany}
-                aria-label="Include company data"
-                onClick={() => setUseCompany((v) => !v)}
-                className={`relative h-[18px] w-8 flex-none rounded-full transition after:absolute after:top-0.5 after:left-0.5 after:h-3.5 after:w-3.5 after:rounded-full after:bg-white after:transition after:content-[''] ${
-                  useCompany ? "bg-grounded after:translate-x-[14px]" : "bg-edge-strong"
-                }`}
-              />
-              <span className="text-xs font-semibold text-subtle">Include company data</span>
-            </span>
-            <span className="ml-auto hidden text-xs font-semibold text-faint sm:block">
-              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-xs font-bold">
-                ↵
-              </kbd>{" "}
-              Send ·{" "}
-              <kbd className="rounded-[5px] border border-edge bg-sidebar px-1.5 py-0.5 text-xs font-bold">
-                ⇧↵
-              </kbd>{" "}
-              New line
-            </span>
-            {streamText !== null && <Spinner className="ml-2 text-accent sm:ml-0" />}
-          </div>
-        </form>
-      </div>
+        <Composer
+          mode={mode}
+          onModeChange={(key) => setModes((s) => ({ ...s, [modeKey]: key }))}
+          webSearchEnabled={webSearchEnabled}
+          attachments={attachments}
+          uploadingCount={uploadingCount}
+          onAttach={attach}
+          draft={draft}
+          onDraftChange={setDraft}
+          inputRef={inputRef}
+          streaming={streamText !== null}
+          onSend={send}
+          onStop={stopStreaming}
+          useVault={useVault}
+          onToggleVault={() => setUseVault((v) => !v)}
+          useCompany={useCompany}
+          onToggleCompany={() => setUseCompany((v) => !v)}
+        />
       )}
     </section>
   );

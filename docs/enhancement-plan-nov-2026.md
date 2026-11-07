@@ -74,7 +74,7 @@ item below):
 - **First use and chat:** no example prompts or checklist; empty states without
   a next step; raw model name, cost never shown; web-only answers get the
   grounded badge; "0 documents" in trust green → P9.
-- **Code health:** `chat.tsx` is 1,064 lines → F4. Legacy colour aliases → P8.
+- **Code health:** `chat.tsx` was 1,064 lines → F4 (split into `app/app/_chat/`, largest file 421 lines). Legacy colour aliases → P8.
 - **Smaller:** "Scheme type" label; change kind only general → development;
   custom project labels (Client, Internal, Bid) — backlog.
 - **Visual check of the running app:** done in F1 (6 Nov 2026) — findings below,
@@ -157,7 +157,7 @@ yet, which matters before R4 (installable app):
 | F5 | Claude alias and model test | Claude added behind LiteLLM as alias `agent` on a zero-retention UK/EU endpoint (see #73). ~10 funder forms, ~20 cited questions and ~15 tool-call scenarios run on current aliases and on Claude; quality and cost per task recorded; routing rule for tool turns and final drafts set from the results | `infra/litellm/config.yaml`, `app/routing.py`, `infra/promptfoo/` | 3 |
 | F6 | Card component | One `<ActionCard>` with confirm, edit and reject; first used by P1 | `apps/web/components/` | 2 |
 
-- [x] F1 (#18) · [ ] F2 · [ ] F3 · [ ] F4 · [ ] F5 · [ ] F6
+- [x] F1 (#18) · [ ] F2 · [ ] F3 · [x] F4 (#19) · [ ] F5 · [ ] F6
 
 ## Stage 2: first hour and finish (weeks 3–8)
 
