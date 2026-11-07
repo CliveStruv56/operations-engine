@@ -1420,11 +1420,12 @@ async def test_ccni_unknown_number_names_the_snapshot(client, two_tenants):
 
 @pytest.fixture
 def capture_llm(monkeypatch):
-    """Stub stream_chat, recording the system prompt of each call."""
+    """Stub stream_chat, recording the user turn of each call — where looked-up
+    records travel, fenced as data (LLM-1)."""
     prompts: list[str] = []
 
     async def _fake(virtual_key, alias, messages, result: StreamResult):
-        prompts.append(messages[0]["content"])
+        prompts.append(messages[-1]["content"])
         result.text_parts.append("ok")
         yield "ok"
         result.tokens_in = 10
@@ -1486,10 +1487,10 @@ async def test_chat_injects_matching_claims_but_never_proposals(client, capture_
         )
 
     await _say(client, t, "How many volunteers do we work with?")
-    system = capture_llm[-1]
-    assert "<company-facts>" in system
-    assert "The organisation works with 40 volunteers." in system
-    assert "99" not in system
+    turn = capture_llm[-1]
+    assert "<company-facts>" in turn
+    assert "The organisation works with 40 volunteers." in turn
+    assert "99" not in turn
 
     # An unrelated question must not drag the register along.
     await _say(client, t, "Draft a short welcome email")
