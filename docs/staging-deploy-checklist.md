@@ -271,7 +271,8 @@ them the workflow skips and says so.
 | `API_BASE_URL` | | ✓ | | staging API origin (the unsubscribe link's host) |
 | `NEXT_PUBLIC_SUPABASE_URL` / `_ANON_KEY` | | | ✓ | |
 | `NEXT_PUBLIC_API_URL` | | | ✓ | staging API origin |
-| `NEXT_PUBLIC_STORAGE_ORIGIN` | | | ✓ | the R2 endpoint origin — presigned-URL open allowlist |
+| `NEXT_PUBLIC_STORAGE_ORIGIN` | | | ✓ | the R2 endpoint origin — presigned-URL open allowlist, and the CSP's `connect-src` (upload PUTs) and `img-src` (logo). Unset = uploads and the logo are refused once the CSP is enforced |
+| `CSP_ENFORCE` | | | ✓ | unset = the nonce Content-Security-Policy is report-only (violations log as `csp-violation` lines); `1` = enforced. Read at build and request time, so redeploy after changing it (`apps/web/lib/csp.ts`) |
 | `OPEN_SIGNUP` | ✓ | | | `false` (the default since 12 Oct — unset is now closed; `true` only on a service meant to take walk-in signups) |
 | `PLATFORM_ADMIN_EMAILS` | ✓ | | | operator login emails; exempt from the signup switch and the per-account workspace limit |
 
