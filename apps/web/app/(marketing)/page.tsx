@@ -83,7 +83,7 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
 
 const PROOF: { title: string; body: string; spot: SpotName }[] = [
   {
-    title: "Ask your documents; open the cited page",
+    title: "Ask your documents; see where each answer came from",
     body: "Answers name the document and the passage they came from (with the page for PDFs) — and say plainly when your documents don't hold the answer.",
     spot: "citation",
   },
