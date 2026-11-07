@@ -18,7 +18,7 @@ const content: SolutionContent = {
       "Your documents and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every figure cites its source for you to review before anything is sent.",
     vault: {
       caption: "surveys · minutes · studies",
-      arrowLabel: "source and passage named",
+      arrowLabel: "source document named",
     },
     facts: {
       caption: "charity no. · policies",
