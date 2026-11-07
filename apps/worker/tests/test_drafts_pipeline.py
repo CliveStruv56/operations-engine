@@ -173,6 +173,8 @@ def test_assemble_monthly_report_structure_citations_and_to_confirm():
     assert "[TO CONFIRM: contract start date]" in body  # markers stay visible
     assert "References" in body and "[1] Housing Needs Survey, p.12–13" in body
     assert "Data sources" in body and "10 stages" not in body  # counts are real, not invented
+    assert "Documents cited: Housing Needs Survey." in body  # ruling #71: no "Vault"
+    assert "Vault" not in body
 
     doc = Document(io.BytesIO(draft.data))
     assert doc.sections[0].header.paragraphs[0].text == "DRAFT — for review"
@@ -370,3 +372,12 @@ async def test_reasoning_effort_is_bounded_on_every_call(monkeypatch):
     await chat(LlmLedger(), "key", "reasoner", "sys", "usr")
     assert client.sent["reasoning_effort"] == REASONING_EFFORT
     assert REASONING_EFFORT in ("none", "low", "medium")
+
+
+def test_page_label_collapses_a_single_page():
+    from worker.drafting.assemble import _page_label
+
+    assert _page_label(4, 4) == "p.4"
+    assert _page_label(4, None) == "p.4"
+    assert _page_label(4, 6) == "p.4–6"
+    assert _page_label(None, None) is None
