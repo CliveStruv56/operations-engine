@@ -3,106 +3,25 @@ import Link from "next/link";
 import { DemoAgendaPanel } from "./cta-panels";
 import { HeroVisual } from "./hero-visual";
 import { PilotForm } from "./pilot-form";
-import { Spot, type SpotName } from "./spot-icons";
+import { BEFORE_AFTER, STEPS, WORKSPACE_DIAGRAM } from "./home-content";
+import {
+  AudiencesSection,
+  CapabilitiesBand,
+  CostsSection,
+  InChargeBand,
+  TrustBand,
+} from "./home-sections";
+import { Spot } from "./spot-icons";
 import { ctaGhost, ctaOutline, DemoCta, Kicker, Section, StatusCard } from "./ui";
-import { WorkflowDiagram, type WorkflowDiagramContent } from "./workflow-diagram";
+import { WorkflowDiagram } from "./workflow-diagram";
 import { PRODUCT_LANGUAGE } from "@/lib/product-language";
 
 export const metadata: Metadata = {
   title: "Flowgrid OS — Turn what your organisation knows into work you can trust",
   description:
-    "Cited answers from your own documents, confirmed organisational facts and live projects in one workspace. Built for UK small organisations and specialist teams.",
+    "Answers from your own documents that show where they came from, facts you confirm once, and first drafts of the reports and bids you write every month.",
   alternates: { canonical: "/" },
 };
-
-const BEFORE_AFTER = [
-  {
-    before: "Scattered documents",
-    after: "Cited answers with a visible source",
-  },
-  {
-    before: "Repeated re-keying",
-    after: "Reusable, reviewed organisational facts",
-  },
-  {
-    before: "Blank-page reporting",
-    after: "Structured outputs assembled from live records",
-  },
-];
-
-const STEPS: { label: string; title: string; body: string; spot: SpotName }[] = [
-  {
-    label: "Step 1 · The evidence",
-    title: "Bring the evidence together",
-    body: "Add documents and connect the facts your organisation relies on. Everything stays inside your own workspace, ready to be found again.",
-    spot: "evidence",
-  },
-  {
-    label: "Step 2 · The structure",
-    title: "Keep work structured",
-    body: `${PRODUCT_LANGUAGE.core.everyProject} Work in projects instead of rebuilding context in every chat: the workspace remembers, so your team doesn't have to.`,
-    spot: "structure",
-  },
-  {
-    label: "Step 3 · The output",
-    title: "Produce and review",
-    body: "Draft from evidence, check every citation against its source, and export a deliverable your client or funder can actually use.",
-    spot: "output",
-  },
-];
-
-const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
-  ariaLabel:
-    "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and every output cites its source for you to review before anything leaves.",
-  vault: {
-    caption: "policies · minutes · reports",
-    arrowLabel: "cited by page",
-  },
-  facts: {
-    caption: "reviewed once",
-    arrowLabel: "reused in every draft",
-  },
-  record: {
-    title: "One structured workspace",
-    gatesDone: 3,
-    gatesTotal: 5,
-    spineLabel: "projects, plans & registers",
-    chips: ["projects", "facts", "registers"],
-    footnote: "the workspace remembers",
-  },
-  outputs: [
-    { label: "Cited answer", violet: true },
-    { label: "Client report" },
-    { label: "Funding bid" },
-    { label: "Branded PDF / slides" },
-  ],
-  outLabel: "produced and reviewed",
-  returnLabel:
-    "every output cites its source — you review before anything leaves",
-};
-
-const PROOF: { title: string; body: string; spot: SpotName }[] = [
-  {
-    title: "Ask your documents; open the cited page",
-    body: "Answers link back to the exact document and page they came from — and say plainly when your documents don't hold the answer.",
-    spot: "citation",
-  },
-  {
-    title: "Confirm a fact once; reuse it everywhere",
-    body: "Charity numbers, policies, insurance dates: review a fact once and every draft draws on the confirmed version.",
-    spot: "claim",
-  },
-  {
-    title: "Turn a project into a plan with owned tasks",
-    body: "Every project has its own chat and documents, and can carry a plan. Switch on a module and it also carries stages, budgets and risks, so plans come from live records rather than a blank page.",
-    spot: "plan",
-  },
-  {
-    title: "Export finished, branded outputs",
-    body: "A conversation becomes a PDF; a funder response becomes editable PowerPoint — in your organisation's own branding.",
-    spot: "export",
-  },
-];
 
 export default function HomePage() {
   return (
@@ -114,12 +33,12 @@ export default function HomePage() {
             Turn what your organisation knows into work you can trust.
           </h1>
           <p className="mt-6 max-w-xl text-[18px] leading-[1.42] tracking-[-0.14px] text-slate">
-            Find cited answers, keep recurring work structured, and produce
-            outputs ready for review.
-            <span className="mt-2 block">
-              Flowgrid connects your source documents, confirmed facts and live
-              projects in one workspace.
-            </span>
+            Flowgrid is one workspace for your team&rsquo;s documents, confirmed
+            facts and projects. It answers questions from your own documents
+            and shows where each answer came from, drafts the reports, bids and
+            monitoring returns you write again and again, and takes on routine
+            jobs. Nothing changes and nothing goes to a funder, client or
+            partner until a person says yes.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-5">
             <DemoCta />
@@ -128,11 +47,13 @@ export default function HomePage() {
             </Link>
           </div>
           <p className="mt-8 text-[13px] font-medium uppercase tracking-[0.08em] text-slate">
-            Built for UK small organisations and specialist teams
+            For small UK organisations of 3 to 50 people
           </p>
           <p className="mt-2 max-w-xl text-[14px] leading-[1.5] text-slate">
-            Best suited to small teams managing recurring bids, reporting,
-            development projects and evidence-heavy organisational work.
+            Charities and community groups, development trusts, professional
+            firms and small businesses: anyone who writes the same kinds of
+            reports, bids and monitoring returns every month and needs to show
+            where the facts came from.
           </p>
         </div>
         <HeroVisual />
@@ -140,7 +61,7 @@ export default function HomePage() {
 
       {/* Problem → outcome strip */}
       <section aria-label="Before and after" className="border-y border-bone bg-band">
-        <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-6 py-12 md:grid-cols-3">
+        <div className="mx-auto grid w-full max-w-[1200px] gap-8 px-6 py-12 md:grid-cols-2 lg:grid-cols-4">
           {BEFORE_AFTER.map((pair) => (
             <div key={pair.before}>
               <p className="text-[14px] text-slate line-through decoration-1">
@@ -154,8 +75,19 @@ export default function HomePage() {
         </div>
       </section>
 
+      <CapabilitiesBand />
+
+      <InChargeBand />
+
+      <AudiencesSection />
+
+      {/* Mid-page call to action */}
+      <div className="flex justify-center px-6 pb-16">
+        <DemoCta />
+      </div>
+
       {/* How it works */}
-      <Section kicker="How it works" title="One workspace, from evidence to deliverable">
+      <Section kicker="How it works" title="From first sign-in to a first useful draft">
         <ol className="grid gap-6 md:grid-cols-3">
           {STEPS.map((step) => (
             <li key={step.label} className="rounded-lg border border-bone p-6">
@@ -170,71 +102,27 @@ export default function HomePage() {
             </li>
           ))}
         </ol>
+        <p className="mt-8 max-w-3xl text-[16px] leading-[1.45] text-slate">
+          Want to look around first? Ask us for a sample workspace when you
+          book a demo. It&rsquo;s a fictional development trust with documents,
+          a project and a grant already in place, open for a limited time, so
+          your team can try Flowgrid before adding anything of its own.
+        </p>
         <div className="mt-12">
           <WorkflowDiagram content={WORKSPACE_DIAGRAM} />
         </div>
       </Section>
 
-      {/* Product proof — the page's one warm band (amber wash, marketing-only:
-          see workflow-diagram.tsx for why it isn't a globals.css token) */}
-      <section className="border-y border-bone bg-[#f2e9dc]">
-        <div className="mx-auto w-full max-w-[1200px] px-6 py-16">
-          <Kicker>Proof</Kicker>
-          <h2 className="mt-3 max-w-3xl text-[29px] font-normal leading-[1.3] tracking-[-0.32px] text-ink md:text-[40px] md:leading-[1.22] md:tracking-[-0.48px]">
-            What that looks like on a normal working day
-          </h2>
-          <div className="mt-10 grid gap-6 md:grid-cols-2">
-            {PROOF.map((item) => (
-              <div key={item.title} className="rounded-lg border border-bone bg-canvas p-6">
-                <Spot name={item.spot} className="mb-4 h-auto w-full max-w-[220px]" />
-                <h3 className="text-[22px] font-medium leading-[1.32] tracking-[-0.22px] text-ink">
-                  {item.title}
-                </h3>
-                <p className="mt-3 text-[16px] leading-[1.45] text-slate">
-                  {item.body}
-                </p>
-              </div>
-            ))}
-          </div>
-          <h3 className="mt-12 border-t border-bone pt-10 text-[22px] font-medium leading-[1.32] text-ink">
-            How Flowgrid is structured
-          </h3>
-          <dl className="mt-6 grid gap-8 sm:grid-cols-3">
-            <div>
-              <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
-                ≈24
-              </dd>
-              <dt className="mt-2 max-w-[36ch] text-[14px] leading-[1.5] text-slate">
-                facts imported from one charity number, each with its public
-                source
-              </dt>
-            </div>
-            <div>
-              <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
-                5
-              </dd>
-              <dt className="mt-2 max-w-[36ch] text-[14px] leading-[1.5] text-slate">
-                stage gates carrying every development project from idea to
-                delivery
-              </dt>
-            </div>
-            <div>
-              <dd className="text-[44px] font-light leading-none tracking-[-0.5px] text-ink tabular-nums">
-                0
-              </dd>
-              <dt className="mt-2 max-w-[36ch] text-[14px] leading-[1.5] text-slate">
-                documents Flowgrid sends on your behalf — you review and send
-                everything
-              </dt>
-            </div>
-          </dl>
-        </div>
-      </section>
-
       {/* Solutions */}
       <Section kicker="Solutions" title="Start from your workflow, not a blank tool">
         <p className="mb-10 max-w-2xl text-[18px] leading-[1.42] text-slate">
           {PRODUCT_LANGUAGE.core.everyProject} {PRODUCT_LANGUAGE.core.modulesAdd}
+        </p>
+        <p className="-mt-6 mb-10 max-w-2xl text-[16px] leading-[1.45] text-slate">
+          In plain terms: each project has its own chat, its own documents and,
+          if you want one, a task plan where each task can be given to a named
+          person. A module adds what your sector needs, such as the five stages
+          of a development project or your grant records.
         </p>
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="flex flex-col">
@@ -274,45 +162,28 @@ export default function HomePage() {
               tone="neutral"
               label="Core · Always included"
               title={`${PRODUCT_LANGUAGE.core.label} — ${PRODUCT_LANGUAGE.core.triplet}`}
-              tags={["Cited answers", "Confirmed facts", "Exports"]}
+              tags={["Answers with sources", "Confirmed facts", "Exports"]}
             />
             <p className="mt-4 flex-1 text-[16px] leading-[1.45] text-slate">
               For teams that need cited answers, confirmed facts and
               projects with chat, documents and an optional plan — without a sector
-              module.
+              module. Every workspace starts with ready-made playbooks for
+              common jobs.
             </p>
             <Link href="/platform" className={`${ctaOutline} mt-4 self-start`}>
               Explore the platform
             </Link>
           </div>
         </div>
+        <p className="mt-10 max-w-3xl border-t border-bone pt-8 text-[16px] leading-[1.45] text-slate">
+          A Community profile module records the place you serve, its services,
+          facilities and figures, and downloads it as a branded PDF.
+        </p>
       </Section>
 
-      {/* Trust and controls */}
-      <section className="border-y border-bone bg-band">
-        <div className="mx-auto w-full max-w-[1200px] px-6 py-16">
-          <Kicker>Trust &amp; controls</Kicker>
-          <h2 className="mt-3 max-w-3xl text-[29px] font-normal leading-[1.3] tracking-[-0.32px] text-ink md:text-[40px] md:leading-[1.22] md:tracking-[-0.48px]">
-            Built so you can check its work
-          </h2>
-          <ul className="mt-10 grid gap-x-10 gap-y-6 md:grid-cols-2">
-            {[
-              "Customer workspaces are isolated at the database level using row-level security — not only by application code.",
-              "Roles and per-module entitlements limit what each user can see and do.",
-              "AI usage and cost are recorded on every call, so you always know what the assistant is spending.",
-              "Grounded answers link back to the document and page they came from — and say so when they can't.",
-            ].map((line) => (
-              <li key={line} className="flex gap-3 text-[16px] leading-[1.45] text-slate">
-                <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-grounded" />
-                {line}
-              </li>
-            ))}
-          </ul>
-          <Link href="/security-and-data" className={`${ctaGhost} mt-8`}>
-            Read the security &amp; data detail
-          </Link>
-        </div>
-      </section>
+      <CostsSection />
+
+      <TrustBand />
 
       {/* Final CTA */}
       <Section kicker="Next step" title="Bring one repeated workflow. We'll show you how it fits.">
