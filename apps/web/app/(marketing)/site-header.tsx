@@ -28,8 +28,12 @@ export function SiteHeader() {
   const closeMenu = () => setOpen(false);
 
   useEffect(() => {
-    createClient()
-      .auth.getSession()
+    // createClient() throws synchronously when NEXT_PUBLIC_SUPABASE_* is
+    // missing (Vercel previews): starting from a resolved promise turns that
+    // throw into a rejection, so the header stays signed out instead of the
+    // error boundary blanking the whole marketing page.
+    Promise.resolve()
+      .then(() => createClient().auth.getSession())
       .then(({ data }) => setAuthed(data.session !== null))
       .catch(() => setAuthed(false));
   }, []);
