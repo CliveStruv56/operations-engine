@@ -1816,11 +1816,11 @@ Items **7–14 of §1**, none started:
 
 Two carried notes that are **not** in the §1 list and are easy to lose:
 
-- **LLM-1 is only half closed.** Both renderers are fixed, but retrieved
-  material is still interpolated into the **system** message with unescaped
-  `<vault-excerpts>` tags, so content carrying the closing tag can break out
-  (`routers/conversations.py:526-545`). The remaining fix is to move it into a
-  dedicated data turn and strip the closing-tag strings. Recorded in §1 row 4.
+- **LLM-1 is closed on both sides (7 Nov 2026).** Both renderers were fixed on
+  3 Sep. The prompt side is fixed by PR #22: retrieved material is fenced and
+  labelled as data through `app/untrusted.py` (see ASSUMPTIONS #74), not
+  interpolated into the **system** message as it was at
+  `routers/conversations.py:526-545`. Recorded in §1 row 4.
 - **The backup alert needs the operator.** `BACKUP_ALERT_EMAIL` and
   `RESEND_API_KEY` must be set on the Railway `backup` service or a failed
   night is still only a log line in a container that has already disappeared.
@@ -1988,8 +1988,7 @@ patched braces is published, and its only path is the lint-time
 `eslint-config-next` devDependency. Remove the entry and add an override as
 soon as braces 3.0.4 exists. `source-map-js` is fixed by override.
 
-**Still open from the review, outside §1:** the prompt-side half of LLM-1
-(retrieved text still sits in the system message), LLM-2 (a client
+**Still open from the review, outside §1:** LLM-2 (a client
 disconnect loses the answer and its cost row), a `script-src` CSP, and
 refusing drafts at the month soft cap (row 11's note).
 
