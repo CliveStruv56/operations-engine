@@ -21,6 +21,7 @@ import re
 
 from app.errors import ApiError
 from app.refdata.schemas import Question
+from app.untrusted import data_rule, fence
 
 #: Guessing here would be worse than failing here.
 SYSTEM = """\
@@ -45,8 +46,9 @@ Rules, in order of importance:
 Reply with a JSON object: {"questions": [{"text": ..., "guidance": ...,
 "limit": <int|null>, "limit_kind": "characters"|"words", "required": bool}]}.
 JSON only, no commentary. If the text contains no questions at all, return
-{"questions": []}.\
-"""
+{"questions": []}.
+
+""" + data_rule("funder-guidance")
 
 #: Bound the paste. A funder's question list runs to a few thousand characters;
 #: anything much larger is a whole guidance PDF, which belongs in the vault.
@@ -60,7 +62,7 @@ def build_prompt(source: str) -> list[dict]:
             "role": "user",
             "content": (
                 "Transcribe the questions in the following text.\n\n"
-                f"<funder-guidance>\n{source}\n</funder-guidance>"
+                + fence("funder-guidance", source)
             ),
         },
     ]

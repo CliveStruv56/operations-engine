@@ -300,11 +300,12 @@ async def test_mutations_are_audited(client):
 
 @pytest.fixture
 def capture_llm(monkeypatch):
-    """Stub stream_chat, recording the system prompt of each call."""
+    """Stub stream_chat, recording the user turn of each call — where looked-up
+    records travel, fenced as data (LLM-1)."""
     prompts: list[str] = []
 
     async def _fake(virtual_key, alias, messages, result: StreamResult):
-        prompts.append(messages[0]["content"])
+        prompts.append(messages[-1]["content"])
         result.text_parts.append("ok")
         yield "ok"
         result.tokens_in = 10
@@ -346,10 +347,10 @@ async def test_chat_injects_matching_contact(client, capture_llm):
     )
 
     await _say(client, t, "What is Sarah's phone number?")
-    system = capture_llm[-1]
-    assert "<contact-records>" in system
-    assert "Sarah Meadows" in system
-    assert "0113 555 0100" in system
+    turn = capture_llm[-1]
+    assert "<contact-records>" in turn
+    assert "Sarah Meadows" in turn
+    assert "0113 555 0100" in turn
 
     # No name mentioned → no injection.
     await _say(client, t, "Summarise our leave policy")
@@ -366,9 +367,9 @@ async def test_chat_injects_matching_company(client, capture_llm):
     )
 
     await _say(client, t, "Do we have an address for Brightside?")
-    system = capture_llm[-1]
-    assert "Brightside Builders (company)" in system
-    assert "0161 555 0199" in system
+    turn = capture_llm[-1]
+    assert "Brightside Builders (company)" in turn
+    assert "0161 555 0199" in turn
 
 
 async def test_chat_lookup_matches_whole_words_only(client, capture_llm):

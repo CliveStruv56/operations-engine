@@ -20,6 +20,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 from worker.drafting.questions import QuestionSet
+from worker.untrusted import neutralise
 
 
 class VaultExcerpt(BaseModel):
@@ -115,7 +116,9 @@ class DraftPackBase(BaseModel):
         """Lines added to every section prompt: the reporting period, client
         instructions, which funder a bid targets."""
         if self.instructions:
-            return [f"Client instructions for this document: {self.instructions}"]
+            # The requester's own instructions, so they stay instructions —
+            # but stored text, so they cannot close a data block either.
+            return [f"Client instructions for this document: {neutralise(self.instructions)}"]
         return []
 
     def record_counts(self) -> dict[str, int]:

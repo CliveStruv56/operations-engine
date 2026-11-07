@@ -104,12 +104,12 @@ async def test_cross_tenant_project_assignment_rejected(client):
 
 @pytest.fixture
 def scoped_llm(monkeypatch):
-    """Cites every excerpt id in the system prompt, in order."""
+    """Cites every excerpt id in the user turn, in order."""
 
     async def _fake(virtual_key, alias, messages, result):
         import re
 
-        ids = re.findall(r"\[c:([0-9a-f-]{36})\]", messages[0]["content"])
+        ids = re.findall(r"\[c:([0-9a-f-]{36})\]", messages[-1]["content"])
         text = " ".join(f"[c:{i}]" for i in ids) or "No coverage."
         result.text_parts.append(text)
         yield text

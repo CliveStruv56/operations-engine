@@ -49,6 +49,9 @@ class Section:
     #: every skeleton section, and the reason existing behaviour is unchanged.
     limit: int | None = None
     limit_kind: str = "characters"
+    #: The title and guidance are a funder's own text, not ours. The prompt
+    #: fences them as data (LLM-1) instead of quoting them as an instruction.
+    from_form: bool = False
 
 
 def measure(text: str, section: Section) -> tuple[int, int]:

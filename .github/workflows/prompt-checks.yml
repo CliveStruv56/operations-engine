@@ -1,6 +1,7 @@
 # Live-model prompt canaries (infra/promptfoo/) — the failure classes CI
 # cannot catch because they are provider behaviours, not code paths: reasoning
-# models returning empty prose, phantom table references, invented limits.
+# models returning empty prose, phantom table references, invented limits, and
+# models obeying instructions planted in fenced data (prompt injection).
 #
 # Runs against the STAGING gateway with real models (a few pence per run), so
 # it is scheduled + manual rather than per-PR, and skips cleanly when the
@@ -36,3 +37,6 @@ jobs:
       - name: Transcription canary (invented-limit class)
         if: steps.gate.outputs.skip != 'true'
         run: npx promptfoo@latest eval -c infra/promptfoo/transcribe.yaml --no-cache
+      - name: Injection canaries (LLM-1 — fenced data must never be obeyed)
+        if: steps.gate.outputs.skip != 'true'
+        run: npx promptfoo@latest eval -c infra/promptfoo/injection.yaml --no-cache

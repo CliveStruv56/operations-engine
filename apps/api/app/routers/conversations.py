@@ -27,16 +27,7 @@ from app.crm.lookup import contacts_block, match_contacts
 from app.db import db
 from app.errors import ApiError
 from app.litellm import StreamResult, estimate_cost_usd, litellm_client
-from app.prompts import (
-    CLAIMS_PROMPT,
-    COMMUNITY_PROMPT,
-    CONTACTS_PROMPT,
-    NO_COVERAGE_PROMPT,
-    SYSTEM_PROMPT,
-    TASK_PROMPTS,
-    VAULT_PROMPT,
-    WEB_PROMPT,
-)
+from app.prompts import ChatData, build_chat_messages, excerpt_block, web_block
 from app.ratelimit import rate_limiter
 from app.retrieval import (
     ATTACHED_WEIGHT,
@@ -110,20 +101,6 @@ FULL_ID_RE = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 # Evidence-panel excerpt length. Chunks run ~600 tokens (~2,400 chars); 300
 # was too little to carry context past a chunk's heading boilerplate.
 SNIPPET_CHARS = 800
-
-
-def _excerpt_block(chunks: list[RetrievedChunk]) -> str:
-    parts = []
-    for c in chunks:
-        pages = f", p.{c.page_start}–{c.page_end}" if c.page_start else ""
-        parts.append(f'[c:{c.chunk_id}] (from "{c.title}"{pages})\n{c.content}')
-    return "\n\n---\n\n".join(parts)
-
-
-def _web_block(sources: list[WebSource]) -> str:
-    return "\n\n---\n\n".join(
-        f'[c:{s.chunk_id}] (from "{s.title}", {s.url})\n{s.content}' for s in sources
-    )
 
 
 def _resolve_citations(
@@ -520,29 +497,30 @@ async def post_message(
         web_sources = search_task.result()
 
     soft_cap_hit = float(month_spend) >= float(tenant["soft_budget_usd"])
-    system = SYSTEM_PROMPT
-    if body.task_kind in TASK_PROMPTS:
-        system += "\n\n" + TASK_PROMPTS[body.task_kind]
-    if body.use_vault:
-        if chunks:
-            system += "\n\n" + VAULT_PROMPT.format(excerpts=_excerpt_block(chunks))
-        else:
-            system += "\n\n" + NO_COVERAGE_PROMPT
-    if web_sources:
-        system += "\n\n" + WEB_PROMPT.format(results=_web_block(web_sources))
-    if matched_contacts or matched_companies:
-        system += "\n\n" + CONTACTS_PROMPT.format(
-            records=contacts_block(matched_contacts, matched_companies)
-        )
-    if matched_place is not None or matched_stats or matched_assets:
-        system += "\n\n" + COMMUNITY_PROMPT.format(
-            records=community_block(matched_place, matched_stats, matched_assets)
-        )
-    if matched_claims:
-        system += "\n\n" + CLAIMS_PROMPT.format(facts=claims_chat_block(matched_claims))
-    llm_messages = [{"role": "system", "content": system}]
-    llm_messages += [{"role": r["role"], "content": r["content"]} for r in history]
-    llm_messages.append({"role": "user", "content": body.content})
+    # Instructions in the system message; everything retrieved for this turn
+    # fenced as data in the user turn (LLM-1 — see app/prompts.py).
+    chat_data = ChatData(
+        use_vault=body.use_vault,
+        excerpts=excerpt_block(chunks) if chunks else "",
+        web=web_block(web_sources) if web_sources else "",
+        contacts=(
+            contacts_block(matched_contacts, matched_companies)
+            if matched_contacts or matched_companies
+            else ""
+        ),
+        community=(
+            community_block(matched_place, matched_stats, matched_assets)
+            if matched_place is not None or matched_stats or matched_assets
+            else ""
+        ),
+        claims=claims_chat_block(matched_claims) if matched_claims else "",
+    )
+    llm_messages = build_chat_messages(
+        body.task_kind,
+        chat_data,
+        [{"role": r["role"], "content": r["content"]} for r in history],
+        body.content,
+    )
     context_tokens = sum(estimate_tokens(m["content"]) for m in llm_messages)
     alias = select_route(body.task_kind, context_tokens, soft_cap_hit=soft_cap_hit)
     # Everything the user waits through before the model is even asked.
