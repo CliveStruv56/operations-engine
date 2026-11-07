@@ -157,7 +157,10 @@ yet, which matters before R4 (installable app):
 | F5 | Claude alias and model test | Claude added behind LiteLLM as alias `agent` on a zero-retention UK/EU endpoint (see #73). ~10 funder forms, ~20 cited questions and ~15 tool-call scenarios run on current aliases and on Claude; quality and cost per task recorded; routing rule for tool turns and final drafts set from the results | `infra/litellm/config.yaml`, `app/routing.py`, `infra/promptfoo/` | 3 |
 | F6 | Card component | One `<ActionCard>` with confirm, edit and reject; first used by P1 | `apps/web/components/` | 2 |
 
-- [x] F1 (#18) · [ ] F2 · [ ] F3 · [x] F4 (#19) · [ ] F5 · [ ] F6
+- [x] F1 (#18) · [x] F2 (#22) · [ ] F3 · [x] F4 (#19) · [ ] F5 · [x] F6 (#21)
+
+- F2 (#22, merged 7 Nov 2026): the promptfoo injection canaries (`infra/promptfoo/injection.yaml`) have not yet been run against the live models; Gate A needs one green run.
+- PR #20 (7 Nov 2026) fixed CI drift: msgpack and dnspython advisories, and a date-sensitive test.
 
 ## Stage 2: first hour and finish (weeks 3–8)
 
