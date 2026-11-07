@@ -49,6 +49,21 @@ function outputYs(count: number): number[] {
   return Array.from({ length: count }, (_, i) => top + i * (OUT_H + OUT_GAP));
 }
 
+/** Arrow labels sit in the ~85-unit gap left of the record: wrap longer
+ * ones onto stacked lines so they never run into the record box. */
+function wrapLabel(label: string, max = 14): string[] {
+  const lines: string[] = [];
+  for (const word of label.split(" ")) {
+    const last = lines[lines.length - 1];
+    if (last !== undefined && `${last} ${word}`.length <= max) {
+      lines[lines.length - 1] = `${last} ${word}`;
+    } else {
+      lines.push(word);
+    }
+  }
+  return lines;
+}
+
 function chipWidth(label: string): number {
   return Math.round(label.length * 6.6) + 26;
 }
@@ -56,6 +71,7 @@ function chipWidth(label: string): number {
 export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }) {
   const { record, outputs } = content;
   const ys = outputYs(outputs.length);
+  const vaultLabel = wrapLabel(content.vault.arrowLabel);
 
   const gateXs = Array.from(
     { length: record.gatesTotal },
@@ -78,7 +94,14 @@ export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }
   );
 
   return (
-    <div className="overflow-x-auto">
+    // At phone width the diagram scrolls sideways, so its container is a
+    // focusable region: keyboard users can scroll it with the arrow keys.
+    <div
+      className="overflow-x-auto"
+      role="region"
+      aria-label="Workflow diagram"
+      tabIndex={0}
+    >
       {/* PRD §9: motion is functional and optional. The citation loop — the
           one mark carrying the trust claim — draws in as the diagram scrolls
           into view. Pure CSS scroll-driven animation: no JS, static in
@@ -244,8 +267,12 @@ export function WorkflowDiagram({ content }: { content: WorkflowDiagramContent }
           strokeWidth="1.2"
           markerEnd="url(#wfd-arrow)"
         />
-        <text x="238" y="84" fontSize="11" fill={SOFT}>
-          {content.vault.arrowLabel}
+        <text x="210" y={84 - (vaultLabel.length - 1) * 13} fontSize="11" fill={SOFT}>
+          {vaultLabel.map((line, i) => (
+            <tspan key={line} x="210" dy={i === 0 ? 0 : 13}>
+              {line}
+            </tspan>
+          ))}
         </text>
         <path
           d="M 200 211 C 250 211, 250 195, 296 185"
