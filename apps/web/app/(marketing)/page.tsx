@@ -53,7 +53,7 @@ const STEPS: { label: string; title: string; body: string; spot: SpotName }[] = 
 
 const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
   ariaLabel:
-    "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and every output cites its source for you to review before anything leaves.",
+    "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and answers, reports and bids cite their sources for you to review before anything leaves.",
   vault: {
     caption: "policies · minutes · reports",
     arrowLabel: "source document named",
@@ -78,12 +78,12 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
   ],
   outLabel: "produced and reviewed",
   returnLabel:
-    "every output cites its source — you review before anything leaves",
+    "answers, reports and bids cite their sources — you review before anything leaves",
 };
 
 const PROOF: { title: string; body: string; spot: SpotName }[] = [
   {
-    title: "Ask your documents; see where each answer came from",
+    title: "Ask your documents; every citation shows its source",
     body: "Answers name the document and the passage they came from (with the page for PDFs) — and say plainly when your documents don't hold the answer.",
     spot: "citation",
   },
