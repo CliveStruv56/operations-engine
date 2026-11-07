@@ -15,8 +15,8 @@ const PILLARS = [
   {
     kicker: "Documents",
     title: "Knowledge that shows its sources",
-    body: "Upload the documents your organisation runs on — policies, minutes, bids, accounts, surveys. Ask in plain English and get an answer with a citation that opens the exact page it came from. When your documents don't hold the answer, Flowgrid says so instead of guessing. Need something it doesn't hold? Research mode, switched on per workspace, is more than a Google search: it reads the pages behind the results and cites each passage it uses.",
-    tags: ["Cited answers", "Page-level sources", "Honest 'not found'", "Research mode (optional)"],
+    body: "Upload the documents your organisation runs on — policies, minutes, bids, accounts, surveys. Ask in plain English and get an answer that names the document and the passage it came from (with the page for PDFs). When your documents don't hold the answer, Flowgrid says so instead of guessing. Need something it doesn't hold? Research mode, switched on per workspace, is more than a Google search: it reads the pages behind the results and cites each passage it uses.",
+    tags: ["Cited answers", "Source and passage named", "Honest 'not found'", "Research mode (optional)"],
   },
   {
     kicker: "Confirmed facts",
