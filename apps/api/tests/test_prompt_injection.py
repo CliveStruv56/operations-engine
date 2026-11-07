@@ -7,6 +7,8 @@ The rule each builder must keep: untrusted text never reaches the system
 message, and it cannot close the block it sits in.
 """
 
+import re
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -239,3 +241,23 @@ def test_transcribe_fences_the_pasted_guidance():
     assert user.count("</funder-guidance>") == 1
     assert user.endswith("</funder-guidance>")
     assert "evil.example" in user
+
+
+# -- the live canaries stay in step with the helper -------------------------------
+
+CANARIES = Path(__file__).resolve().parents[3] / "infra" / "promptfoo" / "injection.yaml"
+
+
+@pytest.mark.skipif(not CANARIES.exists(), reason="infra/ not present")
+def test_injection_canaries_use_the_current_rule_and_labels():
+    """`infra/promptfoo/injection.yaml` carries real builder output. If the
+    data rule or a label line changes here and not there, the weekly canaries
+    would be testing a prompt the app no longer sends."""
+    text = CANARIES.read_text(encoding="utf-8")
+    rule_tail = data_rule("vault-excerpts").split(" tags ", 1)[1]
+    assert text.count(rule_tail) == text.count("  - description:") == 8
+    used = set(re.findall(r"^ {8}<([a-z-]+)>$", text, flags=re.MULTILINE))
+    assert used >= {"vault-excerpts", "web-results", "company-facts", "funder-guidance"}
+    for label in used:
+        assert label in LABELS, label
+        assert " " * 8 + fence(label, "").split("\n")[0] in text, label
