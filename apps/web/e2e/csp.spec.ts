@@ -96,6 +96,9 @@ test("every page carries a fresh nonce policy, and every script carries the nonc
     expect(policy).toContain("frame-ancestors 'none'");
     // Prerendered HTML would have no nonce on its scripts: each one must.
     const html = await resp.text();
+    // The 12 Oct baseline as a <meta> policy, enforced even while the
+    // header policy is report-only.
+    expect(html).toContain('<meta http-equiv="Content-Security-Policy" content="base-uri');
     const scripts = html.match(/<script\b[^>]*>/g) ?? [];
     expect(scripts.length, path).toBeGreaterThan(0);
     for (const tag of scripts) expect(tag, `${path}: ${tag}`).toContain(`nonce="${nonce}"`);

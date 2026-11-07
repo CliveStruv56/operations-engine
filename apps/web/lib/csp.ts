@@ -16,9 +16,16 @@
  * page into dynamic rendering (app/layout.tsx). A prerendered page would
  * carry no nonce and every script on it would be refused. */
 
-/** The directives that shipped on 12 Oct. They stay enforced on every
- * route: next.config.ts sends them, on pages too while the full policy is
- * report-only, and the full policy repeats them. */
+/** The directives that shipped on 12 Oct. They stay enforced everywhere:
+ * the full policy repeats them; next.config.ts sends them on API routes,
+ * which proxy.ts never sees; and while the full policy is report-only,
+ * pages enforce them through META_POLICY plus X-Frame-Options: DENY.
+ *
+ * No page response may carry a nonce-less Content-Security-Policy header.
+ * Next reads the nonce from the request's Content-Security-Policy before
+ * the report-only one, and both Next and Vercel can copy response headers
+ * onto that request — on a Vercel preview, an enforced baseline header
+ * beside the report-only policy left every script without its nonce. */
 export const BASELINE_DIRECTIVES = [
   "frame-ancestors 'none'",
   "base-uri 'self'",
@@ -27,6 +34,13 @@ export const BASELINE_DIRECTIVES = [
 ];
 
 export const BASELINE_POLICY = BASELINE_DIRECTIVES.join("; ");
+
+/** The baseline as the root layout's <meta> policy, for pages while the
+ * full policy is report-only. Browsers ignore frame-ancestors in a <meta>
+ * (and warn about it), so framing is left to X-Frame-Options: DENY. */
+export const META_POLICY = BASELINE_DIRECTIVES.filter((d) => !d.startsWith("frame-ancestors")).join(
+  "; "
+);
 
 /** Where violation reports go (app/api/csp-report/route.ts). */
 export const CSP_REPORT_PATH = "/api/csp-report";
@@ -97,19 +111,14 @@ export function buildCsp(
 }
 
 /** Enforce only when CSP_ENFORCE=1; otherwise the full policy is sent as
- * Content-Security-Policy-Report-Only. Read at build time by next.config.ts
- * and at request time by proxy.ts, so changing it needs a redeploy. */
+ * Content-Security-Policy-Report-Only. Read by proxy.ts per request; the
+ * project's env vars only reach a deploy built after they change, so
+ * redeploy after changing it. */
 export function cspEnforced(env: Record<string, string | undefined> = process.env): boolean {
   return env.CSP_ENFORCE === "1";
 }
 
-/** The response header proxy.ts sets on a page.
- *
- * Never an enforced baseline beside a report-only policy: Next copies every
- * header the proxy sets onto the request too, and reads the nonce from the
- * request's Content-Security-Policy first — a nonce-less baseline there
- * would leave every script without its nonce. While report-only, the
- * baseline comes from next.config.ts instead, which touches responses only. */
+/** The one CSP response header proxy.ts sets on a page (see BASELINE). */
 export function cspResponseHeader(policy: string, enforce: boolean): [string, string] {
   return [enforce ? "Content-Security-Policy" : "Content-Security-Policy-Report-Only", policy];
 }

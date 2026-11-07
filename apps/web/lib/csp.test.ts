@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BASELINE_POLICY,
+  META_POLICY,
   buildCsp,
   cspEnforced,
   cspResponseHeader,
@@ -59,6 +60,10 @@ describe("content-security policy", () => {
   });
 
   afterEach(() => vi.unstubAllEnvs());
+
+  it("keeps the meta baseline free of frame-ancestors, which a <meta> ignores", () => {
+    expect(META_POLICY).toBe("base-uri 'self'; object-src 'none'; form-action 'self'");
+  });
 
   it("reads origins from the public env, defaulting the API like lib/api.ts", () => {
     vi.stubEnv("NEXT_PUBLIC_API_URL", undefined);

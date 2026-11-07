@@ -1,15 +1,14 @@
 import type { NextConfig } from "next";
-import { BASELINE_POLICY, cspEnforced } from "./lib/csp";
+import { BASELINE_POLICY } from "./lib/csp";
 
 // Response headers for every route (code review WEB-1). `/app` is fully
 // client-rendered with the session in cookies, so framing and MIME sniffing
 // are the cheap wins.
 //
-// Content-Security-Policy: pages get the full nonce policy from proxy.ts
-// (lib/csp.ts). While that runs report-only, the 12 Oct baseline is enforced
-// here on every route; once CSP_ENFORCE=1, pages get only the proxy's policy
-// (which includes the baseline) and the baseline stays on API routes, which
-// the proxy never sees. One enforced CSP header per response either way.
+// Content-Security-Policy: pages get theirs from proxy.ts with a per-request
+// nonce (lib/csp.ts). A CSP header from here on a page would reach the
+// renderer as the request's CSP and strip the nonce from every script, so
+// only API routes, which the proxy never sees, get the baseline from here.
 const securityHeaders = [
   // frame-ancestors' predecessor, for browsers that predate it.
   { key: "X-Frame-Options", value: "DENY" },
@@ -28,7 +27,7 @@ const nextConfig: NextConfig = {
     return [
       { source: "/:path*", headers: securityHeaders },
       {
-        source: cspEnforced() ? "/api/:path*" : "/:path*",
+        source: "/api/:path*",
         headers: [{ key: "Content-Security-Policy", value: BASELINE_POLICY }],
       },
     ];
