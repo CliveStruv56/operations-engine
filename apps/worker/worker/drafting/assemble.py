@@ -86,6 +86,15 @@ class AssembledDraft:
     answers: list[dict] = field(default_factory=list)
 
 
+def _page_label(start: int | None, end: int | None) -> str | None:
+    """'p.4' for one page, 'p.4–6' for a range, None when the source has no page."""
+    if not start:
+        return None
+    if end is None or end == start:
+        return f"p.{start}"
+    return f"p.{start}–{end}"
+
+
 class CitationIndex:
     """Shared first-appearance numbering across every section."""
 
@@ -144,7 +153,7 @@ class CitationIndex:
         entries = []
         for cid, n in sorted(self.order.items(), key=lambda kv: kv[1]):
             excerpt = self.by_id[cid]
-            pages = f"p.{excerpt.page_start}–{excerpt.page_end}" if excerpt.page_start else None
+            pages = _page_label(excerpt.page_start, excerpt.page_end)
             entries.append({"n": n, "title": excerpt.title, "pages": pages})
         return entries
 
@@ -195,7 +204,7 @@ def _data_sources(doc: Document, pack: DraftPackBase, index: CitationIndex) -> N
     doc.add_paragraph(f"Assembled from module records: {counts}.")
     cited_titles = sorted({e["title"] for e in index.references()})
     if cited_titles:
-        doc.add_paragraph("Vault documents cited: " + "; ".join(cited_titles) + ".")
+        doc.add_paragraph("Documents cited: " + "; ".join(cited_titles) + ".")
     for note in pack.source_notes():
         doc.add_paragraph(note)
 
