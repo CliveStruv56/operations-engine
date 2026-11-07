@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field
 from worker.claims.facts import claim_source_notes, claims_warning, load_claims
 from worker.drafting.pack import DraftPackBase
 from worker.drafting.questions import load_question_set, source_note_for, warning_for
+from worker.untrusted import inline
 
 DRAFT_KINDS = (
     "case_for_support",
@@ -275,14 +276,14 @@ class GrantPack(DraftPackBase):
         period = self.target_period()
         if period is not None:
             notes.append(
-                f"Reporting period: {period.label} "
+                f"Reporting period: {inline(period.label)} "
                 f"({period.period_start.isoformat()} to {period.period_end.isoformat()})."
             )
         notes.extend(super().prompt_notes())
         if self.catalogue is not None:
             notes.append(
-                f'This application targets "{self.catalogue.name}" '
-                f"({self.catalogue.funder}). Write to that funder's eligibility and "
+                f'This application targets "{inline(self.catalogue.name)}" '
+                f"({inline(self.catalogue.funder)}). Write to that funder's eligibility and "
                 "documentation notes as they appear in the data — do not assert any "
                 "requirement that is not there."
             )
