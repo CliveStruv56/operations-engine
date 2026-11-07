@@ -1,6 +1,8 @@
 """Budget lines with derived totals, funding CRUD, and the programme
 catalogue (nation + status filters)."""
 
+from datetime import date
+
 import pytest
 
 pytestmark = pytest.mark.usefixtures("ref_data")
@@ -46,7 +48,10 @@ async def test_funding_crud_and_catalogue(client, gw):
     keys = {p["key"] for p in cat}
     assert "cwmpas_cch" in keys and "ecology_clh" in keys  # wales + uk-wide
     assert "sahp_cme" not in keys
-    assert all(p["stale"] is False for p in cat)
+    # `stale` is computed against today's date, so derive the expectation from
+    # each row's next_review rather than assuming the seed data is still in date.
+    today = date.today().isoformat()
+    assert all(p["stale"] is (p["next_review"] < today) for p in cat)
     paused = (
         await client.get("/api/v1/projects/funding-programmes?status=paused", headers=gw["h"])
     ).json()
