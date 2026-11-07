@@ -56,7 +56,7 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
     "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and every output cites its source for you to review before anything leaves.",
   vault: {
     caption: "policies · minutes · reports",
-    arrowLabel: "cited by page",
+    arrowLabel: "source document named",
   },
   facts: {
     caption: "reviewed once",
@@ -84,7 +84,7 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
 const PROOF: { title: string; body: string; spot: SpotName }[] = [
   {
     title: "Ask your documents; open the cited page",
-    body: "Answers link back to the exact document and page they came from — and say plainly when your documents don't hold the answer.",
+    body: "Answers name the document and the passage they came from (with the page for PDFs) — and say plainly when your documents don't hold the answer.",
     spot: "citation",
   },
   {
@@ -300,7 +300,7 @@ export default function HomePage() {
               "Customer workspaces are isolated at the database level using row-level security — not only by application code.",
               "Roles and per-module entitlements limit what each user can see and do.",
               "AI usage and cost are recorded on every call, so you always know what the assistant is spending.",
-              "Grounded answers link back to the document and page they came from — and say so when they can't.",
+              "Grounded answers name the document and the passage they came from (with the page for PDFs) — and say so when they can't.",
             ].map((line) => (
               <li key={line} className="flex gap-3 text-[16px] leading-[1.45] text-slate">
                 <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-grounded" />

@@ -18,7 +18,7 @@ const content: SolutionContent = {
       "Your documents and confirmed organisational facts flow into one record per grant, carrying its stages, conditions, deadlines and impact evidence. Application drafts, monitoring returns, paste-ready funder-form answers and editable PowerPoint are assembled out of that record, and every answer cites its evidence — you verify and paste; Flowgrid never submits to a funder.",
     vault: {
       caption: "past bids · policies · accounts",
-      arrowLabel: "cited by page",
+      arrowLabel: "source document named",
     },
     facts: {
       caption: "charity no. · safeguarding",

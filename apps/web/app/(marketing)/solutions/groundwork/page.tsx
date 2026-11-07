@@ -18,7 +18,7 @@ const content: SolutionContent = {
       "Your documents and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every figure cites its source for you to review before anything is sent.",
     vault: {
       caption: "surveys · minutes · studies",
-      arrowLabel: "cited by page",
+      arrowLabel: "source document named",
     },
     facts: {
       caption: "charity no. · policies",
@@ -82,7 +82,7 @@ const content: SolutionContent = {
   ],
   vignette: "health-card",
   trust:
-    "Every draft cites the document and page it drew from, and your workspace is isolated from every other customer's at the database level. You review and send everything — Flowgrid never submits anything to a funder on your behalf.",
+    "Every draft names the documents it drew from (with the page for PDFs), and your workspace is isolated from every other customer's at the database level. You review and send everything — Flowgrid never submits anything to a funder on your behalf.",
   fit: [
     "You run several community-led development engagements at once.",
     "Clients or funders expect regular written reporting against a live project.",
