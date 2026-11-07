@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 from worker.claims.facts import claim_source_notes, claims_warning, load_claims
 from worker.drafting.pack import DraftPackBase, VaultExcerpt
 from worker.drafting.questions import load_question_set, source_note_for, warning_for
+from worker.untrusted import inline
 
 __all__ = ["VaultExcerpt"]  # re-exported: this was its original home
 
@@ -222,13 +223,13 @@ class ContextPack(DraftPackBase):
     def prompt_notes(self) -> list[str]:
         notes = []
         if self.report_month:
-            notes.append(f"Reporting period: {self.report_month}.")
+            notes.append(f"Reporting period: {inline(self.report_month)}.")
         notes.extend(super().prompt_notes())
         if self.kind == "funding_bid" and self.target_funding() is not None:
             source = self.target_funding()
             notes.append(
-                f'This bid targets the funding source "{source.name}" '
-                f"(programme key: {source.programme_key or 'none'}). Tailor the "
+                f'This bid targets the funding source "{inline(source.name)}" '
+                f"(programme key: {inline(source.programme_key or 'none')}). Tailor the "
                 "section to that programme's eligibility and documentation notes "
                 "in the data."
             )

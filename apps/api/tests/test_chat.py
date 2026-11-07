@@ -239,8 +239,9 @@ async def test_research_mode_yields_web_citations(client, monkeypatch):
     monkeypatch.setattr("app.routers.conversations.exa_search", fake_exa)
 
     async def fake_stream(virtual_key, alias, messages, result: StreamResult):
-        # The web block must be in the system prompt.
-        assert "web-results" in messages[0]["content"]
+        # Web results are fenced as data in the user turn, never the system prompt.
+        assert "<web-results>" in messages[-1]["content"]
+        assert "gov.uk/clh-funding" not in messages[0]["content"]
         text = f"Funding exists [c:{source.chunk_id}] but not this [c:{'0' * 32}]."
         result.text_parts.append(text)
         yield text

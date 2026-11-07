@@ -261,11 +261,12 @@ async def test_direct_object_reference_attacks(client, two_tenants):
 
 @pytest.fixture
 def capture_llm(monkeypatch):
-    """Stub stream_chat, recording the system prompt of each call."""
+    """Stub stream_chat, recording the user turn of each call — where looked-up
+    records travel, fenced as data (LLM-1)."""
     prompts: list[str] = []
 
     async def _fake(virtual_key, alias, messages, result: StreamResult):
-        prompts.append(messages[0]["content"])
+        prompts.append(messages[-1]["content"])
         result.text_parts.append("ok")
         yield "ok"
         result.tokens_in = 10
@@ -320,9 +321,9 @@ async def test_chat_injects_matching_figure(client, capture_llm):
     assert resp.status_code == 201, resp.text
 
     await _say(client, t, "How many households are there on the island?")
-    system = capture_llm[-1]
-    assert "<community-profile>" in system
-    assert "Households: 240 households (2022 — Scotland's Census 2022)" in system
+    turn = capture_llm[-1]
+    assert "<community-profile>" in turn
+    assert "Households: 240 households (2022 — Scotland's Census 2022)" in turn
 
     # An unrelated question must not carry the place along.
     await _say(client, t, "Summarise our leave policy")
@@ -346,9 +347,9 @@ async def test_chat_matches_a_category_question(client, capture_llm):
     assert resp.status_code == 201, resp.text
 
     await _say(client, t, "Is there a shop where I can buy groceries?")
-    system = capture_llm[-1]
-    assert "Sinclair General Stores" in system
-    assert "post office: yes" in system
+    turn = capture_llm[-1]
+    assert "Sinclair General Stores" in turn
+    assert "post office: yes" in turn
 
 
 async def test_chat_matches_the_profile_description(client, capture_llm):
@@ -370,9 +371,9 @@ async def test_chat_matches_the_profile_description(client, capture_llm):
     assert resp.status_code == 200, resp.text
 
     await _say(client, t, "Is there a pub on the island?")
-    system = capture_llm[-1]
-    assert "<community-profile>" in system
-    assert "a pub and a Heritage Centre" in system
+    turn = capture_llm[-1]
+    assert "<community-profile>" in turn
+    assert "a pub and a Heritage Centre" in turn
 
 
 async def test_chat_lookup_respects_feature_flag(client, capture_llm):

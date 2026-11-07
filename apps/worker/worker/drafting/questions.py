@@ -108,6 +108,7 @@ def sections_from(question_set: QuestionSet) -> list[Section]:
             uses_vault=q.uses_vault,
             limit=q.limit,
             limit_kind=q.limit_kind,
+            from_form=True,
         )
         for q in question_set.ordered()
     ]

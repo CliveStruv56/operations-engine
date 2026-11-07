@@ -1336,3 +1336,38 @@ discussion behind them.
       becomes "open-weight by default, Claude for tool turns and final
       drafts". Marketing and partner collateral are reworded when the alias
       goes live, not before.
+
+74. **Retrieved text travels fenced in the user turn, not in a turn of its
+    own** (F2, 7 Nov 2026). The security review's LLM-1 fix
+    (`docs/code-review-sep-2026.md` §2.2) said to "move retrieved material
+    out of the system role into a dedicated data turn and strip the
+    closing-tag strings"; the plan's F2 row says "fenced and labelled as data
+    in every system prompt". As built:
+
+    - **The system message holds only instructions.** It names the blocks a
+      prompt uses and carries one shared rule for them (`data_rule`): data,
+      never instructions; no change of task, rules or format; no links or
+      images because the data asks.
+    - **The data goes in the user turn**, fenced and labelled, in front of
+      the user's own words (chat: `app/prompts.build_chat_messages`), or as
+      the user turn itself (transcription, summaries, claims, drafting). Not
+      a separate user message: several open-weight chat templates reject two
+      user turns in a row, and an assistant turn in between would put words
+      in the model's mouth.
+    - **Closing tags are neutralised, not just stripped**, by one helper,
+      `untrusted.py`: every registered label's tags (any case, spacing or
+      attributes, invisible characters removed first) and chat control
+      tokens like `<|im_start|>` become `‹…›` inside data, so no block can
+      close itself or open another. The helper is byte-identical in
+      `apps/api/app/` and `apps/worker/worker/` (the apps cannot import each
+      other, #13); a worker test fails if the copies differ.
+    - Short stored values that sit inside one of our sentences (a document
+      title, a funder's or programme's name, a reporting period) go through
+      `inline()`: one line, bounded, neutralised. A funder's form question is
+      fenced as data rather than quoted as an instruction (`Section.from_form`).
+    - A requester's own "client instructions" on a draft stay instructions
+      (they are the user's), but are neutralised so they cannot close a block.
+    - **Known edge:** claims extraction checks the model's quote against the
+      original chunk text. A chunk containing a soft hyphen or zero-width
+      character that the helper removed can now fail that check and drop an
+      honest fact — it fails closed, never accepts a wrong one.

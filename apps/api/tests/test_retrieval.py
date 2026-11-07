@@ -302,7 +302,7 @@ async def test_scope_restricts_documents(client):
 
 @pytest.fixture
 def citing_llm(monkeypatch):
-    """Stub model that cites the first excerpt id found in the system prompt;
+    """Stub model that cites the first excerpt id found in the user turn;
     captures the prompts it was given."""
     seen: list[list[dict]] = []
 
@@ -310,7 +310,7 @@ def citing_llm(monkeypatch):
         seen.append(messages)
         import re
 
-        ids = re.findall(r"\[c:([0-9a-f-]{36})\]", messages[0]["content"])
+        ids = re.findall(r"\[c:([0-9a-f-]{36})\]", messages[-1]["content"])
         text = f"Covered in the handbook [c:{ids[0]}]." if ids else "The vault doesn't cover that."
         result.text_parts.append(text)
         yield text
