@@ -1293,3 +1293,46 @@ discussion behind them.
     - **Out of scope.** `docs/investor-partner-product-plan.*` and the
       Hearth design concepts are historical and still say "Operations
       Engine"; they are not maintained.
+
+## Recorded during enhancement planning (6 Nov 2026)
+
+72. **"No agent tools in Phase 1" is lifted, for draft-first tools only**
+    (operator decision, 6 Nov 2026). `docs/phase-1-build-spec.md` §9.4 said
+    "no agent tools in Phase 1 (caps blast radius)". The enhancement plan
+    (`docs/enhancement-plan-nov-2026.md`, items A1–A2, R1) needs the assistant
+    to propose real changes. The ruling:
+
+    - **Tools may only propose.** A tool call produces a proposal (an
+      approval card) that a member with the right role accepts, edits or
+      rejects. Acceptance writes through the normal API, under the tenant
+      RLS context, and is recorded in `audit_log`; rejection is logged too.
+      No tool writes directly.
+    - **Nothing leaves Flowgrid on a tool's say-so.** No tool sends email,
+      submits to a funder or posts anywhere; outbound messages (R1) are
+      drafts a person sends. "Flowgrid never submits to a funder" stands.
+    - **The blast-radius concern is met by the card, not by having no
+      tools.** The prompt-injection fix (LLM-1, plan item F2) ships before
+      any tool (gate A).
+    - Automations (A2) produce cards or drafts on the same terms, start
+      paused, and run as saved instructions, never user-written code.
+
+73. **Claude is the frontier model, behind LiteLLM, for tool turns and final
+    drafts** (operator decision, 6 Nov 2026). Until now every route was an
+    open-weight model (`infra/litellm/config.yaml`). The ruling:
+
+    - **One added alias, `agent`,** served by Claude on a zero-retention
+      UK or EU endpoint (AWS Bedrock or Google Vertex), chosen in plan item
+      F5 once written zero-retention and no-training terms are in hand and
+      the host is added to the DPA subprocessor list.
+    - **Scope:** tool-using turns (A1, A2) and the final pass of high-stakes
+      drafts (bids, funder-form answers). Open-weight aliases stay the
+      default for chat, retrieval, extraction, claims and embeddings. F5's
+      test set decides the exact routing rule from measured quality and cost.
+    - **Unchanged:** all calls go through the LiteLLM gateway (no provider
+      SDKs in app code); every call is metered in `usage_events`; soft and
+      hard caps apply, and hitting the soft cap still pins routing to
+      `workhorse`.
+    - **Wording:** "open-weight models" in `CLAUDE.md` and `README.md`
+      becomes "open-weight by default, Claude for tool turns and final
+      drafts". Marketing and partner collateral are reworded when the alias
+      goes live, not before.

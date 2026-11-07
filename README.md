@@ -2,7 +2,8 @@
 
 Flowgrid OS (codename "Operations Engine" until Aug 2026) — white-label, multi-tenant AI operations SaaS for UK SMBs (3–50 seats). One branded
 workspace per client: chat workspace, cited knowledge vault (RAG), cost-routed
-open-weight models via cloud APIs only.
+models via cloud APIs only: open-weight by default, Claude for tool turns and
+final drafts once plan item F5 lands (see [ASSUMPTIONS #73](docs/groundwork/ASSUMPTIONS.md)).
 
 Authoritative specification: [docs/phase-1-build-spec.md](docs/phase-1-build-spec.md).
 
