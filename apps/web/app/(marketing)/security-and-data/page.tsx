@@ -32,7 +32,7 @@ const SECTIONS = [
     plain:
       "Grounded answers name the document and the passage they came from (with the page for PDFs), so you can check each cited statement against its source. When your documents hold no answer, Flowgrid says so rather than improvising.",
     detail:
-      "Retrieval runs over your own documents; answers carry source excerpts, and drafting workflows are transcribe → verify → draft → paste, with a human review step before anything leaves the workspace. Flowgrid never submits documents to a funder or client on your behalf.",
+      "Retrieval runs over your own documents; answers carry source excerpts, and drafting workflows are transcribe → verify → draft → paste, with a human review step. Nothing goes to a funder or client without a person deciding it should, and Flowgrid never submits documents to either on your behalf.",
   },
   {
     kicker: "Cost & oversight",

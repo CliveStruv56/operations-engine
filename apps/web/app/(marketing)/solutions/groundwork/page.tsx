@@ -15,7 +15,7 @@ const content: SolutionContent = {
     "Most development consultants rebuild the same picture every month: trawling emails for the latest budget, re-keying risks into Word, and writing funder updates from memory. Groundwork, the development-projects module of Flowgrid OS, keeps one live record per project, so reporting becomes an export, not an evening.",
   diagram: {
     ariaLabel:
-      "Your documents and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every figure cites its source for you to review before anything is sent.",
+      "Your documents and confirmed organisational facts flow into one live project record with five stage gates and budget, funding and risk registers. Monthly client reports, funding bids, feasibility studies and the health card are drafted out of that record, and every citation shows its source. Nothing goes to a funder or client without your say-so.",
     vault: {
       caption: "surveys · minutes · studies",
       arrowLabel: "source document named",
@@ -40,7 +40,7 @@ const content: SolutionContent = {
     ],
     outLabel: "drafted from live records",
     returnLabel:
-      "every figure cites its source — you review before anything is sent",
+      "every citation shows its source — nothing goes to a funder or client without your say-so",
   },
   outcomes: [
     {
@@ -82,7 +82,7 @@ const content: SolutionContent = {
   ],
   vignette: "health-card",
   trust:
-    "Every draft names the documents it drew from (with the page for PDFs), and your workspace is isolated from every other customer's at the database level. You review and send everything — Flowgrid never submits anything to a funder on your behalf.",
+    "Written drafts name the documents they drew from (with the page for PDFs), and your workspace is isolated from every other customer's at the database level. Flowgrid never submits anything to a funder or client on your behalf: a person decides what goes out.",
   fit: [
     "You run several community-led development engagements at once.",
     "Clients or funders expect regular written reporting against a live project.",

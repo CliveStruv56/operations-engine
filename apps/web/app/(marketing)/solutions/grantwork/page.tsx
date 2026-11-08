@@ -61,7 +61,7 @@ const content: SolutionContent = {
       title: "Monitoring returns from live impact evidence",
       body: "Outcomes and impact measures accumulate against the grant through the year, so the return is assembled from records rather than memory.",
       evidence:
-        "Impact measures per grant, drawn into monitoring drafts you review before anything leaves the building.",
+        "Impact measures per grant, drawn into monitoring drafts for you to review. Nothing goes to a funder without your say-so.",
       spot: "impact",
     },
   ],

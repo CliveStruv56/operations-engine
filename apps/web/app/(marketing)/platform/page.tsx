@@ -33,7 +33,7 @@ const PILLARS = [
   {
     kicker: "Outputs",
     title: "Finished deliverables, in your branding",
-    body: "Turn a conversation into a PDF, a funder response into editable PowerPoint, a project into a client-ready health card. Outputs are assembled from live records and cited evidence — then you review before anything leaves the building.",
+    body: "Turn a conversation into a PDF, a funder response into editable PowerPoint, a project into a client-ready health card. Outputs are assembled from live records and cited evidence, and nothing goes to a funder or client without your say-so.",
     tags: ["PDF export", "Editable PowerPoint", "Branded documents"],
   },
 ];
