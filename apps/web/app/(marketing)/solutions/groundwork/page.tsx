@@ -82,7 +82,7 @@ const content: SolutionContent = {
   ],
   vignette: "health-card",
   trust:
-    "Written drafts name the documents they drew from (with the page for PDFs), and your workspace is isolated from every other customer's at the database level. Flowgrid never submits anything to a funder or client on your behalf: a person decides what goes out.",
+    "Written drafts name the documents they drew from (with the page for PDFs), and your workspace is isolated from every other customer's at the database level. Flowgrid never submits anything to a funder or client on your behalf: a person decides what goes to them.",
   fit: [
     "You run several community-led development engagements at once.",
     "Clients or funders expect regular written reporting against a live project.",
