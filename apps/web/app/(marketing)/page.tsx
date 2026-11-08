@@ -53,7 +53,7 @@ const STEPS: { label: string; title: string; body: string; spot: SpotName }[] = 
 
 const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
   ariaLabel:
-    "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it, and answers, reports and bids cite their sources for you to review before anything leaves.",
+    "Your documents and confirmed organisational facts flow into one structured workspace of projects, plans and registers. Cited answers, client reports, funding bids and branded exports are produced out of it; every citation shows its source, and you review before anything leaves.",
   vault: {
     caption: "policies · minutes · reports",
     arrowLabel: "source document named",
@@ -78,7 +78,7 @@ const WORKSPACE_DIAGRAM: WorkflowDiagramContent = {
   ],
   outLabel: "produced and reviewed",
   returnLabel:
-    "answers, reports and bids cite their sources — you review before anything leaves",
+    "every citation shows its source — you review before anything leaves",
 };
 
 const PROOF: { title: string; body: string; spot: SpotName }[] = [
