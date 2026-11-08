@@ -3,8 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getSession = vi.fn();
 
+const createClient = vi.fn(() => ({ auth: { getSession: () => getSession() } }));
+
 vi.mock("@/lib/supabase/client", () => ({
-  createClient: () => ({ auth: { getSession: () => getSession() } }),
+  createClient: () => createClient(),
 }));
 vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
 
@@ -34,7 +36,20 @@ describe("the marketing header and the session", () => {
     expect(screen.queryByRole("link", { name: "Open app" })).toBeNull();
   });
 
-  // No failure-path test: a rejected session read leaves `authed` at its
+  it("stays signed out when the Supabase client can't be created", async () => {
+    // Previews have no NEXT_PUBLIC_SUPABASE_* values and createClient()
+    // throws synchronously; that must not escape the effect and blank the page.
+    createClient.mockImplementationOnce(() => {
+      throw new Error("@supabase/ssr: Your project's URL and API key are required");
+    });
+    render(<SiteHeader />);
+
+    await waitFor(() => expect(createClient).toHaveBeenCalled());
+    expect(screen.getByRole("link", { name: "Sign in" })).toHaveAttribute("href", "/login");
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  // No failure-path test for getSession: a rejected session read leaves `authed` at its
   // initial false, which the signed-out test already pins — and vitest's
   // unhandled-rejection tracker flags the mock however lazily it rejects.
 });
