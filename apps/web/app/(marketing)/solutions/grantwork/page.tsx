@@ -76,7 +76,7 @@ const content: SolutionContent = {
     "Application draft",
     "Monitoring return draft",
     "Funder-form answers (paste-ready)",
-    "Impact card (one-page PDF)",
+    "Impact card (PDF summary)",
   ],
   vignette: "reporting-calendar",
   trust:
@@ -87,7 +87,7 @@ const content: SolutionContent = {
     "You want drafts grounded in your own documents, not generic AI text.",
   ],
   notFit: [
-    "You want automatic submission to funder portals — Flowgrid deliberately stops at a draft for you to check.",
+    "You want automatic submission to funder portals — Flowgrid deliberately never submits on your behalf.",
     "You need a funder-discovery database; Grantwork manages the grants you pursue, it doesn't find them.",
     "A single annual grant with a one-page return may not repay the setup.",
   ],
