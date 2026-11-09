@@ -15,7 +15,7 @@ const content: SolutionContent = {
     "The facts a funder asks for at application time are the same ones they ask for at monitoring time — but most teams reconstruct them twice, in different Word documents, months apart. Grantwork, the grant-funding module of Flowgrid OS, keeps funders, conditions and evidence in one record so nothing is written from scratch twice.",
   diagram: {
     ariaLabel:
-      "Your documents and confirmed organisational facts flow into one record per grant, carrying its stages, conditions, deadlines and impact evidence. Application drafts, monitoring returns, paste-ready funder-form answers and editable PowerPoint are assembled out of that record, and every answer cites its evidence — you verify and paste; Flowgrid never submits to a funder.",
+      "Your documents and confirmed organisational facts flow into one record per grant, carrying its stages, conditions, deadlines and impact evidence. Application drafts, monitoring returns and paste-ready funder-form answers are drafted out of that record, and every citation shows its source. Nothing goes to a funder without your say-so.",
     vault: {
       caption: "past bids · policies · accounts",
       arrowLabel: "source document named",
@@ -35,12 +35,11 @@ const content: SolutionContent = {
     outputs: [
       { label: "Application draft" },
       { label: "Monitoring return" },
-      { label: "Editable PowerPoint" },
       { label: "Funder-form answers", violet: true },
     ],
-    outLabel: "assembled from the record",
+    outLabel: "drafted from the record",
     returnLabel:
-      "every answer cites its evidence — you verify and paste; Flowgrid never submits",
+      "every citation shows its source — nothing goes to a funder without your say-so",
   },
   outcomes: [
     {
@@ -77,19 +76,18 @@ const content: SolutionContent = {
     "Application draft",
     "Monitoring return draft",
     "Funder-form answers (paste-ready)",
-    "Editable PowerPoint",
-    "PDF report",
+    "Impact card (PDF summary)",
   ],
   vignette: "reporting-calendar",
   trust:
-    "Drafting is transcribe, verify, draft, paste: Flowgrid drafts from cited evidence, you verify and paste into the funder's own portal. Flowgrid never submits to a funder, and your data is isolated from every other customer's at the database level.",
+    "Application drafts and monitoring returns are Word downloads, marked as drafts for review. Funder-form answers are text you paste into the funder's own portal. Flowgrid never submits to a funder, and your data is isolated from every other customer's at the database level.",
   fit: [
     "You hold or apply for several grants a year with written reporting attached.",
     "Different funders keep asking for the same organisational facts.",
     "You want drafts grounded in your own documents, not generic AI text.",
   ],
   notFit: [
-    "You want automatic submission to funder portals — Flowgrid deliberately stops at a verified draft.",
+    "You want automatic submission to funder portals — Flowgrid deliberately never submits on your behalf.",
     "You need a funder-discovery database; Grantwork manages the grants you pursue, it doesn't find them.",
     "A single annual grant with a one-page return may not repay the setup.",
   ],
