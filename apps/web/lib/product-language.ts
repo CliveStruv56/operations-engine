@@ -31,7 +31,7 @@ export const PRODUCT_LANGUAGE = {
     combined: "Groundwork · Development projects",
     href: "/solutions/groundwork",
     appHref: "/app/projects",
-    availability: "Available in pilot",
+    availability: "Works today",
   },
   grantwork: {
     brand: "Grantwork",
@@ -39,7 +39,7 @@ export const PRODUCT_LANGUAGE = {
     combined: "Grantwork · Grant funding",
     href: "/solutions/grantwork",
     appHref: "/app/grants",
-    availability: "Available in pilot",
+    availability: "Works today",
   },
 } as const;
 
