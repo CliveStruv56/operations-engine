@@ -22,7 +22,7 @@ const SECTIONS = [
     kicker: "AI providers",
     title: "Where do our documents go when the AI answers?",
     plain:
-      "Model requests go through a single gateway to vetted cloud providers, with zero-data-retention hosting in Western jurisdictions as the default. Your documents are not used to train anyone's models.",
+      "Model requests go through a single gateway to vetted cloud providers. What those providers may do with your data is set out in the provider terms for your deployment and your signed agreement.",
     detail:
       "All model access runs through one LiteLLM gateway — application code never talks to a provider directly, so the provider list stays small, auditable and swappable. Provider terms are documented per deployment; commercial guarantees always match the signed terms, not this page.",
   },

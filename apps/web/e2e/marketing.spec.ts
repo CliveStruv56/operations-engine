@@ -34,13 +34,26 @@ test("the homepage is public and the skip link is the first tab stop", async ({ 
   await page.goto("/");
   // No redirect to /login — the marketing h1 renders.
   await expect(
-    page.getByRole("heading", { level: 1, name: /turn what your organisation knows/i }),
+    page.getByRole("heading", { level: 1, name: /give every client an ai workspace/i }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "See how Flowgrid works" })).toHaveAttribute(
+  await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "See what works today" })).toHaveAttribute(
     "href",
-    "/platform",
+    "#works-today",
   );
-  await expect(page.getByText("Available in pilot")).toHaveCount(2);
+  // What works today is labelled; planned work is labelled and set apart.
+  const today = page.locator("#works-today");
+  await expect(today.getByText("Works today", { exact: true })).toBeVisible();
+  await expect(today.getByRole("heading", { level: 3 })).toHaveCount(6);
+  const next = page.getByRole("region", { name: "Being built next" });
+  await expect(next.getByText("Being built next · not available yet")).toBeVisible();
+  // No pilot wording, no pilot form, no security-page link (fact-check A22).
+  await expect(page.locator("main").getByText(/pilot/i)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Join the pilot list" })).toHaveCount(0);
+  await expect(page.locator('main a[href="/security-and-data"]')).toHaveCount(0);
+  await expect(page.locator("main").getByText(/editable PowerPoint/)).toHaveText(
+    "A chat answer exports as a branded PDF, and a slide-deck answer as editable PowerPoint.",
+  );
 
   await page.keyboard.press("Tab");
   const first = page.getByRole("link", { name: "Skip to content" });
@@ -131,12 +144,16 @@ test("the demo form submits one lead with an idempotency key", async ({ page }) 
   expect(lead.headers["idempotency-key"]).toMatch(/^[0-9a-f-]{36}$/);
 });
 
-test("the pilot form fails recoverably and retries with the same key", async ({ page }) => {
+// The pilot list form left the home page with the Nov 2026 rewrite (no pilot
+// is running), so the recoverable-error path is pinned on the demo form.
+test("the demo form fails recoverably and retries with the same key", async ({ page }) => {
   const leads = captureLeads(page, 502);
-  await page.goto("/");
+  await page.goto("/contact");
 
-  await page.getByLabel("Work email").fill("pilot@example.org.uk");
-  await page.getByRole("button", { name: "Join the pilot list" }).click();
+  await page.getByLabel("Name").fill("Jo Tester");
+  await page.getByLabel("Work email").fill("retry@example.org.uk");
+  await page.getByLabel("Organisation").fill("E2E Community Trust");
+  await page.getByRole("button", { name: "Request a demo" }).click();
 
   // Recoverable error: an alert with the fallback address, form still usable.
   // (Filtered because Next's route announcer is also role=alert; the copy
@@ -149,11 +166,11 @@ test("the pilot form fails recoverably and retries with the same key", async ({ 
   // dedupe a submission that actually landed the first time.
   await page.unroute("**/api/leads");
   const retries = captureLeads(page);
-  await page.getByRole("button", { name: "Join the pilot list" }).click();
-  await expect(page.getByRole("status")).toContainText(/on the list/i);
+  await page.getByRole("button", { name: "Request a demo" }).click();
+  await expect(page.getByRole("status")).toContainText(/request received/i);
 
   expect(leads).toHaveLength(1);
   expect(retries).toHaveLength(1);
-  expect(retries[0].body).toMatchObject({ kind: "pilot", email: "pilot@example.org.uk" });
+  expect(retries[0].body).toMatchObject({ kind: "demo", email: "retry@example.org.uk" });
   expect(retries[0].headers["idempotency-key"]).toBe(leads[0].headers["idempotency-key"]);
 });

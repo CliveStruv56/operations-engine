@@ -8,7 +8,7 @@ import { Kicker } from "./ui";
 const AGENDA: { time: string; what: string }[] = [
   { time: "0–5", what: "Your workflow, as you run it today" },
   { time: "5–15", what: "The same workflow set up in Flowgrid, on representative data" },
-  { time: "15–20", what: "Fit, questions and pilot next steps" },
+  { time: "15–20", what: "Fit, questions and next steps" },
 ];
 
 export function DemoAgendaPanel() {
