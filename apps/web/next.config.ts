@@ -1,16 +1,15 @@
 import type { NextConfig } from "next";
+import { BASELINE_POLICY } from "./lib/csp";
 
 // Response headers for every route (code review WEB-1). `/app` is fully
 // client-rendered with the session in cookies, so framing and MIME sniffing
-// are the cheap wins. The CSP carries only directives that cannot break the
-// app: a script-src policy needs a per-request nonce for Next's inline
-// bootstrap scripts, plus connect-src entries for the API, Supabase and the
-// R2 bucket — that is a follow-up to land with an e2e run, not a guess here.
+// are the cheap wins.
+//
+// Content-Security-Policy: pages get theirs from proxy.ts with a per-request
+// nonce (lib/csp.ts). A CSP header from here on a page would reach the
+// renderer as the request's CSP and strip the nonce from every script, so
+// only API routes, which the proxy never sees, get the baseline from here.
 const securityHeaders = [
-  {
-    key: "Content-Security-Policy",
-    value: "frame-ancestors 'none'; base-uri 'self'; object-src 'none'; form-action 'self'",
-  },
   // frame-ancestors' predecessor, for browsers that predate it.
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-Content-Type-Options", value: "nosniff" },
@@ -25,7 +24,13 @@ const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
   async headers() {
-    return [{ source: "/:path*", headers: securityHeaders }];
+    return [
+      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/api/:path*",
+        headers: [{ key: "Content-Security-Policy", value: BASELINE_POLICY }],
+      },
+    ];
   },
   async redirects() {
     return [

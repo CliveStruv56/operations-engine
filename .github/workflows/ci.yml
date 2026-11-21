@@ -128,3 +128,8 @@ jobs:
       # Mocked backend — the specs intercept every API and auth request, so
       # no database or API process is needed (env comes from playwright.config).
       - run: pnpm test:e2e
+      # The CSP check again on a production build (next build + next start):
+      # only there would a page prerendered without its nonce show up.
+      - run: pnpm test:e2e e2e/csp.spec.ts
+        env:
+          E2E_PROD: "1"
